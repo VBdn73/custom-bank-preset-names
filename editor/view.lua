@@ -25,7 +25,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
     local contentWidth = layout.width
-    local contentHeight = options.hideTitle and layout.bodyHeight or layout.height
+    local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = {
@@ -86,28 +86,42 @@ function editor.build(parent, names, bindings, initialSlot, options)
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
     local infoVisible = false
-    local infoNotes = {}
-    local function addInfoNote(text, y)
-        local note = createText(parent, "", smallFont)
-        trackPosition(note, layout.padding, y)
-        note:SetSize(layout.controlWidth, layout.noteHeight)
-        infoNotes[#infoNotes + 1] = { control = note, text = text }
-        return note
+    local infoControls = {}
+    local function positionInfo()
+        local host = options.infoParent or parent
+        local x = math.max(0, host.width - layout.padding - layout.controlWidth)
+        local y = options.infoParent and layout.popupHeaderHeight or layout.padding + layout.popupCloseSize + 4
+        for _, entry in ipairs(infoControls) do
+            entry.control:SetPos(x + entry.x, y + entry.y)
+        end
     end
     local function toggleInfo()
         infoVisible = not infoVisible
-        for _, note in ipairs(infoNotes) do
-            note.control.content = infoVisible and note.text or ""
+        if not infoVisible then
+            for _, entry in ipairs(infoControls) do entry.control:Destroy() end
+            infoControls = {}
+            return
         end
-    end
-    local storageNote = addInfoNote("Stored on this device, per character name.", layout.rows.storageNote)
-    trackPosition(storageNote, layout.padding, layout.rows.storageNote)
-    storageNote:SetSize(layout.controlWidth, layout.noteHeight)
-
-    -- Explain the display-only scope where players edit names, not just in the README.
-    for index, text in ipairs({ "Changes displayed names only.", "Does not load presets or unlock slots." }) do
-        local y = layout.rows.scopeNotes + (index - 1) * layout.noteSpacing
-        addInfoNote(text, y)
+        local host = options.infoParent or parent
+        local height = layout.padding * 2 + layout.noteSpacing * 3
+        for _, fill in ipairs({ true, false }) do
+            local box = ui.Rectangle.new(host)
+            box:SetSize(layout.controlWidth, height)
+            box.fill = fill
+            box.colour = theme.colour(fill and theme.background or theme.border)
+            box.clickthrough = false
+            infoControls[#infoControls + 1] = { control = box, x = 0, y = 0 }
+        end
+        for index, text in ipairs({ "Stored on this device, per character name.",
+            "Changes displayed names only.", "Does not load presets or unlock slots." }) do
+            local note = createText(host, text, smallFont)
+            note:SetSize(layout.controlWidth - layout.padding * 2, layout.noteHeight)
+            note.clickthrough = true
+            infoControls[#infoControls + 1] = {
+                control = note, x = layout.padding, y = layout.padding + (index - 1) * layout.noteSpacing,
+            }
+        end
+        positionInfo()
     end
 
     -- Popup chrome supplies its own button; native settings chrome is owned by
@@ -184,6 +198,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             infoButton:SetPos(math.max(0, parent.width - layout.padding - layout.popupCloseSize),
                 layout.padding)
         end
+        positionInfo()
     end
     centreContent()
     parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)

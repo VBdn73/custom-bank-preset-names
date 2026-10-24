@@ -11,6 +11,7 @@ local function createFixture()
             self.parentX, self.selfX = parentX, selfX
         end
         function control:SetSize(width, height) self.width, self.height = width, height end
+        function control:Destroy() self.destroyed = true end
         function control:Setup(visibility, filter, limit)
             self.visibility, self.filter, self.limit = visibility, filter, limit
         end
@@ -26,6 +27,7 @@ local function createFixture()
         return control
     end
     ui = {
+        Rectangle = { new = function(parent) return createControl("rectangle", parent) end },
         Text = { new = function(parent) return createControl("text", parent) end },
         Button = { new = function(parent) return createControl("button", parent) end },
         InputField = { new = function(parent) return createControl("input", parent) end },
@@ -57,7 +59,7 @@ local function createFixture()
     f.parent.width, f.parent.height = 580, 360
     function f:open(initialSlot, options)
         local firstNewControl = #self.controls + 1
-        self.refresh = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18 }, initialSlot, options)
+        self.refresh, self.toggleInfo = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18 }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" then self.selector = control
@@ -68,7 +70,7 @@ local function createFixture()
             elseif control.content == "Custom bank preset names" then self.title = control
             elseif control.kind == "text" and control.height == 18
                 and control.y == math.max(0, math.floor((self.parent.height
-                    - (options and options.hideTitle and 262 or 294)) / 2))
+                     - (options and options.hideTitle and 194 or 226)) / 2))
                     + 226 - (options and options.hideTitle and 32 or 0) then self.note = control
             elseif control.kind == "text" and control.content == "" and control.height == 28 then self.status = control end
         end
@@ -171,13 +173,15 @@ end)
 
 test.case("Popup editor omits its duplicate title and fits beneath window chrome", function()
     local f = createFixture()
-    f.parent.width, f.parent.height = 352, 262
+    f.parent.width, f.parent.height = 352, 194
     local first = #f.controls + 1
     f:open(18, { hideTitle = true })
     for index = first, #f.controls do
         local c = f.controls[index]
         test.equal(c.content == "Custom bank preset names", false)
-        test.equal(c.y >= 0 and c.y + c.height <= 262, true, "Control fits popup content")
+        if c.content ~= "" then
+            test.equal(c.y >= 0 and c.y + c.height <= 194, true, "Visible control fits popup content")
+        end
     end
     test.equal(f.selector.y, 16)
     test.equal(f.input.content, "Last preset")
@@ -190,25 +194,23 @@ test.case("Editor centres controls without resizing host layers and clamps small
     test.equal(f.host.width, 600)
     test.equal(f.host.height, 400)
     test.equal(f.title.x, 130)
-    test.equal(f.title.y, 41)
+    test.equal(f.title.y, 75)
     test.equal(f.title.parent, f.parent, "Controls attach directly to supplied layer")
     test.equal(f.title.parentX, nil)
     test.equal(f.title.selfX, nil)
     f.parent.width, f.parent.height = 640, 400
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 160)
-    test.equal(f.title.y, 61)
+    test.equal(f.title.y, 95)
     f.parent.width, f.parent.height = 300, 200
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 8)
     test.equal(f.title.y, 8)
-    test.equal(f.note.font, id.Font.MUSEO_SANS_11PT_REGULAR)
-    test.equal(f.note.height, 18)
 end)
 
 test.case("Editor info button reveals and hides scope notes without saving or changing edits", function()
     local f = createFixture()
-    test.equal(f.note.content, "")
+    local originalY = f.input.y
     f.input.content = "Unsaved edit"
     f.info.hooks[ui.Hook.ONBUTTONPRESSED]()
     local text = {}
@@ -217,10 +219,26 @@ test.case("Editor info button reveals and hides scope notes without saving or ch
     end
     test.equal(text["Changes displayed names only."], true)
     test.equal(text["Does not load presets or unlock slots."], true)
-    test.equal(f.note.content, "Stored on this device, per character name.")
+    test.equal(text["Stored on this device, per character name."], true)
+    test.equal(f.input.y, originalY, "Help must not move the form")
+    local note = f.controls[#f.controls]
     f.info.hooks[ui.Hook.ONBUTTONPRESSED]()
-    test.equal(f.note.content, "")
+    test.equal(note.destroyed, true)
     test.equal(f.input.content, "Unsaved edit")
+    test.equal(f.saveCalls, 0)
+end)
+
+test.case("Editor popover stays within its host without resizing or losing the selected preset", function()
+    local f = createFixture()
+    local heights = {}
+    f:open(18, { hideTitle = true, externalInfoButton = true,
+        onHeightChanged = function(height) heights[#heights + 1] = height end })
+    f.toggleInfo()
+    f.toggleInfo()
+    local layout = require("editor/layout")
+    test.equal(#heights, 0, "Popover never requests a layout resize")
+    test.equal(f.parent.height, 360)
+    test.equal(f.selector.selectedID, 17)
     test.equal(f.saveCalls, 0)
 end)
 

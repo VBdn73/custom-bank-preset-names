@@ -2,6 +2,7 @@
 local layout = {
     width = 336,
     height = 294,
+    compactHeight = 226,
     titleHeight = 32,
     padding = 8,
     textHeight = 28,
@@ -37,7 +38,9 @@ layout.controlWidth = layout.width - layout.padding * 2
 layout.buttonWidth = (layout.controlWidth - layout.buttonGap) / 2
 layout.resetX = layout.padding + layout.buttonWidth + layout.buttonGap
 layout.bodyHeight = layout.height - layout.titleHeight
+layout.compactBodyHeight = layout.compactHeight - layout.titleHeight
 layout.popupWidth = layout.width + layout.popupPadding * 2
 layout.popupHeight = layout.popupHeaderHeight + layout.bodyHeight + layout.popupBottomPadding
+layout.compactPopupHeight = layout.popupHeaderHeight + layout.compactBodyHeight + layout.popupBottomPadding
 
 return layout

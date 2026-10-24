@@ -4,7 +4,7 @@ local layout = require("editor/layout")
 local theme = require("editor/theme")
 local popup = {}
 local layer, refresh, centre
-local width, height = layout.popupWidth, layout.popupHeight
+local width, height = layout.popupWidth, layout.compactPopupHeight
 
 local function rectangle(parent, x, y, w, h, colour, fill)
     local control = ui.Rectangle.new(parent)
@@ -40,6 +40,7 @@ function popup.open(slot, names, bindings)
     if not parent or parent.isRestricted then return end
 
     popup.close()
+    height = layout.compactPopupHeight
     layer = ui.Layer.new(parent)
     layer:SetSize(width, height)
     -- Nested native bank containers do not reliably apply percentage anchors
@@ -75,10 +76,10 @@ function popup.open(slot, names, bindings)
     title.clickthrough = true
     local content = ui.Layer.new(layer)
     content:SetPos(0, layout.popupHeaderHeight)
-    content:SetSize(width, layout.bodyHeight)
+    content:SetSize(width, layout.compactBodyHeight)
     local toggleInfo
     refresh, toggleInfo = nameEditor.build(content, names, bindings, slot,
-        { hideTitle = true, externalInfoButton = true })
+        { hideTitle = true, externalInfoButton = true, infoParent = layer })
     local info = ui.Button.new(layer)
     info:SetPos(infoX, layout.popupTitleY)
     info:SetSize(layout.popupCloseSize, layout.popupCloseSize)
