@@ -49,12 +49,24 @@ function editor.build(parent, names, bindings, initialSlot, options)
     presetSelector.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
     presetSelector.dropdownMaxVisibleEntries = layout.dropdownVisibleEntries
     presetSelector.entryHeight = layout.textHeight
-    for preset = 1, bindings.presetCount do
-        -- Insert in display order with zero-based IDs, matching the native list.
-        -- Storage and bank bindings remain one-based preset numbers.
-        presetSelector:Add("Preset " .. preset, preset - 1)
+    local presetLabels = {}
+    local function refreshPresetLabels()
+        local labels, changed = {}, false
+        for preset = 1, bindings.presetCount do
+            local name = names.get(preset)
+            labels[preset] = "Preset " .. preset .. (name and name ~= "" and " *" or "")
+            changed = changed or labels[preset] ~= presetLabels[preset]
+        end
+        if not changed then return end
+        presetSelector:Clear()
+        for preset = 1, bindings.presetCount do
+            -- Native list IDs are zero-based; storage slots are one-based.
+            presetSelector:Add(labels[preset], preset - 1)
+        end
+        presetSelector:SetEntrySelected(selectedSlot - 1, true, false)
+        presetLabels = labels
     end
-    presetSelector:SetEntrySelected(selectedSlot - 1, true, false)
+    refreshPresetLabels()
     local smallFont = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
     trackPosition(createText(parent, "Custom name (blank = predefined):", smallFont),
         layout.padding, layout.rows.nameLabel)
@@ -109,6 +121,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local displayedCharacterContext = names.getContext()
     local function refreshSelectedName()
         displayedCharacterContext = names.getContext()
+        refreshPresetLabels()
         nameInput.content = names.get(selectedSlot) or ""
         statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
     end
@@ -129,6 +142,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             return false
         end
         setStatus(message, saveSucceeded)
+        if saveSucceeded then refreshPresetLabels() end
         return saveSucceeded
     end
 
@@ -179,6 +193,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
         end
+        refreshPresetLabels()
     end, toggleInfo
 end
 

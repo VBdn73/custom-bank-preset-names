@@ -16,6 +16,7 @@ local function createFixture()
         end
         function control:Subscribe(hook, reference, callback) self.hooks[hook] = callback or reference end
         function control:Add(label, entryID) self.entries[entryID] = label end
+        function control:Clear() self.entries = {} end
         function control:SetEntrySelected(entryID, selected, triggerEvents)
             test.equal(selected, true)
             test.equal(triggerEvents, false, "Initialization must not trigger selection events")
@@ -84,12 +85,38 @@ end
 
 test.case("Editor starts at preset 1 with all 18 zero-based dropdown entries", function()
     local f = createFixture()
-    for slot = 1, 18 do test.equal(f.selector.entries[slot - 1], "Preset " .. slot) end
+    for slot = 1, 18 do
+        test.equal(f.selector.entries[slot - 1], "Preset " .. slot .. (slot == 18 and " *" or ""))
+    end
     test.equal(f.selector.entries[18], nil)
     test.equal(f.selector.selectedID, 0)
     test.equal(f.input.content, "")
     test.equal(f.input.limit, 40)
     test.equal(f.saveCalls, 0, "Opening must not save")
+end)
+
+test.case("Preset markers follow saved names, blank saves, resets and external edits", function()
+    local f = createFixture()
+    f.input.content = "Custom"
+    f.refresh()
+    test.equal(f.selector.entries[0], "Preset 1")
+    f:clickSave()
+    test.equal(f.selector.entries[0], "Preset 1 *")
+    f:clickReset()
+    test.equal(f.selector.entries[0], "Preset 1")
+    f:select(17)
+    f.input.content = ""
+    f:clickSave()
+    test.equal(f.selector.entries[17], "Preset 18")
+    test.equal(f.selector.selectedID, 17)
+    f.stored[2] = "Another editor"
+    f.input.content = "Keep unsaved edit"
+    f.refresh()
+    test.equal(f.selector.entries[1], "Preset 2 *")
+    test.equal(f.input.content, "Keep unsaved edit")
+    f.context, f.stored = "second", {}
+    f.refresh()
+    test.equal(f.selector.entries[1], "Preset 2")
 end)
 
 test.case("Custom name label and save status use the smaller font", function()

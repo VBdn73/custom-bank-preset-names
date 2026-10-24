@@ -31,6 +31,9 @@ For local testing, use the RuneScape plugin development beta as described below.
 3. Enter a name and click **Save**, or press Enter.
 4. Click **Reset**, or save a blank name, to use the game's predefined name again.
 
+An asterisk in the preset dropdown (for example, **Preset 3 \***) marks a slot
+with a saved custom name. Resetting it or saving a blank name removes the marker.
+
 Click **i** to show or hide the storage and display-only information. These notes
 start hidden in both editors. In the bank popup the button sits beside **×**;
 in plugin settings it sits at the top-right of the content area.
