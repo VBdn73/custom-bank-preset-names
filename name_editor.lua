@@ -1,3 +1,5 @@
+local constants = require("constants")
+local layout = require("editor_layout")
 local editor = {}
 
 local function createText(parent, content, x, y, width, font)
@@ -23,12 +25,12 @@ function editor.build(parent, names, bindings, initialSlot, options)
     options = options or {}
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
-    local contentWidth, contentHeight = 336, 294
-    if options.hideTitle then contentHeight = contentHeight - 32 end
+    local contentWidth = layout.width
+    local contentHeight = options.hideTitle and layout.bodyHeight or layout.height
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = {
-            component = component, x = x, y = y - (options.hideTitle and 32 or 0),
+            component = component, x = x, y = y - (options.hideTitle and layout.titleHeight or 0),
         }
         return component
     end
@@ -40,7 +42,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         selectedSlot = 1
     end
     if not options.hideTitle then
-        trackPosition(createText(parent, "Custom bank preset names", 8, 8, 320), 8, 8)
+        trackPosition(createText(parent, constants.editorTitle, 8, 8, 320), 8, 8)
     end
     local presetSelector = ui.List.new(parent)
     trackPosition(presetSelector, 8, 48)
@@ -63,7 +65,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     nameInput:SetPos(8, 122)
     nameInput:SetSize(320, 32)
     nameInput.stylesheetID = id.StyleSheet.INPUT_DEFAULT
-    nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 40)
+    nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE,
+        constants.maximumNameLength)
     nameInput.emptyText = "Use predefined name"
 
     local statusLabel = createText(parent, "", 8, 198, 320, smallFont)

@@ -1,7 +1,7 @@
 local names = {}
 local textValidation = require("text_validation")
+local constants = require("constants")
 local storageKeyPrefix = "presetName.v3.displayName."
-local maximumNameLength = 40
 -- nil means not loaded; an empty string means no custom name for this slot.
 local cachedNames = {}
 local currentContext
@@ -45,8 +45,8 @@ function names.normalize(value)
         return nil, "Names cannot contain control characters or < >."
     end
     local characterCount = textValidation.length(trimmedName)
-    if not characterCount or characterCount > maximumNameLength then
-        return nil, "Use at most 40 characters of valid text."
+    if not characterCount or characterCount > constants.maximumNameLength then
+        return nil, ("Use at most %d characters of valid text."):format(constants.maximumNameLength)
     end
     return trimmedName
 end

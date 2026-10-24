@@ -1,7 +1,9 @@
 local nameEditor = require("name_editor")
+local constants = require("constants")
+local layout = require("editor_layout")
 local popup = {}
 local layer, refresh, centre
-local width, height = 352, 310
+local width, height = layout.popupWidth, layout.popupHeight
 
 local function rectangle(parent, x, y, w, h, colour, fill)
     local control = ui.Rectangle.new(parent)
@@ -61,12 +63,12 @@ function popup.open(slot, names, bindings)
     title:SetPos(12, 7)
     title:SetSize(width - 52, 26)
     title.font = id.Font.MUSEO_SANS_15PT_REGULAR
-    title.content = "Custom bank preset names"
+    title.content = constants.editorTitle
     title.colour = Vector4.new(0.88, 0.72, 0.43, 1)
     title.clickthrough = true
     local content = ui.Layer.new(layer)
-    content:SetPos(0, 36)
-    content:SetSize(width, 262)
+    content:SetPos(0, layout.popupHeaderHeight)
+    content:SetSize(width, layout.bodyHeight)
     refresh = nameEditor.build(content, names, bindings, slot, { hideTitle = true })
     local close = ui.Button.new(layer)
     close:SetPos(width - 30, 7)
