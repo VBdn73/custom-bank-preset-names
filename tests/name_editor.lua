@@ -87,6 +87,19 @@ test.case("Editor starts at preset 1 with all 18 zero-based dropdown entries", f
     test.equal(f.saveCalls, 0, "Opening must not save")
 end)
 
+test.case("Custom name label and save status use the smaller font", function()
+    local f = createFixture()
+    local label
+    for _, control in ipairs(f.controls) do
+        if control.content == "Custom name (blank = predefined):" then label = control end
+    end
+    test.equal(label.font, id.Font.MUSEO_SANS_11PT_REGULAR)
+    f:clickSave()
+    test.equal(f.status.content, "Name saved.")
+    test.equal(f.status.font, id.Font.MUSEO_SANS_11PT_REGULAR)
+    test.equal(f.title.font, id.Font.MUSEO_SANS_15PT_REGULAR)
+end)
+
 test.case("Direct editing starts at the clicked preset and saves only that slot", function()
     local f = createFixture()
     f:open(18)

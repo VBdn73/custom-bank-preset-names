@@ -1,10 +1,10 @@
 local editor = {}
 
-local function createText(parent, content, x, y, width)
+local function createText(parent, content, x, y, width, font)
     local label = ui.Text.new(parent)
     label:SetPos(x, y)
     label:SetSize(width, 28)
-    label.font = id.Font.MUSEO_SANS_15PT_REGULAR
+    label.font = font or id.Font.MUSEO_SANS_15PT_REGULAR
     label.content = content
     return label
 end
@@ -55,7 +55,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         presetSelector:Add("Preset " .. preset, preset - 1)
     end
     presetSelector:SetEntrySelected(selectedSlot - 1, true, false)
-    trackPosition(createText(parent, "Custom name (blank = predefined):", 8, 90, 320), 8, 90)
+    local smallFont = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
+    trackPosition(createText(parent, "Custom name (blank = predefined):", 8, 90, 320, smallFont), 8, 90)
 
     local nameInput = ui.InputField.new(parent)
     trackPosition(nameInput, 8, 122)
@@ -65,7 +66,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 40)
     nameInput.emptyText = "Use predefined name"
 
-    local statusLabel = createText(parent, "", 8, 198, 320)
+    local statusLabel = createText(parent, "", 8, 198, 320, smallFont)
     trackPosition(statusLabel, 8, 198)
     local storageNote = createText(parent, "Stored on this device, per character name.", 8, 226, 320)
     trackPosition(storageNote, 8, 226)
