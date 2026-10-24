@@ -43,8 +43,8 @@ function bankLabels.restore(bindings)
         local state = labelStates[index]
         local component = resolveComponent(binding)
         -- Only undo our own latest write, never a newer change from the game.
-        if state and component and component == state.component
-            and component.type == ui.ComponentType.LABEL and component.content == state.appliedText then
+        if state and isEditableLabel(component) and component == state.component
+            and component.content == state.appliedText then
             component.content = state.originalText
         end
     end

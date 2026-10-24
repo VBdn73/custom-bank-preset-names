@@ -94,20 +94,31 @@ test.case("Editor centres controls without resizing host layers and clamps small
     test.equal(f.host.width, 600)
     test.equal(f.host.height, 400)
     test.equal(f.title.x, 130)
-    test.equal(f.title.y, 61)
+    test.equal(f.title.y, 41)
     test.equal(f.title.parent, f.parent, "Controls attach directly to supplied layer")
     test.equal(f.title.parentX, nil)
     test.equal(f.title.selfX, nil)
     f.parent.width, f.parent.height = 640, 400
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 160)
-    test.equal(f.title.y, 81)
+    test.equal(f.title.y, 61)
     f.parent.width, f.parent.height = 300, 200
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 8)
     test.equal(f.title.y, 8)
     test.equal(f.note.font, id.Font.MUSEO_SANS_11PT_REGULAR)
     test.equal(f.note.height, 18)
+end)
+
+test.case("Editor explains its display-only scope without saving", function()
+    local f = createFixture()
+    local text = {}
+    for _, control in ipairs(f.controls) do
+        if control.kind == "text" then text[control.content] = true end
+    end
+    test.equal(text["Changes displayed names only."], true)
+    test.equal(text["Does not load presets or unlock slots."], true)
+    test.equal(f.saveCalls, 0)
 end)
 
 test.case("Selecting the last entry saves and resets slot 18, not slot 17", function()

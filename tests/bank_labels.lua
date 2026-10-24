@@ -114,6 +114,53 @@ test.case("Shutdown does not write to a tracked component whose type changed", f
     test.equal(f.label.content, "Bossing", "Non-label component is left untouched")
 end)
 
+test.case("Shutdown does not write to a tracked component that became restricted", function()
+    local f = createFixture()
+    f:update()
+    f.label.isRestricted = true
+    f:restore()
+    test.equal(f.label.content, "Bossing", "Restricted component is left untouched")
+    f.label.isRestricted = false
+    f:restore()
+    test.equal(f.label.content, "Bossing", "Skipped restoration clears tracked state")
+end)
+
+test.case("Updates stop writing when a tracked component becomes restricted", function()
+    local f = createFixture()
+    f:update()
+    f.label.isRestricted = true
+    f.label.content = "Locked preset"
+    f:update()
+    f:restore()
+    test.equal(f.label.content, "Locked preset")
+end)
+
+test.case("Label updates and restoration write only text and never invoke component actions", function()
+    local f = createFixture()
+    -- A strict proxy rejects every non-text write and unexpected method lookup.
+    -- This guards against visibility, geometry, and interaction changes without
+    -- pretending that mocks can verify the real client's locked-slot behaviour.
+    local properties = { type = 1, content = "Combat", isRestricted = false }
+    local writes = 0
+    f.label = setmetatable({}, {
+        __index = function(_, key)
+            if properties[key] == nil then error("Unexpected component access: " .. key) end
+            return properties[key]
+        end,
+        __newindex = function(_, key, value)
+            test.equal(key, "content", "Only label text may change")
+            properties[key] = value
+            writes = writes + 1
+        end,
+    })
+    f:update()
+    f:update()
+    test.equal(writes, 1, "Unchanged names do not cause repeated writes")
+    f:restore()
+    test.equal(properties.content, "Combat")
+    test.equal(writes, 2)
+end)
+
 test.case("Static bindings use the two-ID component lookup", function()
     local f = createFixture()
     ui.Interfaces.GetComponent = function(_, ...)

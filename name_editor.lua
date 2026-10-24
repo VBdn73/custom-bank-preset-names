@@ -22,7 +22,7 @@ end
 function editor.build(parent, names, bindings)
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
-    local contentWidth, contentHeight = 336, 254
+    local contentWidth, contentHeight = 336, 294
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = { component = component, x = x, y = y }
@@ -61,6 +61,15 @@ function editor.build(parent, names, bindings)
     trackPosition(storageNote, 8, 226)
     storageNote.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
     storageNote:SetSize(320, 18)
+
+    -- Explain the display-only scope where players edit names, not just in the README.
+    for index, text in ipairs({ "Changes displayed names only.", "Does not load presets or unlock slots." }) do
+        local y = 246 + (index - 1) * 20
+        local note = createText(parent, text, 8, y, 320)
+        trackPosition(note, 8, y)
+        note.font = storageNote.font
+        note:SetSize(320, 18)
+    end
 
     local displayedCharacterContext = names.getContext()
     local function refreshSelectedName()
