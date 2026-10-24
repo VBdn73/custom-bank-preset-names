@@ -40,7 +40,9 @@ in plugin settings it sits at the top-right of the content area.
 
 Alternatively, right-click the preset's name in the bank and choose **Edit name**.
 The popup starts on the clicked slot, regardless of which preset is selected in
-the bank. The popup stays centered within the bank; click **×** in the top-right
+the bank. The popup opens centered within the bank; drag its title bar to move it
+within the outer game UI, outside the bank's nested popover. This does not change
+the plugin settings editor. Click **×** in the top-right
 corner to dismiss it. The normal bank menu actions and default
 left-click action are unchanged.
 
