@@ -1,6 +1,6 @@
 local test = require("tests.test_helper")
-local menu = require("preset_menu")
-local bindings = require("bank_bindings")
+local menu = require("bank/menu")
+local bindings = require("bank/bindings")
 MiniMenuActionType = { CANCEL = 1006 }
 local hoveredLabels = {}
 ui = { Interfaces = { GetComponent = function(_, _, _, _, dynamicID)

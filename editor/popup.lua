@@ -1,7 +1,7 @@
-local nameEditor = require("name_editor")
+local nameEditor = require("editor/view")
 local constants = require("constants")
-local layout = require("editor_layout")
-local theme = require("editor_theme")
+local layout = require("editor/layout")
+local theme = require("editor/theme")
 local popup = {}
 local layer, refresh, centre
 local width, height = layout.popupWidth, layout.popupHeight

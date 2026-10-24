@@ -86,16 +86,25 @@ Start with `main.lua` to follow the plugin's lifecycle:
 | File | Responsibility |
 | --- | --- |
 | `main.lua` | Opens editors, refreshes them each logic tick, reapplies bank labels before drawing, and restores labels on shutdown. |
-| `bank_bindings.lua` | Maps the 18 preset slots to their bank label component IDs. |
-| `bank_labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
-| `name_editor.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
-| `preset_menu.lua` | Adds a low-priority Edit name action using component identity or the hovered name label when native actions belong to a row hit target. |
-| `editor_popup.lua` | Hosts the editor in a bank popup with the clicked slot preselected. |
-| `preset_names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
-| `text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
+| `constants.lua` | Shares the editor title and maximum name length between modules. |
+| `bank/bindings.lua` | Maps the 18 preset slots to their bank label component IDs. |
+| `bank/labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
+| `bank/menu.lua` | Adds a low-priority Edit name action using component identity or the hovered name label when native actions belong to a row hit target. |
+| `editor/view.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
+| `editor/popup.lua` | Hosts the editor in a bank popup with the clicked slot preselected. |
+| `editor/layout.lua` | Defines control positions and dimensions, including derived popup sizes. |
+| `editor/theme.lua` | Defines named UI colours and creates native colour values on demand. |
+| `presets/names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
+| `presets/text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
 | `plugin.json` | Declares the plugin's name, version, UI entry points, and contact address. |
 | `tests/run.lua` | Runs the regression suites and reports totals with a failing exit status when needed. |
 | `tests/name_editor.lua` | Mocks native controls to test editor layout and interactions. |
+
+Runtime modules use slash-separated imports relative to the plugin root, without
+the `.lua` extension, such as `require("editor/view")`. This also applies inside
+nested modules. Dotted imports such as `require("editor.view")` are not supported
+by the client. See the [official dependency documentation](https://developer.runescape.com/rs/structure.html#dependencies).
+Keep the `bank/`, `editor/`, and `presets/` directories when installing the plugin.
 
 Preset slots are **one-based** throughout storage and bank bindings. Only the
 native dropdown uses **zero-based** entry IDs; the editor converts between them.
@@ -103,7 +112,7 @@ An empty saved name means “use the game's predefined name”, not a custom bla
 
 ### Interface bindings
 
-`bank_bindings.lua` defines the preset label mappings. They currently use interface
+`bank/bindings.lua` defines the preset label mappings. They currently use interface
 517, static component 266, category 0, and dynamic ID `(slot - 1) * 3 + 1`.
 Missing or restricted components are skipped. Game UI updates may require these
 mappings to be updated.

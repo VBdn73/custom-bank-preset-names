@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 
 test.case("Editor layout derives control and popup sizes from shared dimensions", function()
-    local layout = dofile("editor_layout.lua")
+    local layout = dofile("editor/layout.lua")
     test.equal(layout.controlWidth + layout.padding * 2, layout.width)
     test.equal(layout.buttonWidth * 2 + layout.buttonGap, layout.controlWidth)
     test.equal(layout.resetX + layout.buttonWidth, layout.width - layout.padding)
@@ -14,7 +14,7 @@ end)
 test.case("Editor theme loads without the client API and creates colours on demand", function()
     local previous = Vector4
     Vector4 = nil
-    local theme = dofile("editor_theme.lua")
+    local theme = dofile("editor/theme.lua")
     Vector4 = previous
     for _, name in ipairs({ "background", "border", "titleBar", "titleText", "success", "error" }) do
         test.equal(#theme[name], 4)

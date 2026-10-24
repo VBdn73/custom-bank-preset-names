@@ -22,7 +22,7 @@ local function createFixture()
             return true
         end,
     }
-    fixture.names = dofile("preset_names.lua")
+    fixture.names = dofile("presets/names.lua")
     return fixture
 end
 
@@ -31,7 +31,7 @@ test.case("Names are trimmed and survive a module reload", function()
     test.equal(f.names.get(1), nil, "New slot")
     test.equal(f.names.save(1, "  Bossing  "), true, "Save result")
     test.equal(f.names.get(1), "Bossing", "Cached name")
-    test.equal(dofile("preset_names.lua").get(1), "Bossing", "Reloaded name")
+    test.equal(dofile("presets/names.lua").get(1), "Bossing", "Reloaded name")
 end)
 
 for _, character in ipairs({ "x", "é", "\240\159\152\128" }) do
@@ -74,7 +74,7 @@ for _, example in ipairs({ { "Empty", "" }, { "Whitespace-only", " \t\n " } }) d
         test.equal(f.names.save(1, example[2]), true)
         test.equal(f.names.get(1), nil, "Reset slot")
         test.equal(f.names.get(2), "Skilling", "Other slot")
-        test.equal(dofile("preset_names.lua").get(1), nil, "Reset persists")
+        test.equal(dofile("presets/names.lua").get(1), nil, "Reset persists")
     end)
 end
 
@@ -84,7 +84,7 @@ test.case("Character settings ignore case and surrounding spaces but stay isolat
     f.displayName = "Second Character"
     test.equal(f.names.get(1), nil)
     f.names.save(1, "Second name")
-    test.equal(dofile("preset_names.lua").get(1), "Second name")
+    test.equal(dofile("presets/names.lua").get(1), "Second name")
     f.displayName = "  FIRST CHARACTER  "
     test.equal(f.names.get(1), "First name")
     f.displayName = "Renamed Character"
@@ -160,5 +160,5 @@ test.case("Storage setter may omit its return if read-back verifies the write", 
     local f = createFixture()
     PersistentDB.SetString = function(_, key, value) f.data[key] = value end
     test.equal(f.names.save(1, "Verified"), true)
-    test.equal(dofile("preset_names.lua").get(1), "Verified")
+    test.equal(dofile("presets/names.lua").get(1), "Verified")
 end)

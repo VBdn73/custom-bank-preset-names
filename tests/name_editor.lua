@@ -56,7 +56,7 @@ local function createFixture()
     f.parent.width, f.parent.height = 580, 360
     function f:open(initialSlot, options)
         local firstNewControl = #self.controls + 1
-        self.refresh = dofile("name_editor.lua").build(self.parent, self.names, { presetCount = 18 }, initialSlot, options)
+        self.refresh = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18 }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" then self.selector = control

@@ -1,9 +1,9 @@
-local bankBindings = require("bank_bindings")
-local presetNames = require("preset_names")
-local bankLabels = require("bank_labels")
-local nameEditor = require("name_editor")
-local presetMenu = require("preset_menu")
-local editorPopup = require("editor_popup")
+local bankBindings = require("bank/bindings")
+local presetNames = require("presets/names")
+local bankLabels = require("bank/labels")
+local nameEditor = require("editor/view")
+local presetMenu = require("bank/menu")
+local editorPopup = require("editor/popup")
 
 -- Each open editor supplies a callback that follows character changes.
 local editorRefreshCallbacks = {}

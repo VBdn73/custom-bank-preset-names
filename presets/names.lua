@@ -1,5 +1,5 @@
 local names = {}
-local textValidation = require("text_validation")
+local textValidation = require("presets/text_validation")
 local constants = require("constants")
 local storageKeyPrefix = "presetName.v3.displayName."
 -- nil means not loaded; an empty string means no custom name for this slot.

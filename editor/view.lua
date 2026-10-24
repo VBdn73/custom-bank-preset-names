@@ -1,6 +1,6 @@
 local constants = require("constants")
-local layout = require("editor_layout")
-local theme = require("editor_theme")
+local layout = require("editor/layout")
+local theme = require("editor/theme")
 local editor = {}
 
 local function createText(parent, content, font)

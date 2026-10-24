@@ -10,7 +10,7 @@ local function createFixture()
         Interfaces = { GetComponent = function() return f.label end },
     }
     f.names = { get = function() return f.customName end }
-    f.bank = dofile("bank_labels.lua")
+    f.bank = dofile("bank/labels.lua")
     function f:update() self.bank.update(self.bindings, self.names) end
     function f:restore() self.bank.restore(self.bindings) end
     return f
@@ -175,7 +175,7 @@ end)
 
 test.case("All 18 dynamic bindings resolve, reset, and restore independently", function()
     local f = createFixture()
-    local bindings = dofile("bank_bindings.lua")
+    local bindings = dofile("bank/bindings.lua")
     test.equal(bindings.presetCount, 18)
     test.equal(#bindings.labels, 18)
     local labels, customNames = {}, {}

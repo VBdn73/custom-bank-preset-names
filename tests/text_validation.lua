@@ -1,5 +1,5 @@
 local test = require("tests.test_helper")
-local validation = dofile("text_validation.lua")
+local validation = dofile("presets/text_validation.lua")
 
 -- Byte escapes make boundary values explicit and independent of editor encoding.
 local validTextCases = {

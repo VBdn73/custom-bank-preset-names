@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 
 test.case("Popup opens the requested slot, replaces old popups and closes safely", function()
-    local previousEditor = package.loaded.name_editor
+    local previousEditor = package.loaded["editor/view"]
     local built, controls = {}, {}
     local root = { interfaceID = 517, width = 900, height = 890 }
     local scroll = { interfaceID = 517, parent = root }
@@ -26,13 +26,13 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     }
     Vector4 = { new = function(...) return { ... } end }
     id = { StyleSheet = { BUTTON_DEFAULT = 1 }, Font = { MUSEO_SANS_15PT_REGULAR = 1 } }
-    package.loaded.name_editor = { build = function(parent, names, bindings, slot, options)
+    package.loaded["editor/view"] = { build = function(parent, names, bindings, slot, options)
         built[#built + 1] = { parent = parent, slot = slot, options = options }
         return function() if parent.disposed then error("Disposed") end end
     end }
-    local popup = dofile("editor_popup.lua")
-    package.loaded.name_editor = previousEditor
-    local bindings = require("bank_bindings")
+    local popup = dofile("editor/popup.lua")
+    package.loaded["editor/view"] = previousEditor
+    local bindings = require("bank/bindings")
     popup.open(18, {}, bindings)
     test.equal(built[1].slot, 18)
     test.equal(controls[1].parent, root, "Popup must not live inside the scrolling list")
