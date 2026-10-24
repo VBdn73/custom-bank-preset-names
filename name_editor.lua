@@ -1,6 +1,6 @@
 local editor = {}
 
-local function text(parent, content, x, y, width)
+local function createText(parent, content, x, y, width)
     local label = ui.Text.new(parent)
     label:SetPos(x, y)
     label:SetSize(width, 28)
@@ -9,7 +9,7 @@ local function text(parent, content, x, y, width)
     return label
 end
 
-local function button(parent, label, x, y, width, callback)
+local function createButton(parent, label, x, y, width, callback)
     local control = ui.Button.new(parent)
     control:SetPos(x, y)
     control:SetSize(width, 30)
@@ -22,94 +22,115 @@ end
 function editor.build(parent, names, bindings)
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
-    local width, height = 336, 254
-    local positions = {}
-    local function track(component, x, y)
-        positions[#positions + 1] = { component = component, x = x, y = y }
+    local contentWidth, contentHeight = 336, 254
+    local controlPositions = {}
+    local function trackPosition(component, x, y)
+        controlPositions[#controlPositions + 1] = { component = component, x = x, y = y }
         return component
     end
-    local slot = 1
-    track(text(parent, "Custom bank preset names", 8, 8, 320), 8, 8)
-    local selector = ui.List.new(parent)
-    track(selector, 8, 48)
-    selector:SetPos(8, 48)
-    selector:SetSize(320, 32)
-    selector.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
-    selector.dropdownMaxVisibleEntries = 8
-    selector.entryHeight = 28
+
+    -- Build the controls in display order, using offsets within the editor.
+    local selectedSlot = 1
+    trackPosition(createText(parent, "Custom bank preset names", 8, 8, 320), 8, 8)
+    local presetSelector = ui.List.new(parent)
+    trackPosition(presetSelector, 8, 48)
+    presetSelector:SetPos(8, 48)
+    presetSelector:SetSize(320, 32)
+    presetSelector.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
+    presetSelector.dropdownMaxVisibleEntries = 8
+    presetSelector.entryHeight = 28
     for preset = 1, bindings.presetCount do
         -- Insert in display order with zero-based IDs, matching the native list.
         -- Storage and bank bindings remain one-based preset numbers.
-        selector:Add("Preset " .. preset, preset - 1)
+        presetSelector:Add("Preset " .. preset, preset - 1)
     end
-    selector:SetEntrySelected(0, true, false)
-    track(text(parent, "Custom name (blank = predefined):", 8, 90, 320), 8, 90)
-    local input = ui.InputField.new(parent)
-    track(input, 8, 122)
-    input:SetPos(8, 122)
-    input:SetSize(320, 32)
-    input.stylesheetID = id.StyleSheet.INPUT_DEFAULT
-    input:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 40)
-    input.emptyText = "Use predefined name"
-    local status = text(parent, "", 8, 198, 320)
-    track(status, 8, 198)
-    local note = text(parent, "Stored on this device, per character name.", 8, 226, 320)
-    track(note, 8, 226)
-    note.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
-    note:SetSize(320, 18)
+    presetSelector:SetEntrySelected(0, true, false)
+    trackPosition(createText(parent, "Custom name (blank = predefined):", 8, 90, 320), 8, 90)
 
-    local context = names.getContext()
-    local function refresh()
-        context = names.getContext()
-        input.content = names.get(slot) or ""
-        status.content = context and "" or "Log in and wait for your character name."
+    local nameInput = ui.InputField.new(parent)
+    trackPosition(nameInput, 8, 122)
+    nameInput:SetPos(8, 122)
+    nameInput:SetSize(320, 32)
+    nameInput.stylesheetID = id.StyleSheet.INPUT_DEFAULT
+    nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 40)
+    nameInput.emptyText = "Use predefined name"
+
+    local statusLabel = createText(parent, "", 8, 198, 320)
+    trackPosition(statusLabel, 8, 198)
+    local storageNote = createText(parent, "Stored on this device, per character name.", 8, 226, 320)
+    trackPosition(storageNote, 8, 226)
+    storageNote.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
+    storageNote:SetSize(320, 18)
+
+    local displayedCharacterContext = names.getContext()
+    local function refreshSelectedName()
+        displayedCharacterContext = names.getContext()
+        nameInput.content = names.get(selectedSlot) or ""
+        statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
     end
+
     local function saveValue(value)
-        if names.getContext() ~= context then
-            refresh()
-            status.content = "Character changed. Enter the name again."
+        -- Do not save an old character's unfinished edit under a new character.
+        if names.getContext() ~= displayedCharacterContext then
+            refreshSelectedName()
+            statusLabel.content = "Character changed. Enter the name again."
             return false
         end
-        local called, ok, message = pcall(names.save, slot, value)
-        if not called then
-            print("[Preset names] Save error: " .. tostring(ok))
-            status.content = "Save error. See the client console."
+
+        -- pcall separates unexpected host errors from ordinary validation failures.
+        local callSucceeded, saveSucceeded, message = pcall(names.save, selectedSlot, value)
+        if not callSucceeded then
+            print("[Preset names] Save error: " .. tostring(saveSucceeded))
+            statusLabel.content = "Save error. See the client console."
             return false
         end
-        status.content = message
-        return ok
+        statusLabel.content = message
+        return saveSucceeded
     end
-    local function save()
-        saveValue(input.content)
+
+    local function saveInput()
+        saveValue(nameInput.content)
     end
-    selector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
-        local preset = entryID + 1
+
+    -- Wire user actions after the controls and their shared state exist.
+    presetSelector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
+        local selectedPreset = entryID + 1
         if event == ui.SelectionChangeEvent.SELECTED
-            and preset >= 1 and preset <= bindings.presetCount and preset ~= slot then
-            slot = preset
-            refresh()
+            and selectedPreset >= 1 and selectedPreset <= bindings.presetCount
+            and selectedPreset ~= selectedSlot then
+            selectedSlot = selectedPreset
+            refreshSelectedName()
         end
     end)
-    track(button(parent, "Save", 8, 166, 150, save), 8, 166)
-    track(button(parent, "Reset", 178, 166, 150, function()
-        local ok = saveValue("")
-        if ok then input.content = "" end
+    trackPosition(createButton(parent, "Save", 8, 166, 150, saveInput), 8, 166)
+    trackPosition(createButton(parent, "Reset", 178, 166, 150, function()
+        local saveSucceeded = saveValue("")
+        if saveSucceeded then
+            nameInput.content = ""
+        end
     end), 178, 166)
-    input:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
-        if reason == ui.InputFieldActionResult.SUBMIT then save() end
+    nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+        if reason == ui.InputFieldActionResult.SUBMIT then
+            saveInput()
+        end
     end)
-    refresh()
+    refreshSelectedName()
+
     local function centreContent()
-        local x = math.max(0, math.floor((parent.width - width) / 2))
-        local y = math.max(0, math.floor((parent.height - height) / 2))
-        for _, position in ipairs(positions) do
-            position.component:SetPos(x + position.x, y + position.y)
+        local offsetX = math.max(0, math.floor((parent.width - contentWidth) / 2))
+        local offsetY = math.max(0, math.floor((parent.height - contentHeight) / 2))
+        for _, position in ipairs(controlPositions) do
+            position.component:SetPos(offsetX + position.x, offsetY + position.y)
         end
     end
     centreContent()
     parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)
+
+    -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()
-        if names.getContext() ~= context then refresh() end
+        if names.getContext() ~= displayedCharacterContext then
+            refreshSelectedName()
+        end
     end
 end
 

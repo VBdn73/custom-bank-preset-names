@@ -77,6 +77,26 @@ restoration, and editor interactions. They do not replace in-client testing.
 Bindings exist for all 18 slots, but the previous testing notes only confirm slot
 7 in-client; the remaining mappings still need verification.
 
+### Code layout
+
+Start with `main.lua` to follow the plugin's lifecycle:
+
+| File | Responsibility |
+| --- | --- |
+| `main.lua` | Opens editors, refreshes them and bank labels each logic tick, and restores labels on shutdown. |
+| `bank_bindings.lua` | Maps the 18 preset slots to their bank label component IDs. |
+| `bank_labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
+| `name_editor.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
+| `preset_names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
+| `text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
+| `plugin.json` | Declares the plugin's name, version, UI entry points, and contact address. |
+| `tests/run.lua` | Runs validation, storage, and bank-label regression checks, then the editor tests. |
+| `tests/name_editor.lua` | Mocks native controls to test editor layout and interactions. |
+
+Preset slots are **one-based** throughout storage and bank bindings. Only the
+native dropdown uses **zero-based** entry IDs; the editor converts between them.
+An empty saved name means “use the game's predefined name”, not a custom blank label.
+
 ### Interface bindings
 
 `bank_bindings.lua` defines the preset label mappings. They currently use interface
@@ -94,4 +114,3 @@ Report problems through this repository's issue tracker or contact
 [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com).
 Include reproduction steps and your client version, and avoid sharing personal
 information in public reports.
-
