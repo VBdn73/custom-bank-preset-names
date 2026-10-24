@@ -41,7 +41,9 @@ ui.ComponentType = { GROUP_BOX = 42 }
 id = { Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
     StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 } }
 local stored = { [18] = "Last preset" }
+local context = "101"
 local names = {
+    getContext = function() return context end,
     get = function(slot) return stored[slot] end,
     save = function(slot, value) stored[slot] = value; return true, "Name saved." end,
 }
@@ -49,7 +51,7 @@ local host = control("host")
 host.type, host.width, host.height = 42, 600, 400
 local parent = control("parent")
 parent.parent, parent.width, parent.height = host, 580, 360
-dofile("name_editor.lua").build(parent, names, { presetCount = 18, labels = { {} } })
+local refreshAccount = dofile("name_editor.lua").build(parent, names, { presetCount = 18, labels = { {} } })
 assert(parent.width == 580 and parent.height == 360)
 assert(host.width == 600 and host.height == 400)
 local content = controls[3] -- First label, positioned directly on the host layer.
@@ -69,7 +71,7 @@ for _, item in ipairs(controls) do
     if item.label == "Save" then save = item end
     if item.label == "Reset" then reset = item end
     assert(item.label ~= "<" and item.label ~= ">")
-    if item.content == "Stored on this device; shared by characters." then
+    if item.content == "Stored on this device, per character name." then
         assert(item.font == 2 and item.width == 320 and item.height == 18)
     end
 end
@@ -89,6 +91,15 @@ selector.hooks[3](selector, 0, ui.SelectionChangeEvent.SELECTED)
 input.content = "First preset"
 save.hooks[1]()
 assert(stored[1] == "First preset")
+input.content = "Unsaved previous character"
+context = "202"
+stored = { [1] = "Other character" }
+save.hooks[1]()
+assert(stored[1] == "Other character" and input.content == "Other character")
+context = "101"
+stored = { [1] = "First preset" }
+refreshAccount()
+assert(input.content == "First preset")
 -- Reopening after choosing a different slot always starts at preset 1,
 -- showing its saved name without overwriting any stored settings.
 selector.hooks[3](selector, 17, ui.SelectionChangeEvent.SELECTED)

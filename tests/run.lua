@@ -10,6 +10,17 @@ for _, invalid in ipairs({ "\128", "\192\128", "\226\130", "\237\160\128",
     assert(validation.length(invalid) == nil)
 end
 local data = {}
+local displayName = "First Character"
+local entityValid = true
+local entityMissing = false
+local available = true
+Player = {
+    IsAvailable = function() return available end,
+    GetEntity = function()
+        if entityMissing then return nil end
+        return { isValid = entityValid, displayName = displayName }
+    end,
+}
 PersistentDB = {
     GetString = function(_, key) return data[key] end,
     SetString = function(_, key, value) data[key] = value; return true end,
@@ -36,6 +47,43 @@ end
 assert(names.save(3, "Verified by read-back"))
 assert(dofile("preset_names.lua").get(3) == "Verified by read-back")
 PersistentDB.SetString = realSet
+
+-- Character isolation, reload persistence, logout, and unavailable names/entities.
+data["presetName.v1.1"] = "Legacy shared name"
+displayName = "Second Character"
+assert(names.get(1) == nil)
+assert(names.save(1, "Second character"))
+assert(dofile("preset_names.lua").get(1) == "Second character")
+displayName = "  FIRST CHARACTER  "
+assert(names.get(1) == "Bossing")
+available = false
+assert(names.get(1) == nil)
+assert(not names.save(1, "Logged out"))
+available = true
+displayName = nil
+assert(names.get(1) == nil)
+assert(not names.save(1, "No name"))
+displayName = ""
+assert(names.get(1) == nil)
+assert(not names.save(1, "Empty name"))
+displayName = "First Character"
+entityValid = false
+assert(names.get(1) == nil)
+assert(not names.save(1, "Invalid entity"))
+entityValid = true
+entityMissing = true
+assert(names.get(1) == nil)
+assert(not names.save(1, "Missing entity"))
+entityMissing = false
+displayName = "Renamed Character"
+assert(names.get(1) == nil)
+displayName = "Second Character"
+assert(names.get(1) == "Second character")
+assert(names.save(1, ""))
+assert(names.get(1) == nil)
+displayName = "First Character"
+assert(names.get(1) == "Bossing")
+assert(data["presetName.v1.1"] == "Legacy shared name")
 
 local label = { type = 1, content = "Combat" }
 ui = {

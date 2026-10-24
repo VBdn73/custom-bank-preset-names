@@ -51,8 +51,18 @@ must be rechecked after client UI changes.
 
 Names are limited to 40 Unicode characters; markup delimiters and control
 characters are rejected. Settings are saved immediately through `PersistentDB`.
-They are shared between characters on this device, not synced to other devices,
-and separate between beta and live clients. No extra permissions are needed.
+They are isolated per RuneScape character on this device, not synced to other
+devices, and separate between beta and live clients. The character's display name
+(ignoring case and surrounding spaces) separates local settings. No extra
+permissions are required and no data is sent off-device. After a character rename,
+names must be re-entered or manually migrated. A reused display name on this device
+can inherit settings previously saved under that name.
+
+Old device-wide names are retained but not automatically imported: their original
+character cannot be determined. Re-enter those names for each desired character.
+Settings from the previous tracking-ID-based version are also retained but are
+not automatically imported. Saving is blocked until the logged-in character's
+display name is available.
 
 Before submission, replace the placeholder `contactEmailAddress` in
 `plugin.json`, personally review the code, test in the beta client, and follow

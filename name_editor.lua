@@ -53,7 +53,7 @@ function editor.build(parent, names, bindings)
     input.emptyText = "Use predefined name"
     local status = text(parent, "", 8, 198, 320)
     track(status, 8, 198)
-    local note = text(parent, "Stored on this device; shared by characters.", 8, 226, 320)
+    local note = text(parent, "Stored on this device, per character name.", 8, 226, 320)
     track(note, 8, 226)
     note.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
     note:SetSize(320, 18)
@@ -61,11 +61,18 @@ function editor.build(parent, names, bindings)
         track(text(parent, "Bank bindings missing: see README.md.", 8, 250, 320), 8, 250)
     end
 
+    local context = names.getContext()
     local function refresh()
+        context = names.getContext()
         input.content = names.get(slot) or ""
-        status.content = ""
+        status.content = context and "" or "Log in and wait for your character name."
     end
     local function saveValue(value)
+        if names.getContext() ~= context then
+            refresh()
+            status.content = "Character changed. Enter the name again."
+            return false
+        end
         print(string.format("[Preset names] Save requested for preset %d (%d bytes).", slot, #value))
         local called, ok, message = pcall(names.save, slot, value)
         if not called then
@@ -106,6 +113,9 @@ function editor.build(parent, names, bindings)
     end
     centreContent()
     parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)
+    return function()
+        if names.getContext() ~= context then refresh() end
+    end
 end
 
 return editor
