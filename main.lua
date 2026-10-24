@@ -27,7 +27,3 @@ function PluginShutdown()
     Event.ContentLayerReady.Unsubscribe("presetNames.content")
     bank.restore(bindings.labels)
 end
-
-if #bindings.labels == 0 then
-    print("Custom bank preset names: bank label bindings are missing. See README.md.")
-end

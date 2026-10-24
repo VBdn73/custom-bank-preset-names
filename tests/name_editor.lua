@@ -12,12 +12,6 @@ local function control(kind)
         self.hooks[hook] = callback or reference
     end
     function item:Add(label, entryID) self.entries[entryID] = label end
-    function item:SetEntries(entries, selectedID)
-        self.entries = {}
-        for label, entryID in pairs(entries) do self.entries[entryID] = label end
-        self.selectedID = selectedID
-        return true
-    end
     function item:SetEntrySelected(entryID, selected, triggerEvents)
         assert(selected and not triggerEvents)
         self.selectedID = entryID
@@ -26,7 +20,6 @@ local function control(kind)
     return item
 end
 ui = {
-    Layer = { new = function() return control("layer") end },
     Text = { new = function() return control("text") end },
     Button = { new = function() return control("button") end },
     InputField = { new = function() return control("input") end },
@@ -37,7 +30,6 @@ ui = {
     InputFieldFilterMode = { NONE = 0 },
     InputFieldActionResult = { SUBMIT = 1 },
 }
-ui.ComponentType = { GROUP_BOX = 42 }
 id = { Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
     StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 } }
 local stored = { [18] = "Last preset" }

@@ -22,7 +22,7 @@ end
 function editor.build(parent, names, bindings)
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
-    local width, height = 336, #bindings.labels == 0 and 282 or 254
+    local width, height = 336, 254
     local positions = {}
     local function track(component, x, y)
         positions[#positions + 1] = { component = component, x = x, y = y }
@@ -57,9 +57,6 @@ function editor.build(parent, names, bindings)
     track(note, 8, 226)
     note.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
     note:SetSize(320, 18)
-    if #bindings.labels == 0 then
-        track(text(parent, "Bank bindings missing: see README.md.", 8, 250, 320), 8, 250)
-    end
 
     local context = names.getContext()
     local function refresh()
@@ -73,14 +70,12 @@ function editor.build(parent, names, bindings)
             status.content = "Character changed. Enter the name again."
             return false
         end
-        print(string.format("[Preset names] Save requested for preset %d (%d bytes).", slot, #value))
         local called, ok, message = pcall(names.save, slot, value)
         if not called then
             print("[Preset names] Save error: " .. tostring(ok))
             status.content = "Save error. See the client console."
             return false
         end
-        print(string.format("[Preset names] Preset %d: %s", slot, message))
         status.content = message
         return ok
     end

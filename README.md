@@ -1,81 +1,97 @@
 # Custom bank preset names
 
-A Lua 5.4 RuneScape client plugin for local, display-only preset names. It does
-not change server-side preset names, load presets, or automate bank actions.
+Give your RuneScape bank presets custom names that are easier to recognise.
+This Lua 5.4 client plugin replaces the displayed preset labels locally, without
+changing the game's server-side preset names or how presets work.
 
-## Bank preset support
+## Features
 
-All 18 preset slots now have name-label bindings in `bank_bindings.lua`.
-The mappings use interface 517, static component 266, category 0, and name-label
-dynamic ID `(slot - 1) * 3 + 1`, following the captured row layout for slots 6–9.
-Slot 7 has been confirmed working in-client; verify the remaining slots on your
-client, particularly the first and last slots. Missing components are skipped;
-the plugin does not unlock unavailable presets or create missing game rows.
-Custom names and reset-to-predefined behavior work independently for each slot.
-Previously saved names are preserved.
+- Custom names for all 18 mapped bank preset slots.
+- A scrollable preset selector, with **Save** and **Reset** controls.
+- Names up to 40 Unicode characters long.
+- Local settings kept separately for each character name.
+- Restore the game's predefined name by resetting a slot or saving a blank name.
+- No extra permissions, external dependencies, or network requests.
 
-### Interface discovery tool
+The plugin only changes displayed text. It does not load presets, automate bank
+actions, or unlock unavailable preset slots. Disabling it restores the original
+labels where the bank components are still available.
 
-Development-only interface scanning has been moved out of this plugin to
-`../../developer-tools/bank-interface-diagnostics/`. That folder contains the
-scanner, configuration, standalone development plugin entry point, tests, and
-reuse instructions. This plugin no longer scans interface IDs or prints
-`[Bank IDs]` diagnostic output. The tool is not a runtime dependency.
+## Availability
 
-In the beta client console, use `pan Component` to export the component name/ID
-index to your clipboard. Find the bank preset name labels and verify their slot
-mapping in the client. Add one entry per label in `bank_bindings.lua`, specifying
-`slot` (1-based), `interfaceID`, and `staticID`. Dynamic labels also require
-`categoryID` and `dynamicID`. Do not bind generic labels reused for a selected
-preset unless you implement selection-aware slot resolution first. Adjust
-`presetCount` if your client exposes a different number of presets.
+This repository contains the development version. Live-client distribution
+requires Jagex moderation approval; this repository does not imply approval.
+For local testing, use the RuneScape plugin development beta as described below.
 
-Bindings must resolve to unrestricted `ui.ComponentType.LABEL` components.
-The plugin reacquires labels on each client logic tick, retains their predefined
-text, and restores it when reset or disabled. If the game updates a label while
-overridden, its latest text becomes the fallback. Dynamic component mappings
-must be rechecked after client UI changes.
+## How to use
 
-## Install and use
+1. Enable the plugin and open its ribbon entry or its Settings icon in the Plugin Hub.
+2. Choose a preset number from the dropdown.
+3. Enter a name and click **Save**, or press Enter.
+4. Click **Reset**, or save a blank name, to use the game's predefined name again.
 
-1. Join the RuneScape plugin development beta and import your save as described
-   in https://developer.runescape.com/rs/getting-started.html.
-2. Keep this folder under `RuneScape-BETA/dev_plugins/` (already correctly placed).
-3. Open the console with **Alt + `**, run `prf`, then
-   `pon custom-bank-preset-names`.
-4. Open the plugin's ribbon entry or its Settings icon in the Plugin Hub.
-5. Choose a preset number from the scrollable dropdown, type a name, and press **Save** or Enter. Changing
-   preset numbers discards unsaved edits. **Reset**, or saving a blank name,
-   returns to the game's predefined name.
-6. After editing Lua files, run `prl custom-bank-preset-names`.
+Changing the selected preset discards unsaved edits. You must be logged in with
+your character's display name available before saving. Markup delimiters (`<` and
+`>`) and control characters are not allowed in names.
 
-Names are limited to 40 Unicode characters; markup delimiters and control
-characters are rejected. Settings are saved immediately through `PersistentDB`.
-They are isolated per RuneScape character on this device, not synced to other
-devices, and separate between beta and live clients. The character's display name
-(ignoring case and surrounding spaces) separates local settings. No extra
-permissions are required and no data is sent off-device. After a character rename,
-names must be re-entered or manually migrated. A reused display name on this device
-can inherit settings previously saved under that name.
+## Storage and privacy
 
-Old device-wide names are retained but not automatically imported: their original
-character cannot be determined. Re-enter those names for each desired character.
-Settings from the previous tracking-ID-based version are also retained but are
-not automatically imported. Saving is blocked until the logged-in character's
-display name is available.
+Custom names are saved on your device using the client's `PersistentDB` API.
+The plugin uses the logged-in character's display name to separate settings,
+ignoring case and surrounding spaces. It sends no data off-device.
 
-Before submission, replace the placeholder `contactEmailAddress` in
-`plugin.json`, personally review the code, test in the beta client, and follow
-Jagex's moderation/submission process. Live use requires moderation approval.
+- Settings are not synced between devices and are separate between beta and live clients.
+- After a character rename, names must be re-entered or manually migrated.
+- A reused character display name on the same device can inherit its previous settings.
+- Older device-wide and tracking-ID-based settings are not automatically imported.
 
-## Verification
+## Local development
 
-Run `lua tests/run.lua` with Lua 5.4 installed for mocked regression tests.
-In-client testing is still required: save/reset names, reopen the bank, change a
-predefined name while overridden, reload/disable the plugin, restart the client,
-and verify each mapped slot (including dynamic labels and locked presets).
+Follow Jagex's [getting-started guide](https://developer.runescape.com/rs/getting-started.html)
+to set up the plugin development beta. Place this repository in
+`RuneScape-BETA/dev_plugins/custom-bank-preset-names/`.
 
-API references: [structure](https://developer.runescape.com/rs/structure.html),
-[UI](https://developer.runescape.com/rs/ui/interface.html),
-[events](https://developer.runescape.com/rs/core/events.html), and
-[persistence](https://developer.runescape.com/rs/core/persistentdb.html).
+Open the client console with **Alt + `**, then run:
+
+```text
+prf
+pon custom-bank-preset-names
+```
+
+After changing Lua files, reload the plugin:
+
+```text
+prl custom-bank-preset-names
+```
+
+### Tests
+
+Run the mocked regression suite from the repository root with Lua 5.4:
+
+```sh
+lua tests/run.lua
+```
+
+These tests cover text validation, persistence, character isolation, label
+restoration, and editor interactions. They do not replace in-client testing.
+Bindings exist for all 18 slots, but the previous testing notes only confirm slot
+7 in-client; the remaining mappings still need verification.
+
+### Interface bindings
+
+`bank_bindings.lua` defines the preset label mappings. They currently use interface
+517, static component 266, category 0, and dynamic ID `(slot - 1) * 3 + 1`.
+Missing or restricted components are skipped. Game UI updates may require these
+mappings to be updated.
+
+Use `pan Component` in the beta console to export the component index when
+investigating UI changes. Bind only unrestricted label components corresponding
+to individual preset slots, not a shared selected-preset label.
+
+## Feedback
+
+Report problems through this repository's issue tracker or contact
+[vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com).
+Include reproduction steps and your client version, and avoid sharing personal
+information in public reports.
+
