@@ -1,6 +1,7 @@
 local nameEditor = require("name_editor")
 local constants = require("constants")
 local layout = require("editor_layout")
+local theme = require("editor_theme")
 local popup = {}
 local layer, refresh, centre
 local width, height = layout.popupWidth, layout.popupHeight
@@ -53,29 +54,34 @@ function popup.open(slot, names, bindings)
     end
     centre()
     layer.clickthrough = false
-    local gold = Vector4.new(0.58, 0.48, 0.28, 1)
-    rectangle(layer, 0, 0, width, height, Vector4.new(0.14, 0.13, 0.11, 1), true)
-    rectangle(layer, 1, 1, width - 2, height - 2, gold, false)
-    rectangle(layer, 4, 4, width - 8, 30, Vector4.new(0.20, 0.18, 0.14, 1), true)
-    rectangle(layer, 4, 34, width - 8, 1, gold, true)
+    local border = theme.colour(theme.border)
+    local inset = layout.popupBorderInset
+    local titleInset = layout.popupTitleBarInset
+    rectangle(layer, 0, 0, width, height, theme.colour(theme.background), true)
+    rectangle(layer, inset, inset, width - inset * 2, height - inset * 2, border, false)
+    rectangle(layer, titleInset, titleInset, width - titleInset * 2,
+        layout.popupTitleBarHeight, theme.colour(theme.titleBar), true)
+    rectangle(layer, titleInset, titleInset + layout.popupTitleBarHeight,
+        width - titleInset * 2, inset, border, true)
 
     local title = ui.Text.new(layer)
-    title:SetPos(12, 7)
-    title:SetSize(width - 52, 26)
+    local closeX = width - layout.popupPadding - layout.popupCloseSize
+    title:SetPos(layout.popupTitleX, layout.popupTitleY)
+    title:SetSize(closeX - layout.popupTitleX - layout.popupPadding, layout.popupTitleHeight)
     title.font = id.Font.MUSEO_SANS_15PT_REGULAR
     title.content = constants.editorTitle
-    title.colour = Vector4.new(0.88, 0.72, 0.43, 1)
+    title.colour = theme.colour(theme.titleText)
     title.clickthrough = true
     local content = ui.Layer.new(layer)
     content:SetPos(0, layout.popupHeaderHeight)
     content:SetSize(width, layout.bodyHeight)
     refresh = nameEditor.build(content, names, bindings, slot, { hideTitle = true })
     local close = ui.Button.new(layer)
-    close:SetPos(width - 30, 7)
-    close:SetSize(22, 22)
+    close:SetPos(closeX, layout.popupTitleY)
+    close:SetSize(layout.popupCloseSize, layout.popupCloseSize)
     close.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
     close.label = "×"
-    close.text.colour = Vector4.new(0.88, 0.72, 0.43, 1)
+    close.text.colour = theme.colour(theme.titleText)
     close:Subscribe(ui.Hook.ONBUTTONPRESSED, popup.close)
 end
 

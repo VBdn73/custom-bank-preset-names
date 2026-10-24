@@ -1,20 +1,19 @@
 local constants = require("constants")
 local layout = require("editor_layout")
+local theme = require("editor_theme")
 local editor = {}
 
-local function createText(parent, content, x, y, width, font)
+local function createText(parent, content, font)
     local label = ui.Text.new(parent)
-    label:SetPos(x, y)
-    label:SetSize(width, 28)
+    label:SetSize(layout.controlWidth, layout.textHeight)
     label.font = font or id.Font.MUSEO_SANS_15PT_REGULAR
     label.content = content
     return label
 end
 
-local function createButton(parent, label, x, y, width, callback)
+local function createButton(parent, label, callback)
     local control = ui.Button.new(parent)
-    control:SetPos(x, y)
-    control:SetSize(width, 30)
+    control:SetSize(layout.buttonWidth, layout.buttonHeight)
     control.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
     control.label = label
     control:Subscribe(ui.Hook.ONBUTTONPRESSED, callback)
@@ -42,15 +41,14 @@ function editor.build(parent, names, bindings, initialSlot, options)
         selectedSlot = 1
     end
     if not options.hideTitle then
-        trackPosition(createText(parent, constants.editorTitle, 8, 8, 320), 8, 8)
+        trackPosition(createText(parent, constants.editorTitle), layout.padding, layout.rows.title)
     end
     local presetSelector = ui.List.new(parent)
-    trackPosition(presetSelector, 8, 48)
-    presetSelector:SetPos(8, 48)
-    presetSelector:SetSize(320, 32)
+    trackPosition(presetSelector, layout.padding, layout.rows.selector)
+    presetSelector:SetSize(layout.controlWidth, layout.fieldHeight)
     presetSelector.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
-    presetSelector.dropdownMaxVisibleEntries = 8
-    presetSelector.entryHeight = 28
+    presetSelector.dropdownMaxVisibleEntries = layout.dropdownVisibleEntries
+    presetSelector.entryHeight = layout.textHeight
     for preset = 1, bindings.presetCount do
         -- Insert in display order with zero-based IDs, matching the native list.
         -- Storage and bank bindings remain one-based preset numbers.
@@ -58,36 +56,33 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     presetSelector:SetEntrySelected(selectedSlot - 1, true, false)
     local smallFont = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
-    trackPosition(createText(parent, "Custom name (blank = predefined):", 8, 90, 320, smallFont), 8, 90)
+    trackPosition(createText(parent, "Custom name (blank = predefined):", smallFont),
+        layout.padding, layout.rows.nameLabel)
 
     local nameInput = ui.InputField.new(parent)
-    trackPosition(nameInput, 8, 122)
-    nameInput:SetPos(8, 122)
-    nameInput:SetSize(320, 32)
+    trackPosition(nameInput, layout.padding, layout.rows.input)
+    nameInput:SetSize(layout.controlWidth, layout.fieldHeight)
     nameInput.stylesheetID = id.StyleSheet.INPUT_DEFAULT
     nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE,
         constants.maximumNameLength)
     nameInput.emptyText = "Use predefined name"
 
-    local statusLabel = createText(parent, "", 8, 198, 320, smallFont)
-    trackPosition(statusLabel, 8, 198)
+    local statusLabel = createText(parent, "", smallFont)
+    trackPosition(statusLabel, layout.padding, layout.rows.status)
     local function setStatus(message, succeeded)
         statusLabel.content = message
-        statusLabel.colour = succeeded and Vector4.new(0.35, 0.85, 0.35, 1)
-            or Vector4.new(1, 0.35, 0.35, 1)
+        statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
-    local storageNote = createText(parent, "Stored on this device, per character name.", 8, 226, 320)
-    trackPosition(storageNote, 8, 226)
-    storageNote.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
-    storageNote:SetSize(320, 18)
+    local storageNote = createText(parent, "Stored on this device, per character name.", smallFont)
+    trackPosition(storageNote, layout.padding, layout.rows.storageNote)
+    storageNote:SetSize(layout.controlWidth, layout.noteHeight)
 
     -- Explain the display-only scope where players edit names, not just in the README.
     for index, text in ipairs({ "Changes displayed names only.", "Does not load presets or unlock slots." }) do
-        local y = 246 + (index - 1) * 20
-        local note = createText(parent, text, 8, y, 320)
-        trackPosition(note, 8, y)
-        note.font = storageNote.font
-        note:SetSize(320, 18)
+        local y = layout.rows.scopeNotes + (index - 1) * layout.noteSpacing
+        local note = createText(parent, text, smallFont)
+        trackPosition(note, layout.padding, y)
+        note:SetSize(layout.controlWidth, layout.noteHeight)
     end
 
     local displayedCharacterContext = names.getContext()
@@ -130,13 +125,13 @@ function editor.build(parent, names, bindings, initialSlot, options)
             refreshSelectedName()
         end
     end)
-    trackPosition(createButton(parent, "Save", 8, 166, 150, saveInput), 8, 166)
-    trackPosition(createButton(parent, "Reset", 178, 166, 150, function()
+    trackPosition(createButton(parent, "Save", saveInput), layout.padding, layout.rows.buttons)
+    trackPosition(createButton(parent, "Reset", function()
         local saveSucceeded = saveValue("")
         if saveSucceeded then
             nameInput.content = ""
         end
-    end), 178, 166)
+    end), layout.resetX, layout.rows.buttons)
     nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
         if reason == ui.InputFieldActionResult.SUBMIT then
             saveInput()
