@@ -53,9 +53,9 @@ local function createFixture()
     f.host.width, f.host.height = 600, 400
     f.parent = createControl("parent", f.host)
     f.parent.width, f.parent.height = 580, 360
-    function f:open()
+    function f:open(initialSlot, options)
         local firstNewControl = #self.controls + 1
-        self.refresh = dofile("name_editor.lua").build(self.parent, self.names, { presetCount = 18 })
+        self.refresh = dofile("name_editor.lua").build(self.parent, self.names, { presetCount = 18 }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" then self.selector = control
@@ -85,6 +85,40 @@ test.case("Editor starts at preset 1 with all 18 zero-based dropdown entries", f
     test.equal(f.input.content, "")
     test.equal(f.input.limit, 40)
     test.equal(f.saveCalls, 0, "Opening must not save")
+end)
+
+test.case("Direct editing starts at the clicked preset and saves only that slot", function()
+    local f = createFixture()
+    f:open(18)
+    test.equal(f.selector.selectedID, 17)
+    test.equal(f.input.content, "Last preset")
+    test.equal(f.saveCalls, 0)
+    f.input.content = "Direct edit"
+    f:clickSave()
+    test.equal(f.stored[18], "Direct edit")
+    test.equal(f.stored[1], nil)
+end)
+
+test.case("Invalid direct-edit slots fall back to preset 1", function()
+    local f = createFixture()
+    for _, slot in ipairs({ 0, 19, 1.5, "18" }) do
+        f:open(slot)
+        test.equal(f.selector.selectedID, 0)
+    end
+end)
+
+test.case("Popup editor omits its duplicate title and fits beneath window chrome", function()
+    local f = createFixture()
+    f.parent.width, f.parent.height = 352, 262
+    local first = #f.controls + 1
+    f:open(18, { hideTitle = true })
+    for index = first, #f.controls do
+        local c = f.controls[index]
+        test.equal(c.content == "Custom bank preset names", false)
+        test.equal(c.y >= 0 and c.y + c.height <= 262, true, "Control fits popup content")
+    end
+    test.equal(f.selector.y, 16)
+    test.equal(f.input.content, "Last preset")
 end)
 
 test.case("Editor centres controls without resizing host layers and clamps small layouts", function()

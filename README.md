@@ -8,6 +8,7 @@ changing the game's server-side preset names or how presets work.
 
 - Custom names for all 18 mapped bank preset slots.
 - A scrollable preset selector, with **Save** and **Reset** controls.
+- Right-click a bank preset name and choose **Edit name** to open a popup for that slot.
 - Names up to 40 Unicode characters long.
 - Local settings kept separately for each character name.
 - Restore the game's predefined name by resetting a slot or saving a blank name.
@@ -29,6 +30,12 @@ For local testing, use the RuneScape plugin development beta as described below.
 2. Choose a preset number from the dropdown.
 3. Enter a name and click **Save**, or press Enter.
 4. Click **Reset**, or save a blank name, to use the game's predefined name again.
+
+Alternatively, right-click the preset's name in the bank and choose **Edit name**.
+The popup starts on the clicked slot, regardless of which preset is selected in
+the bank. The popup stays centered within the bank; click **×** in the top-right
+corner to dismiss it. The normal bank menu actions and default
+left-click action are unchanged.
 
 Changing the selected preset discards unsaved edits. You must be logged in with
 your character's display name available before saving. Markup delimiters (`<` and
@@ -78,14 +85,16 @@ Start with `main.lua` to follow the plugin's lifecycle:
 
 | File | Responsibility |
 | --- | --- |
-| `main.lua` | Opens editors, refreshes them and bank labels each logic tick, and restores labels on shutdown. |
+| `main.lua` | Opens editors, refreshes them each logic tick, reapplies bank labels before drawing, and restores labels on shutdown. |
 | `bank_bindings.lua` | Maps the 18 preset slots to their bank label component IDs. |
 | `bank_labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
 | `name_editor.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
+| `preset_menu.lua` | Adds a low-priority Edit name action using component identity or the hovered name label when native actions belong to a row hit target. |
+| `editor_popup.lua` | Hosts the editor in a bank popup with the clicked slot preselected. |
 | `preset_names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
 | `text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
 | `plugin.json` | Declares the plugin's name, version, UI entry points, and contact address. |
-| `tests/run.lua` | Runs all four regression suites and reports totals with a failing exit status when needed. |
+| `tests/run.lua` | Runs the regression suites and reports totals with a failing exit status when needed. |
 | `tests/name_editor.lua` | Mocks native controls to test editor layout and interactions. |
 
 Preset slots are **one-based** throughout storage and bank bindings. Only the

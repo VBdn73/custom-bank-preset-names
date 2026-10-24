@@ -3,7 +3,7 @@
 utf8 = nil
 local test = require("tests.test_helper")
 
-for _, suite in ipairs({ "text_validation", "preset_names", "bank_labels", "name_editor" }) do
+for _, suite in ipairs({ "text_validation", "preset_names", "bank_labels", "name_editor", "preset_menu", "editor_popup", }) do
     print("\n" .. suite)
     dofile("tests/" .. suite .. ".lua")
 end

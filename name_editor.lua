@@ -19,19 +19,29 @@ local function createButton(parent, label, x, y, width, callback)
     return control
 end
 
-function editor.build(parent, names, bindings)
+function editor.build(parent, names, bindings, initialSlot, options)
+    options = options or {}
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
     local contentWidth, contentHeight = 336, 294
+    if options.hideTitle then contentHeight = contentHeight - 32 end
     local controlPositions = {}
     local function trackPosition(component, x, y)
-        controlPositions[#controlPositions + 1] = { component = component, x = x, y = y }
+        controlPositions[#controlPositions + 1] = {
+            component = component, x = x, y = y - (options.hideTitle and 32 or 0),
+        }
         return component
     end
 
     -- Build the controls in display order, using offsets within the editor.
-    local selectedSlot = 1
-    trackPosition(createText(parent, "Custom bank preset names", 8, 8, 320), 8, 8)
+    local selectedSlot = initialSlot or 1
+    if type(selectedSlot) ~= "number" or selectedSlot % 1 ~= 0
+        or selectedSlot < 1 or selectedSlot > bindings.presetCount then
+        selectedSlot = 1
+    end
+    if not options.hideTitle then
+        trackPosition(createText(parent, "Custom bank preset names", 8, 8, 320), 8, 8)
+    end
     local presetSelector = ui.List.new(parent)
     trackPosition(presetSelector, 8, 48)
     presetSelector:SetPos(8, 48)
@@ -44,7 +54,7 @@ function editor.build(parent, names, bindings)
         -- Storage and bank bindings remain one-based preset numbers.
         presetSelector:Add("Preset " .. preset, preset - 1)
     end
-    presetSelector:SetEntrySelected(0, true, false)
+    presetSelector:SetEntrySelected(selectedSlot - 1, true, false)
     trackPosition(createText(parent, "Custom name (blank = predefined):", 8, 90, 320), 8, 90)
 
     local nameInput = ui.InputField.new(parent)
