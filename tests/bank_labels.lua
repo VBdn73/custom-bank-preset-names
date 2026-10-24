@@ -1,0 +1,160 @@
+local test = require("tests.test_helper")
+
+local function createFixture()
+    local f = {
+        label = { type = 1, content = "Combat" }, customName = "Bossing",
+        bindings = { { slot = 1, interfaceID = 517, staticID = 266 } },
+    }
+    ui = {
+        ComponentType = { LABEL = 1 },
+        Interfaces = { GetComponent = function() return f.label end },
+    }
+    f.names = { get = function() return f.customName end }
+    f.bank = dofile("bank_labels.lua")
+    function f:update() self.bank.update(self.bindings, self.names) end
+    function f:restore() self.bank.restore(self.bindings) end
+    return f
+end
+
+test.case("Labels apply custom names and reset to predefined text", function()
+    local f = createFixture()
+    f:update()
+    test.equal(f.label.content, "Bossing")
+    f:update() -- Repeated updates must not mistake our own text for original text.
+    f.customName = nil
+    f:update()
+    test.equal(f.label.content, "Combat")
+end)
+
+test.case("Restoration uses the latest predefined text supplied by the game", function()
+    local f = createFixture()
+    f:update()
+    f.label.content = "New predefined"
+    f:update()
+    test.equal(f.label.content, "Bossing")
+    f:restore()
+    test.equal(f.label.content, "New predefined")
+end)
+
+test.case("Shutdown never overwrites a newer game-side text change", function()
+    local f = createFixture()
+    f:update()
+    f.label.content = "Changed just before shutdown"
+    f:restore()
+    test.equal(f.label.content, "Changed just before shutdown")
+end)
+
+test.case("A reopened bank captures its own original text", function()
+    local f = createFixture()
+    f:update()
+    f.label = nil
+    f:update()
+    f.label = { type = 1, content = "Reopened" }
+    f:update()
+    test.equal(f.label.content, "Bossing")
+    f:restore()
+    test.equal(f.label.content, "Reopened")
+end)
+
+test.case("Replacing a component without closing the bank discards its old state", function()
+    local f = createFixture()
+    f:update()
+    f.label = { type = 1, content = "Replacement" }
+    f:update()
+    f:restore()
+    test.equal(f.label.content, "Replacement")
+end)
+
+for _, componentKind in ipairs({ "missing", "restricted", "not a label" }) do
+    test.case("Updates skip components that are " .. componentKind, function()
+        local f = createFixture()
+        if componentKind == "missing" then
+            f.label = nil
+        elseif componentKind == "restricted" then
+            f.label.isRestricted = true
+        else
+            f.label.type = 99
+        end
+        f:update()
+        f:restore()
+        if f.label then test.equal(f.label.content, "Combat") end
+    end)
+end
+
+test.case("Shutdown skips missing, replaced, or non-label components", function()
+    for _, replacement in ipairs({ false, { type = 1, content = "Replacement" },
+        { type = 99, content = "Other control" } }) do
+        local f = createFixture()
+        f:update()
+        f.label = replacement or nil
+        f:restore()
+        if replacement then
+            test.equal(f.label.content, replacement.type == 1 and "Replacement" or "Other control")
+        end
+    end
+end)
+
+test.case("Restoration clears state and is safe to call twice", function()
+    local f = createFixture()
+    f:update()
+    f:restore()
+    f.label.content = "Later game text"
+    f:restore()
+    test.equal(f.label.content, "Later game text")
+    f:update()
+    f:restore()
+    test.equal(f.label.content, "Later game text")
+end)
+
+test.case("Shutdown does not write to a tracked component whose type changed", function()
+    local f = createFixture()
+    f:update()
+    f.label.type = 99
+    f:restore()
+    test.equal(f.label.content, "Bossing", "Non-label component is left untouched")
+end)
+
+test.case("Static bindings use the two-ID component lookup", function()
+    local f = createFixture()
+    ui.Interfaces.GetComponent = function(_, ...)
+        test.equal(select("#", ...), 2, "Lookup argument count")
+        local interfaceID, staticID = ...
+        test.equal(interfaceID, 517)
+        test.equal(staticID, 266)
+        return f.label
+    end
+    f:update()
+end)
+
+test.case("All 18 dynamic bindings resolve, reset, and restore independently", function()
+    local f = createFixture()
+    local bindings = dofile("bank_bindings.lua")
+    test.equal(bindings.presetCount, 18)
+    test.equal(#bindings.labels, 18)
+    local labels, customNames = {}, {}
+    for slot, binding in ipairs(bindings.labels) do
+        test.equal(binding.slot, slot)
+        test.equal(binding.dynamicID, (slot - 1) * 3 + 1, "Name label offset")
+        labels[binding.dynamicID] = { type = 1, content = "Predefined " .. slot }
+        customNames[slot] = "Custom " .. slot
+    end
+    ui.Interfaces.GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
+        test.equal(interfaceID, 517)
+        test.equal(staticID, 266)
+        test.equal(categoryID, 0)
+        return labels[dynamicID]
+    end
+    local names = { get = function(slot) return customNames[slot] end }
+    f.bank.update(bindings.labels, names)
+    for slot, binding in ipairs(bindings.labels) do
+        test.equal(labels[binding.dynamicID].content, "Custom " .. slot)
+    end
+    customNames[18] = nil
+    f.bank.update(bindings.labels, names)
+    test.equal(labels[52].content, "Predefined 18")
+    test.equal(labels[49].content, "Custom 17")
+    f.bank.restore(bindings.labels)
+    for slot, binding in ipairs(bindings.labels) do
+        test.equal(labels[binding.dynamicID].content, "Predefined " .. slot)
+    end
+end)

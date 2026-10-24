@@ -72,11 +72,6 @@ Run the mocked regression suite from the repository root with Lua 5.4:
 lua tests/run.lua
 ```
 
-These tests cover text validation, persistence, character isolation, label
-restoration, and editor interactions. They do not replace in-client testing.
-Bindings exist for all 18 slots, but the previous testing notes only confirm slot
-7 in-client; the remaining mappings still need verification.
-
 ### Code layout
 
 Start with `main.lua` to follow the plugin's lifecycle:
@@ -90,7 +85,7 @@ Start with `main.lua` to follow the plugin's lifecycle:
 | `preset_names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
 | `text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
 | `plugin.json` | Declares the plugin's name, version, UI entry points, and contact address. |
-| `tests/run.lua` | Runs validation, storage, and bank-label regression checks, then the editor tests. |
+| `tests/run.lua` | Runs all four regression suites and reports totals with a failing exit status when needed. |
 | `tests/name_editor.lua` | Mocks native controls to test editor layout and interactions. |
 
 Preset slots are **one-based** throughout storage and bank bindings. Only the
