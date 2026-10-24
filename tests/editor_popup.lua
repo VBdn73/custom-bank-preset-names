@@ -7,7 +7,7 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     local root = { interfaceID = 100, width = 900, height = 890 }
     local bank = { interfaceID = 517, parent = root, width = 500, height = 500 }
     local scroll = { interfaceID = 517, parent = bank }
-    local source = { parent = scroll }
+    local source = { parent = scroll, visibleGlobal = true }
     local function control(parent)
         local c = { parent = parent, text = {}, hooks = {}, dragConfig = {} }
         function c:SetSize(w, h) self.width, self.height = w, h end
@@ -151,7 +151,27 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     built[3].parent.disposed = true
     popup.update()
     test.equal(built[3].parent.parent.destroyed, true)
+    for _, unavailable in ipairs({ "hidden", "restricted", "replaced", "missing" }) do
+        source = { parent = scroll, visibleGlobal = true }
+        popup.open(1, {}, bindings)
+        local opened = built[#built].parent.parent
+        if unavailable == "hidden" then source.visibleGlobal = false
+        elseif unavailable == "restricted" then source.isRestricted = true
+        elseif unavailable == "replaced" then source = { parent = scroll, visibleGlobal = true }
+        else source = nil end
+        popup.update()
+        test.equal(opened.destroyed, true, "Close when source becomes " .. unavailable)
+    end
+    local buildCount = #built
+    for _, unavailableSource in ipairs({
+        { parent = scroll, visibleGlobal = false },
+        { parent = scroll, visibleGlobal = true, isRestricted = true },
+    }) do
+        source = unavailableSource
+        popup.open(1, {}, bindings)
+        test.equal(#built, buildCount, "Unavailable labels cannot open a popup")
+    end
     source = nil
     popup.open(1, {}, bindings)
-    test.equal(#built, 3)
+    test.equal(#built, buildCount)
 end)

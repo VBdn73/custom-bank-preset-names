@@ -61,6 +61,22 @@ ignoring case and surrounding spaces. It sends no data off-device.
 - A reused character display name on the same device can inherit its previous settings.
 - Older device-wide and tracking-ID-based settings are not automatically imported.
 
+**Data protection: Case 1 (local only).** The data used is your character's display
+name and the custom preset names you enter. The display name forms part of the
+local storage keys; custom names are stored as their values. Nothing is transmitted
+to the developer or external services.
+
+Saved settings have no automatic expiry. Resetting a slot overwrites its custom
+name with an empty string, but does not remove the character name from the storage
+key. Disabling the plugin does not erase its stored settings. The plugin has no
+full-data deletion control, including for previous character names and legacy keys;
+do not assume uninstalling clears the client's database. The developer cannot
+access or erase this local database remotely.
+
+## Permissions
+
+This plugin requests no additional permissions.
+
 ## Local development
 
 Follow Jagex's [getting-started guide](https://developer.runescape.com/rs/getting-started.html)
@@ -111,6 +127,7 @@ Start with `main.lua` to follow the plugin's lifecycle:
 | `editor/popup.lua` | Hosts the editor in a bank popup with the clicked slot preselected. |
 | `editor/layout.lua` | Defines control positions and dimensions, including derived popup sizes. |
 | `editor/theme.lua` | Defines named UI colours and creates native colour values on demand. |
+| `editor/icon.lua` | Builds native sprite controls and updates their hover/pressed artwork. |
 | `presets/names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
 | `presets/text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
 | `plugin.json` | Declares the plugin's name, version, UI entry points, and contact address. |
@@ -144,3 +161,7 @@ Report problems through this repository's issue tracker or contact
 [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com).
 Include reproduction steps and your client version, and avoid sharing personal
 information in public reports.
+
+## EULA
+
+This Plugin uses software licensed by Jagex to the developer under the terms of the Jagex End User Licence Agreement (EULA) found at https://legal.jagex.com/docs/terms/eula (and all terms incorporated into it by reference). The development and any use of the Plugin is at all times subject to the Jagex EULA.

@@ -40,7 +40,7 @@ function popup.open(slot, names, bindings)
     if not binding then return end
     local source = ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
         binding.categoryID, binding.dynamicID)
-    if not source or source.isRestricted then return end
+    if not source or source.isRestricted or not source.visibleGlobal then return end
     -- Cross interface boundaries: the bank's root is itself a constrained
     -- popover. Hosting there clips the editor and confines its drag region.
     local parent = source.parent
@@ -51,8 +51,10 @@ function popup.open(slot, names, bindings)
 
     popup.close()
     bankIsOpen = function()
-        return ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
-            binding.categoryID, binding.dynamicID) == source
+        local current = ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
+            binding.categoryID, binding.dynamicID)
+        -- The outer host can survive a bank close or a change in availability.
+        return current == source and not current.isRestricted and current.visibleGlobal
     end
     height = layout.compactPopupHeight
     layer = ui.Layer.new(parent)

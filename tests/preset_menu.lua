@@ -11,7 +11,7 @@ local function entry(slot)
     local binding = bindings.labels[slot]
     return { componentData = { component = {
         interfaceID = binding.interfaceID, staticID = binding.staticID,
-        categoryID = binding.categoryID, dynamicID = binding.dynamicID,
+        categoryID = binding.categoryID, dynamicID = binding.dynamicID, visibleGlobal = true,
     } } }
 end
 
@@ -114,6 +114,23 @@ test.case("Hidden or restricted hovered labels and non-bank menus do not get edi
     end
     hoveredLabels[1] = { visibleGlobal = true, isMouseOver = true }
     local m = fixture({ { componentData = { component = { interfaceID = 1 } } } })
+    menu.add(m, bindings.labels, function() end)
+    test.equal(m.added, 0)
+    hoveredLabels = {}
+end)
+
+test.case("Hidden direct labels and restricted row targets do not get edit actions", function()
+    local hidden = entry(1)
+    hidden.componentData.component.visibleGlobal = false
+    local m = fixture({ hidden })
+    menu.add(m, bindings.labels, function() end)
+    test.equal(m.added, 0)
+
+    hoveredLabels[1] = { visibleGlobal = true, isMouseOver = true }
+    local restrictedRow = { componentData = { component = {
+        interfaceID = 517, staticID = 999, isRestricted = true,
+    } } }
+    m = fixture({ restrictedRow })
     menu.add(m, bindings.labels, function() end)
     test.equal(m.added, 0)
     hoveredLabels = {}

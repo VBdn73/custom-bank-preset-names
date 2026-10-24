@@ -6,7 +6,7 @@ function menu.add(miniMenu, bindings, openEditor)
     local slot
     for _, entry in ipairs(miniMenu.entries) do
         local component = entry.componentData and entry.componentData.component
-        if component and not component.isRestricted then
+        if component and not component.isRestricted and component.visibleGlobal then
             for _, binding in ipairs(bindings) do
                 if component.interfaceID == binding.interfaceID
                     and component.staticID == binding.staticID
@@ -26,7 +26,8 @@ function menu.add(miniMenu, bindings, openEditor)
         local bankAction = false
         for _, entry in ipairs(miniMenu.entries) do
             local component = entry.componentData and entry.componentData.component
-            if component and component.interfaceID == bindings[1].interfaceID then
+            if component and not component.isRestricted
+                and component.interfaceID == bindings[1].interfaceID then
                 bankAction = true
                 break
             end
