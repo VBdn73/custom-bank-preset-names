@@ -67,7 +67,8 @@ function popup.open(slot, names, bindings)
     local title = ui.Text.new(layer)
     local closeX = width - layout.popupPadding - layout.popupCloseSize
     title:SetPos(layout.popupTitleX, layout.popupTitleY)
-    title:SetSize(closeX - layout.popupTitleX - layout.popupPadding, layout.popupTitleHeight)
+    local infoX = closeX - layout.popupCloseSize - 4
+    title:SetSize(infoX - layout.popupTitleX - layout.popupPadding, layout.popupTitleHeight)
     title.font = id.Font.MUSEO_SANS_15PT_REGULAR
     title.content = constants.editorTitle
     title.colour = theme.colour(theme.titleText)
@@ -75,7 +76,16 @@ function popup.open(slot, names, bindings)
     local content = ui.Layer.new(layer)
     content:SetPos(0, layout.popupHeaderHeight)
     content:SetSize(width, layout.bodyHeight)
-    refresh = nameEditor.build(content, names, bindings, slot, { hideTitle = true })
+    local toggleInfo
+    refresh, toggleInfo = nameEditor.build(content, names, bindings, slot,
+        { hideTitle = true, externalInfoButton = true })
+    local info = ui.Button.new(layer)
+    info:SetPos(infoX, layout.popupTitleY)
+    info:SetSize(layout.popupCloseSize, layout.popupCloseSize)
+    info.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+    info.label = "i"
+    info.text.colour = theme.colour(theme.titleText)
+    info:Subscribe(ui.Hook.ONBUTTONPRESSED, toggleInfo)
     local close = ui.Button.new(layer)
     close:SetPos(closeX, layout.popupTitleY)
     close:SetSize(layout.popupCloseSize, layout.popupCloseSize)

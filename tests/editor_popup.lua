@@ -3,6 +3,7 @@ local test = require("tests.test_helper")
 test.case("Popup opens the requested slot, replaces old popups and closes safely", function()
     local previousEditor = package.loaded["editor/view"]
     local built, controls = {}, {}
+    local infoClicks = 0
     local root = { interfaceID = 517, width = 900, height = 890 }
     local scroll = { interfaceID = 517, parent = root }
     local source = { parent = scroll }
@@ -28,7 +29,8 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     id = { StyleSheet = { BUTTON_DEFAULT = 1 }, Font = { MUSEO_SANS_15PT_REGULAR = 1 } }
     package.loaded["editor/view"] = { build = function(parent, names, bindings, slot, options)
         built[#built + 1] = { parent = parent, slot = slot, options = options }
-        return function() if parent.disposed then error("Disposed") end end
+        return function() if parent.disposed then error("Disposed") end end,
+            function() infoClicks = infoClicks + 1 end
     end }
     local popup = dofile("editor/popup.lua")
     package.loaded["editor/view"] = previousEditor
@@ -47,7 +49,14 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     test.equal(controls[1].position[2], 245)
     test.equal(built[1].options.hideTitle, true)
     test.equal(built[1].parent.y, 36, "Editor must sit below the title bar")
-    local close = controls[8]
+    test.equal(built[1].options.externalInfoButton, true)
+    local info = controls[8]
+    test.equal(info.label, "i")
+    test.equal(info.x, 296)
+    info.callback()
+    test.equal(infoClicks, 1)
+    test.equal(controls[1].destroyed, nil, "Info does not close the popup")
+    local close = controls[9]
     test.equal(next(controls[1].hooks), nil, "Popup has no drag handlers")
     test.equal(next(controls[6].hooks), nil, "Title has no drag handlers")
     test.equal(close.label, "×")

@@ -31,6 +31,10 @@ For local testing, use the RuneScape plugin development beta as described below.
 3. Enter a name and click **Save**, or press Enter.
 4. Click **Reset**, or save a blank name, to use the game's predefined name again.
 
+Click **i** to show or hide the storage and display-only information. These notes
+start hidden in both editors. In the bank popup the button sits beside **×**;
+in plugin settings it sits at the top-right of the content area.
+
 Alternatively, right-click the preset's name in the bank and choose **Edit name**.
 The popup starts on the clicked slot, regardless of which preset is selected in
 the bank. The popup stays centered within the bank; click **×** in the top-right

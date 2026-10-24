@@ -63,9 +63,13 @@ local function createFixture()
             elseif control.kind == "input" then self.input = control
             elseif control.label == "Save" then self.save = control
             elseif control.label == "Reset" then self.reset = control
+            elseif control.label == "i" then self.info = control
             elseif control.content == "Custom bank preset names" then self.title = control
-            elseif control.content == "Stored on this device, per character name." then self.note = control
-            elseif control.kind == "text" and control.content == "" then self.status = control end
+            elseif control.kind == "text" and control.height == 18
+                and control.y == math.max(0, math.floor((self.parent.height
+                    - (options and options.hideTitle and 262 or 294)) / 2))
+                    + 226 - (options and options.hideTitle and 32 or 0) then self.note = control
+            elseif control.kind == "text" and control.content == "" and control.height == 28 then self.status = control end
         end
     end
     function f:select(entryID, event)
@@ -175,14 +179,21 @@ test.case("Editor centres controls without resizing host layers and clamps small
     test.equal(f.note.height, 18)
 end)
 
-test.case("Editor explains its display-only scope without saving", function()
+test.case("Editor info button reveals and hides scope notes without saving or changing edits", function()
     local f = createFixture()
+    test.equal(f.note.content, "")
+    f.input.content = "Unsaved edit"
+    f.info.hooks[ui.Hook.ONBUTTONPRESSED]()
     local text = {}
     for _, control in ipairs(f.controls) do
         if control.kind == "text" then text[control.content] = true end
     end
     test.equal(text["Changes displayed names only."], true)
     test.equal(text["Does not load presets or unlock slots."], true)
+    test.equal(f.note.content, "Stored on this device, per character name.")
+    f.info.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(f.note.content, "")
+    test.equal(f.input.content, "Unsaved edit")
     test.equal(f.saveCalls, 0)
 end)
 

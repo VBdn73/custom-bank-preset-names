@@ -73,16 +73,37 @@ function editor.build(parent, names, bindings, initialSlot, options)
         statusLabel.content = message
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
-    local storageNote = createText(parent, "Stored on this device, per character name.", smallFont)
+    local infoVisible = false
+    local infoNotes = {}
+    local function addInfoNote(text, y)
+        local note = createText(parent, "", smallFont)
+        trackPosition(note, layout.padding, y)
+        note:SetSize(layout.controlWidth, layout.noteHeight)
+        infoNotes[#infoNotes + 1] = { control = note, text = text }
+        return note
+    end
+    local function toggleInfo()
+        infoVisible = not infoVisible
+        for _, note in ipairs(infoNotes) do
+            note.control.content = infoVisible and note.text or ""
+        end
+    end
+    local storageNote = addInfoNote("Stored on this device, per character name.", layout.rows.storageNote)
     trackPosition(storageNote, layout.padding, layout.rows.storageNote)
     storageNote:SetSize(layout.controlWidth, layout.noteHeight)
 
     -- Explain the display-only scope where players edit names, not just in the README.
     for index, text in ipairs({ "Changes displayed names only.", "Does not load presets or unlock slots." }) do
         local y = layout.rows.scopeNotes + (index - 1) * layout.noteSpacing
-        local note = createText(parent, text, smallFont)
-        trackPosition(note, layout.padding, y)
-        note:SetSize(layout.controlWidth, layout.noteHeight)
+        addInfoNote(text, y)
+    end
+
+    -- Popup chrome supplies its own button; native settings chrome is owned by
+    -- the client, so keep the embedded button in our content's top-right corner.
+    local infoButton
+    if not options.externalInfoButton then
+        infoButton = createButton(parent, "i", toggleInfo)
+        infoButton:SetSize(layout.popupCloseSize, layout.popupCloseSize)
     end
 
     local displayedCharacterContext = names.getContext()
@@ -145,6 +166,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
         for _, position in ipairs(controlPositions) do
             position.component:SetPos(offsetX + position.x, offsetY + position.y)
         end
+        if infoButton then
+            infoButton:SetPos(math.max(0, parent.width - layout.padding - layout.popupCloseSize),
+                layout.padding)
+        end
     end
     centreContent()
     parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)
@@ -154,7 +179,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
         end
-    end
+    end, toggleInfo
 end
 
 return editor
