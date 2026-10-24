@@ -1,6 +1,7 @@
 local constants = require("constants")
 local layout = require("editor/layout")
 local theme = require("editor/theme")
+local icons = require("editor/icon")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -126,10 +127,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     -- Popup chrome supplies its own button; native settings chrome is owned by
     -- the client, so keep the embedded button in our content's top-right corner.
-    local infoButton
+    local infoButton, updateInfo
     if not options.externalInfoButton then
-        infoButton = createButton(parent, "i", toggleInfo)
-        infoButton:SetSize(layout.popupCloseSize, layout.popupCloseSize)
+        infoButton, updateInfo = icons.new(parent, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
+            id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, toggleInfo)
     end
 
     local displayedCharacterContext = names.getContext()
@@ -205,6 +206,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()
+        if updateInfo then updateInfo() end
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
         end

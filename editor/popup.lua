@@ -2,9 +2,16 @@ local nameEditor = require("editor/view")
 local constants = require("constants")
 local layout = require("editor/layout")
 local theme = require("editor/theme")
+local icons = require("editor/icon")
 local popup = {}
-local layer, refresh, centre, bankIsOpen, dragHandle
+local layer, refresh, centre, bankIsOpen, dragHandle, updateIcons
 local width, height = layout.popupWidth, layout.compactPopupHeight
+
+local function icon(parent, x, idle, hover, pressed, action)
+    local control, update = icons.new(parent, idle, hover, pressed, action)
+    control:SetPos(x, layout.popupTitleY)
+    return update
+end
 
 local function rectangle(parent, x, y, w, h, colour, fill)
     local control = ui.Rectangle.new(parent)
@@ -21,6 +28,7 @@ function popup.close()
     if dragHandle then pcall(function() dragHandle:Destroy() end) end
     dragHandle = nil
     layer, refresh, centre, bankIsOpen = nil, nil, nil, nil
+    updateIcons = nil
     if previous then
         -- The bank may already have disposed the popup's interface.
         pcall(function() previous:Destroy() end)
@@ -96,20 +104,11 @@ function popup.open(slot, names, bindings)
     local toggleInfo
     refresh, toggleInfo = nameEditor.build(content, names, bindings, slot,
         { hideTitle = true, externalInfoButton = true, infoParent = layer })
-    local info = ui.Button.new(layer)
-    info:SetPos(infoX, layout.popupTitleY)
-    info:SetSize(layout.popupCloseSize, layout.popupCloseSize)
-    info.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
-    info.label = "i"
-    info.text.colour = theme.colour(theme.titleText)
-    info:Subscribe(ui.Hook.ONBUTTONPRESSED, toggleInfo)
-    local close = ui.Button.new(layer)
-    close:SetPos(closeX, layout.popupTitleY)
-    close:SetSize(layout.popupCloseSize, layout.popupCloseSize)
-    close.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
-    close.label = "×"
-    close.text.colour = theme.colour(theme.titleText)
-    close:Subscribe(ui.Hook.ONBUTTONPRESSED, popup.close)
+    local updateInfo = icon(layer, infoX, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
+        id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, toggleInfo)
+    local updateClose = icon(layer, closeX, id.Sprite.RS3_BUTTON_CLOSE_PARENT_0,
+        id.Sprite.RS3_BUTTON_CLOSE_PARENT_1, id.Sprite.RS3_BUTTON_CLOSE_PARENT_2, popup.close)
+    updateIcons = function() updateInfo(); updateClose() end
 
     -- A transparent handle above the controls expands to cover the host while
     -- held. Fast motion cannot outrun its hit region; all coordinates during
@@ -160,6 +159,7 @@ function popup.update()
         local succeeded = pcall(function()
             if not bankIsOpen() then popup.close(); return end
             centre()
+            updateIcons()
             refresh()
         end)
         if not succeeded then popup.close() end

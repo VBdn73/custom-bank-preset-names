@@ -30,9 +30,10 @@ local function createFixture()
         Rectangle = { new = function(parent) return createControl("rectangle", parent) end },
         Text = { new = function(parent) return createControl("text", parent) end },
         Button = { new = function(parent) return createControl("button", parent) end },
+        Sprite = { new = function(parent) return createControl("sprite", parent) end },
         InputField = { new = function(parent) return createControl("input", parent) end },
         List = { new = function(parent) return createControl("list", parent) end },
-        Hook = { ONBUTTONPRESSED = 1, ONCONTENTCHANGED = 2, ONSELECTIONCHANGED = 3, ONRESIZE = 4 },
+        Hook = { ONBUTTONPRESSED = 1, ONCONTENTCHANGED = 2, ONSELECTIONCHANGED = 3, ONRESIZE = 4, ONCLICK = 5 },
         SelectionChangeEvent = { SELECTED = 1, DESELECTED = 0 },
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
         InputFieldActionResult = { SUBMIT = 1 },
@@ -41,6 +42,8 @@ local function createFixture()
     id = {
         Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
         StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 },
+        Sprite = { RS3_BUTTON_INFO_PARENT_0 = 28787, RS3_BUTTON_INFO_PARENT_1 = 32135,
+            RS3_BUTTON_INFO_PARENT_2 = 32136 },
     }
     f.names = {
         getContext = function() return f.context end,
@@ -66,7 +69,7 @@ local function createFixture()
             elseif control.kind == "input" then self.input = control
             elseif control.label == "Save" then self.save = control
             elseif control.label == "Reset" then self.reset = control
-            elseif control.label == "i" then self.info = control
+            elseif control.kind == "sprite" then self.info = control
             elseif control.content == "Custom bank preset names" then self.title = control
             elseif control.kind == "text" and control.height == 18
                 and control.y == math.max(0, math.floor((self.parent.height
@@ -84,6 +87,22 @@ local function createFixture()
     f:open()
     return f
 end
+
+test.case("Settings info uses the same native icon states as the popup", function()
+    local f = createFixture()
+    test.equal(f.info.sprite, 28787)
+    test.equal(f.info.label, nil)
+    test.equal(f.info.clickthrough, false)
+    f.info.isMouseOver = true
+    f.refresh()
+    test.equal(f.info.sprite, 32135)
+    f.info.isClicked = true
+    f.refresh()
+    test.equal(f.info.sprite, 32136)
+    f.info.isMouseOver, f.info.isClicked = false, false
+    f.refresh()
+    test.equal(f.info.sprite, 28787)
+end)
 
 test.case("Editor starts at preset 1 with all 18 zero-based dropdown entries", function()
     local f = createFixture()
@@ -212,7 +231,7 @@ test.case("Editor info button reveals and hides scope notes without saving or ch
     local f = createFixture()
     local originalY = f.input.y
     f.input.content = "Unsaved edit"
-    f.info.hooks[ui.Hook.ONBUTTONPRESSED]()
+    f.info.hooks[ui.Hook.ONCLICK]()
     local text = {}
     for _, control in ipairs(f.controls) do
         if control.kind == "text" then text[control.content] = true end
@@ -222,7 +241,7 @@ test.case("Editor info button reveals and hides scope notes without saving or ch
     test.equal(text["Stored on this device, per character name."], true)
     test.equal(f.input.y, originalY, "Help must not move the form")
     local note = f.controls[#f.controls]
-    f.info.hooks[ui.Hook.ONBUTTONPRESSED]()
+    f.info.hooks[ui.Hook.ONCLICK]()
     test.equal(note.destroyed, true)
     test.equal(f.input.content, "Unsaved edit")
     test.equal(f.saveCalls, 0)

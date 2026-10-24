@@ -24,11 +24,17 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
         Interfaces = { GetComponent = function() return source end },
         Layer = { new = control }, Rectangle = { new = control }, Button = { new = control },
         Text = { new = control },
+        Sprite = { new = control },
         Hook = { ONBUTTONPRESSED = 1, ONCLICK = 2, ONHOLD = 3, ONRELEASE = 4 },
         DragRenderBehaviour = { OPAQUE_OVERLAY = 1 },
     }
     Vector4 = { new = function(...) return { ... } end }
     id = { StyleSheet = { BUTTON_DEFAULT = 1 }, Font = { MUSEO_SANS_15PT_REGULAR = 1 } }
+    id.Sprite = {
+        RS3_BUTTON_INFO_PARENT_0 = 28787, RS3_BUTTON_INFO_PARENT_1 = 32135,
+        RS3_BUTTON_INFO_PARENT_2 = 32136, RS3_BUTTON_CLOSE_PARENT_0 = 27808,
+        RS3_BUTTON_CLOSE_PARENT_1 = 27809, RS3_BUTTON_CLOSE_PARENT_2 = 28786,
+    }
     package.loaded["editor/view"] = { build = function(parent, names, bindings, slot, options)
         built[#built + 1] = { parent = parent, slot = slot, options = options }
         return function() if parent.disposed then error("Disposed") end end,
@@ -53,7 +59,18 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     test.equal(built[1].parent.y, 36, "Editor must sit below the title bar")
     test.equal(built[1].options.externalInfoButton, true)
     local info = controls[8]
-    test.equal(info.label, "i")
+    test.equal(info.label, nil, "Trial icon has no text label")
+    test.equal(info.sprite, 28787)
+    test.equal(info.clickthrough, false)
+    info.isMouseOver = true
+    popup.update()
+    test.equal(info.sprite, 32135, "Info hover artwork")
+    info.isClicked = true
+    popup.update()
+    test.equal(info.sprite, 32136, "Info pressed artwork")
+    info.isClicked, info.isMouseOver = false, false
+    popup.update()
+    test.equal(info.sprite, 28787, "Info returns to idle")
     test.equal(info.x, 296)
     info.callback()
     test.equal(infoClicks, 1)
@@ -67,7 +84,18 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     local close = controls[9]
     test.equal(next(controls[1].hooks), nil, "Body is not a drag handle")
     test.equal(next(controls[6].hooks), nil, "Title text passes clicks to the title bar")
-    test.equal(close.label, "×")
+    test.equal(close.label, nil)
+    test.equal(close.sprite, 27808)
+    test.equal(close.clickthrough, false)
+    close.isMouseOver = true
+    popup.update()
+    test.equal(close.sprite, 27809, "Close hover artwork")
+    close.isClicked = true
+    popup.update()
+    test.equal(close.sprite, 28786, "Close pressed artwork")
+    close.isMouseOver = false
+    popup.update()
+    test.equal(close.sprite, 27808, "Leaving a pressed icon restores idle")
     test.equal(close.x, 322)
     test.equal(close.y, 7)
     test.equal(close.width, 22)

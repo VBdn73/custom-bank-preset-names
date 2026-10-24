@@ -82,6 +82,14 @@ prl custom-bank-preset-names
 
 ### Tests
 
+The bank popup currently trials the native `RS3_BUTTON_INFO_PARENT_0/1/2`
+and `RS3_BUTTON_CLOSE_PARENT_0/1/2` sprites as idle, hover, and pressed artwork.
+Their exact match to the bank icons still needs an in-client visual check:
+reload the plugin, right-click a preset name, and choose **Edit name**. Compare
+the icons with the bank's top-right controls, hover/click them, and confirm that
+info toggles the help notes and close dismisses only the editor, not the bank.
+The plugin settings editor uses the same native info icon and states.
+
 Run the mocked regression suite from the repository root with Lua 5.4:
 
 ```sh
