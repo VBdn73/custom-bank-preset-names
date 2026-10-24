@@ -15,7 +15,8 @@ Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
 end)
 
 Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
-    editorRefreshCallbacks.settings = nameEditor.build(event.component, presetNames, bankBindings)
+    editorRefreshCallbacks.settings = nameEditor.build(event.component, presetNames, bankBindings,
+        nil, { hideTitle = true })
 end)
 
 Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
