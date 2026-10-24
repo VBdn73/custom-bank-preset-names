@@ -68,6 +68,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     local statusLabel = createText(parent, "", 8, 198, 320, smallFont)
     trackPosition(statusLabel, 8, 198)
+    local function setStatus(message, succeeded)
+        statusLabel.content = message
+        statusLabel.colour = succeeded and Vector4.new(0.35, 0.85, 0.35, 1)
+            or Vector4.new(1, 0.35, 0.35, 1)
+    end
     local storageNote = createText(parent, "Stored on this device, per character name.", 8, 226, 320)
     trackPosition(storageNote, 8, 226)
     storageNote.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
@@ -93,7 +98,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         -- Do not save an old character's unfinished edit under a new character.
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
-            statusLabel.content = "Character changed. Enter the name again."
+            setStatus("Character changed. Enter the name again.", false)
             return false
         end
 
@@ -101,10 +106,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local callSucceeded, saveSucceeded, message = pcall(names.save, selectedSlot, value)
         if not callSucceeded then
             print("[Preset names] Save error: " .. tostring(saveSucceeded))
-            statusLabel.content = "Save error. See the client console."
+            setStatus("Save error. See the client console.", false)
             return false
         end
-        statusLabel.content = message
+        setStatus(message, saveSucceeded)
         return saveSucceeded
     end
 

@@ -34,6 +34,7 @@ local function createFixture()
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
         InputFieldActionResult = { SUBMIT = 1 },
     }
+    Vector4 = { new = function(...) return { ... } end }
     id = {
         Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
         StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 },
@@ -96,8 +97,25 @@ test.case("Custom name label and save status use the smaller font", function()
     test.equal(label.font, id.Font.MUSEO_SANS_11PT_REGULAR)
     f:clickSave()
     test.equal(f.status.content, "Name saved.")
+    test.equal(f.status.colour[2] > f.status.colour[1], true, "Success is green")
     test.equal(f.status.font, id.Font.MUSEO_SANS_11PT_REGULAR)
     test.equal(f.title.font, id.Font.MUSEO_SANS_15PT_REGULAR)
+end)
+
+test.case("Status colours switch between success and failure without icons", function()
+    local f = createFixture()
+    for _, control in ipairs(f.controls) do
+        test.equal(control.kind == "line", false)
+    end
+    f:clickSave()
+    test.equal(f.status.content, "Name saved.")
+    test.equal(f.status.colour[2] > f.status.colour[1], true)
+    f.saveMode = "rejected"
+    f:clickSave()
+    test.equal(f.status.content, "Simulated validation failure")
+    test.equal(f.status.colour[1] > f.status.colour[2], true)
+    f:select(17)
+    test.equal(f.status.content, "")
 end)
 
 test.case("Direct editing starts at the clicked preset and saves only that slot", function()
@@ -219,6 +237,7 @@ test.case("Rejected saves and resets preserve edits and show the validation mess
     f.input.content = "Keep this edit"
     f:clickSave()
     test.equal(f.status.content, "Simulated validation failure")
+    test.equal(f.status.colour[1] > f.status.colour[2], true, "Failure is red")
     f:clickReset()
     test.equal(f.input.content, "Keep this edit")
     test.equal(f.stored[1], nil)
