@@ -1,106 +1,84 @@
 # Custom bank preset names
 
-Give your RuneScape bank presets custom names that are easier to recognise.
-This Lua 5.4 client plugin replaces the displayed preset labels locally, without
-changing the game's server-side preset names or how presets work.
+Give your RuneScape bank presets recognisable names and colours. This Lua 5.4
+plugin changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
 
-- Custom names for all 18 mapped bank preset slots.
-- Independent background and preset-name colours with 13 standard colours plus Default.
-- A scrollable preset selector, with **Save** and **Reset** controls.
-- Right-click a bank preset name and choose **Customize preset** to open a popup for that slot.
-- Names up to 40 Unicode characters long.
-- Local settings kept separately for each character name.
-- Restore the game's predefined name by resetting a slot or saving a blank name.
-- No extra permissions or network requests. Uses PrettyUI for the bank window,
-  ribbon scrolling, and managed name fields and action buttons in those editors.
+- Custom names for all 18 mapped preset slots, up to 40 Unicode characters each.
+- Independent background and name-text colours: 13 colours plus Default.
+- Edit through the plugin's ribbon/settings panel or directly from the bank.
+- Save settings locally for each character; reset individual presets at any time.
+- Draggable bank editor with a position remembered between client sessions.
 
-The plugin only changes displayed text and colours. It does not load presets, automate bank
-actions, or unlock unavailable preset slots. Disabling it restores the original
-labels and colours where the bank components are still available.
+The plugin does not load presets, automate actions, reveal hidden information, or
+unlock unavailable slots. Existing bank actions are unchanged. Disabling it
+restores original labels and colours where the bank components remain available.
 
-## Availability
+See [changelog.md](changelog.md) for release changes.
 
-This repository contains the development version. Live-client distribution
-requires Jagex moderation approval; this repository does not imply approval.
-For local testing, use the RuneScape plugin development beta as described below.
+## Availability and requirements
+
+This repository contains the development version. Distribution requires Jagex
+moderation approval; this repository does not imply approval. Local testing uses
+the RuneScape plugin development beta.
+
+**Dependency:** PrettyUI (mod.io ID `6398181`) must be installed. Development
+enable commands do not download dependencies automatically.
 
 ## How to use
 
-1. Enable the plugin and open its ribbon entry or its Settings icon in the Plugin Hub.
-2. Choose a preset number from the dropdown.
-3. Enter a name, choose colours, and click **Save**, or press Enter, to save all three.
-4. Click **Reset** to restore the game's predefined name and default colours.
-    Saving a blank name restores only the predefined name, keeping your chosen colours.
+1. Enable the plugin and open its ribbon entry or Settings icon in the Plugin Hub.
+2. Select a preset, enter a name, and choose **Background** and **Text colour**.
+3. Click **Save** or press Enter to save the name and both colours.
+4. Click **Reset** to restore the predefined name and default colours. Saving a
+   blank name restores only the name, keeping your chosen colours.
 
-The ribbon editor adapts as you resize its panel. Short panels use tighter spacing;
-when the form still does not fit, scroll over the form, drag the scrollbar thumb,
-or click its track on the right to reach the remaining controls. Scrolling over a dropdown operates
-that dropdown instead. Resizing keeps the selected preset and unfinished edits.
+Alternatively, right-click a preset name in the bank and choose **Customize
+preset**. The editor opens for that slot. Drag its title bar to move it; its
+position is saved on close, shared across characters, and kept within UI bounds.
+Click **×** to close it; it also closes when the bank disappears.
 
-An asterisk in the preset dropdown (for example, **Preset 3 \***) marks a slot
-with a saved custom name, background colour, or text colour. Resetting the preset
-removes the marker; saving a blank name removes it only if both colours are Default.
-
-Click **i** to show or hide the storage and display-only information. These notes
-start hidden in both editors. In the bank popup the button sits in the header beside **×**;
-in plugin settings it sits at the top-right of the content area.
-
-Each preset editor includes **Background** and **Text colour** dropdowns with
-**Default**, **Red**, **Green**, **Blue**, **White**, **Black**, **Purple**, **Cyan**,
-**Yellow**, **Orange**, **Pink**, **Magenta**, **Lime**, and **Grey**. Colour selections are saved together
-with the name using **Save** at the bottom of the editor, on this device per character.
-Default restores the game's colour. Text colour affects only the preset name.
-
-Alternatively, right-click the preset's name in the bank and choose **Customize preset**.
-The popup starts on the clicked slot, regardless of which preset is selected in
-the bank. The popup opens centered when no saved position is known; drag its title bar to move it
-within the outer game UI, outside the bank's nested popover. PrettyUI supplies the
-window artwork, dragging, and resize bounds handling. The last position is saved locally
-on close and restored on reopening, including after restarting the client, with coordinates
-kept within the available UI bounds. The position is shared across characters on this device. This does not change
-the plugin settings editor. Click **×** in the top-right
-corner to dismiss it. The normal bank menu actions and default
-left-click action are unchanged.
-
-Changing the selected preset discards unsaved edits. You must be logged in with
-your character's display name available before saving. Markup delimiters (`<` and
-`>`) and control characters are not allowed in names.
-
-## Storage and privacy
-
-Custom names are saved on your device using the client's `PersistentDB` API.
-The plugin uses the logged-in character's display name to separate settings,
-ignoring case and surrounding spaces. It sends no data off-device.
-
-- Settings are not synced between devices and are separate between beta and live clients.
-- After a character rename, names must be re-entered or manually migrated.
-- A reused character display name on the same device can inherit its previous settings.
-- Older device-wide and tracking-ID-based settings are not automatically imported.
-
-**Data protection: Case 1 (local only).** The data used is your character's display
-name and the custom preset names you enter. The display name forms part of the
-local storage keys; custom names are stored as their values. Nothing is transmitted
-to the developer or external services.
-
-Saved settings have no automatic expiry. Resetting a slot overwrites its custom
-name with an empty string, but does not remove the character name from the storage
-key. Disabling the plugin does not erase its stored settings. The plugin has no
-full-data deletion control, including for previous character names and legacy keys;
-do not assume uninstalling clears the client's database. The developer cannot
-access or erase this local database remotely.
+- An asterisk (`*`) in the preset selector marks a saved custom name or colour.
+- Click **i** to show or hide help notes, which start hidden.
+- Scroll the ribbon form or use its scrollbar when controls do not fit. Scrolling
+  over a dropdown operates that dropdown. Resizing preserves unfinished edits.
+- Changing presets discards unsaved edits. You must be logged in with your
+  character's display name available to save.
+- Names cannot contain markup delimiters (`<`, `>`) or control characters.
+- **Default** restores the game's colour; text colour affects only the name.
 
 ## Permissions
 
-This plugin requests no additional permissions.
+This plugin requests no additional permissions. It does not access chat or make
+network requests.
+
+## Data protection - Case 1 (local only)
+
+The plugin uses your character's display name, entered preset names, chosen
+colours, and editor position. Nothing is transmitted outside the plugin to the
+developer or external services. It does not take screenshots.
+
+Settings persist locally through the client's `PersistentDB` API. The character
+display name forms part of the storage keys, ignoring case and surrounding
+spaces. Names and colours are stored per character; editor position is shared
+across characters on this device. No gameplay history is stored.
+
+- Settings do not sync between devices; beta and live storage are separate.
+- After a character rename, re-enter or manually migrate your settings. Reusing
+  a display name on the same device can inherit its previous settings.
+- Older device-wide and tracking-ID-based settings are not imported automatically.
+- Settings have no automatic expiry. Reset clears a slot's customisation but
+  does not remove the character name from its storage keys.
+- Disabling does not erase settings. There is no full-data deletion control for
+  current or legacy keys; do not assume uninstalling clears the client database.
+  The developer cannot access or delete these local settings remotely.
 
 ## Local development
 
-Follow Jagex's [getting-started guide](https://developer.runescape.com/rs/getting-started.html)
-to set up the plugin development beta. Place this repository in
-`RuneScape-BETA/dev_plugins/custom-bank-preset-names/`.
-
+Follow Jagex's [getting-started guide](https://developer.runescape.com/rs/getting-started.html).
+Place the repository, including its subdirectories, in
+`RuneScape-BETA/dev_plugins/custom-bank-preset-names/` and install PrettyUI.
 Open the client console with **Alt + `**, then run:
 
 ```text
@@ -108,95 +86,50 @@ prf
 pon custom-bank-preset-names
 ```
 
-After changing Lua files, reload the plugin:
-
-```text
-prl custom-bank-preset-names
-```
-
-After changing `plugin.json` (including dependencies), refresh the manifest before
-reloading. Reload alone does not rescan the manifest:
-
-```text
-prf
-prl custom-bank-preset-names
-```
-
-PrettyUI (mod.io ID `6398181`) must be installed. Development enable commands do
-not download missing dependencies automatically. The client exposes its exports
-as the `prettyui` global in `main.lua`; no Lua `require("prettyui")` is needed.
-The entry point passes that library explicitly to the editor module rather than
-relying on dependency globals being available in required modules.
+After Lua changes, run `prl custom-bank-preset-names`. After `plugin.json` changes,
+run `prf` before reloading so the manifest and dependencies are rescanned.
 
 ### Tests
 
-In-client checks: test several rows including preset 18, reopen the bank and
-reload the plugin to verify persistence, and check scrolling, hover/selection
-outlines, independent Default resets, and restoration when disabling the plugin.
-
-The bank popup uses PrettyUI's window close control and native
-`RS3_BUTTON_INFO_PARENT_0/1/2` sprites for the header info button.
-The window and managed controls still need an in-client visual check:
-reload the plugin, right-click a preset name, and choose **Customize preset**. Compare
-the window artwork and header info icon, hover/click the controls, and confirm that
-info toggles the help notes and close dismisses only the editor, not the bank.
-The plugin settings editor uses the same native info icon and states.
-
-Run the mocked regression suite from the repository root with Lua 5.4:
+Run the mocked regression suite with Lua 5.4:
 
 ```sh
 lua tests/run.lua
 ```
 
-### Code layout
+In the client, verify save/reset, all mapped slots (including preset 18), separate
+character settings, persistence after reload/restart, popup position, scrolling,
+resizing, help/close buttons, colour defaults, and restoration on disable.
+Mocked tests do not replace in-client visual and interaction checks.
 
-Start with `main.lua` to follow the plugin's lifecycle:
+### Code overview
 
-| File | Responsibility |
-| --- | --- |
-| `main.lua` | Opens editors, refreshes them each logic tick, reapplies bank labels before drawing, and restores labels on shutdown. |
-| `constants.lua` | Shares the editor title and maximum name length between modules. |
-| `bank/bindings.lua` | Maps the 18 preset slots to their bank label component IDs. |
-| `bank/labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
-| `bank/menu.lua` | Adds a Customize preset action using component identity or the hovered name label when native actions belong to a row hit target. |
-| `editor/view.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
-| `editor/popup.lua` | Hosts the editor in a PrettyUI window with the clicked slot preselected and closes it when the bank disappears. |
-| `editor/layout.lua` | Defines control positions and dimensions, including derived popup sizes. |
-| `editor/theme.lua` | Defines named UI colours and creates native colour values on demand. |
-| `editor/icon.lua` | Builds native sprite controls and updates their hover/pressed artwork. |
-| `presets/names.lua` | Validates names, separates settings by character, caches reads, and verifies writes to `PersistentDB`. |
-| `presets/text_validation.lua` | Counts UTF-8 code points and rejects malformed text without the optional `utf8` library. |
-| `plugin.json` | Declares the plugin's name, version, UI entry points, and contact address. |
-| `tests/run.lua` | Runs the regression suites and reports totals with a failing exit status when needed. |
-| `tests/name_editor.lua` | Mocks native controls to test editor layout and interactions. |
+- `main.lua`: lifecycle, editor entry points, and label refresh/restoration.
+- `bank/`: preset bindings, local label/colour overrides, and the context menu.
+- `editor/`: shared editor, PrettyUI popup, layout, colours, and icons.
+- `presets/`: validation and per-character persistent settings.
+- `tests/`: mocked regression suites; `plugin.json`: manifest and dependency.
 
-Runtime modules use slash-separated imports relative to the plugin root, without
-the `.lua` extension, such as `require("editor/view")`. This also applies inside
-nested modules. Dotted imports such as `require("editor.view")` are not supported
-by the client. See the [official dependency documentation](https://developer.runescape.com/rs/structure.html#dependencies).
-Keep the `bank/`, `editor/`, and `presets/` directories when installing the plugin.
+Use slash-separated imports such as `require("editor/view")`, without `.lua`.
+The entry point passes the `prettyui` dependency global to editor modules;
+do not use `require("prettyui")`. Preset slots are one-based; native dropdown
+entry IDs are zero-based. An empty saved name means “use the predefined name”.
 
-Preset slots are **one-based** throughout storage and bank bindings. Only the
-native dropdown uses **zero-based** entry IDs; the editor converts between them.
-An empty saved name means “use the game's predefined name”, not a custom blank label.
+`bank/bindings.lua` maps interface 517, static component 266, category 0, dynamic
+ID `(slot - 1) * 3 + 1`. Missing or restricted components are skipped. Game UI
+updates may require new mappings; use `pan Component` in the beta console to
+inspect them. Bind only unrestricted labels belonging to individual slots.
 
-### Interface bindings
+Before submission, personally review and understand the code, test it, and follow
+Jagex's [plugin guidelines](https://developer.runescape.com/rs/submission/guidelines.html)
+and [submission process](https://developer.runescape.com/rs/submission/process.html).
 
-`bank/bindings.lua` defines the preset label mappings. They currently use interface
-517, static component 266, category 0, and dynamic ID `(slot - 1) * 3 + 1`.
-Missing or restricted components are skipped. Game UI updates may require these
-mappings to be updated.
+## Feedback and collaboration
 
-Use `pan Component` in the beta console to export the component index when
-investigating UI changes. Bind only unrestricted label components corresponding
-to individual preset slots, not a shared selected-preset label.
-
-## Feedback
-
-Report problems through this repository's issue tracker or contact
-[vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com).
-Include reproduction steps and your client version, and avoid sharing personal
-information in public reports.
+Report issues or propose contributions through this repository's issue tracker,
+or contact [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com).
+For bugs, include reproduction steps and your client version. Do not post
+personal information in public reports.
 
 ## EULA
 
