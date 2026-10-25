@@ -55,9 +55,11 @@ Default restores the game's colour. Text colour affects only the preset name.
 
 Alternatively, right-click the preset's name in the bank and choose **Customize preset**.
 The popup starts on the clicked slot, regardless of which preset is selected in
-the bank. The popup opens centered within the bank; drag its title bar to move it
+the bank. The popup opens centered when no saved position is known; drag its title bar to move it
 within the outer game UI, outside the bank's nested popover. PrettyUI supplies the
-window artwork, dragging, and resize bounds handling. This does not change
+window artwork, dragging, and resize bounds handling. The last position is saved locally
+on close and restored on reopening, including after restarting the client, with coordinates
+kept within the available UI bounds. The position is shared across characters on this device. This does not change
 the plugin settings editor. Click **×** in the top-right
 corner to dismiss it. The normal bank menu actions and default
 left-click action are unchanged.

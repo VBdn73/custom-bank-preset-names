@@ -4,8 +4,44 @@ local layout = require("editor/layout")
 local icons = require("editor/icon")
 local popup = {}
 local window, refresh, bankIsOpen, updateInfo, infoButton
+local positionKey = "presetEditor.position.v1"
+local lastX, lastY
+local savedPosition
+
+local function loadPosition()
+    local ok, value = pcall(function() return PersistentDB:GetString(positionKey) end)
+    if not ok or type(value) ~= "string" then return end
+    local x, y = value:match("^(%d+),(%d+)$")
+    x, y = tonumber(x), tonumber(y)
+    if x and y and x < math.huge and y < math.huge then
+        lastX, lastY, savedPosition = x, y, value
+    end
+end
+
+local function rememberPosition()
+    if not window then return end
+    -- The bank may already have disposed the interface; retain the last tick's
+    -- position if the component is no longer readable.
+    pcall(function()
+        local x, y = window.root.x, window.root.y
+        if type(x) == "number" and type(y) == "number"
+            and x >= 0 and y >= 0 and x < math.huge and y < math.huge then
+            lastX, lastY = math.floor(x), math.floor(y)
+        end
+    end)
+end
+
+loadPosition()
 
 function popup.close()
+    rememberPosition()
+    if lastX and lastY then
+        local value = lastX .. "," .. lastY
+        if value ~= savedPosition then
+            local ok, result = pcall(function() return PersistentDB:SetString(positionKey, value) end)
+            if ok and result ~= false then savedPosition = value end
+        end
+    end
     local previous = window
     local previousInfo = infoButton
     window, refresh, bankIsOpen, updateInfo = nil, nil, nil, nil
@@ -44,8 +80,8 @@ function popup.open(slot, names, bindings, prettyui)
     local ok, message = pcall(function()
         window = prettyui.Window.new(parent, {
             title = constants.editorTitle, width = width, height = height,
-            x = math.max(0, math.floor((parent.width - width) / 2)),
-            y = math.max(0, math.floor((parent.height - height) / 2)),
+            x = math.max(0, math.min(lastX or math.floor((parent.width - width) / 2), parent.width - width)),
+            y = math.max(0, math.min(lastY or math.floor((parent.height - height) / 2), parent.height - height)),
             scrollable = false, onClose = popup.close,
         })
         local toggleInfo
@@ -72,6 +108,7 @@ end
 
 function popup.update()
     if not window then return end
+    rememberPosition()
     local ok = pcall(function()
         if not bankIsOpen() then popup.close(); return end
         window:_SyncOverlays(window.root.hidden == true)

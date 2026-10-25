@@ -1,6 +1,12 @@
 local test = require("tests.test_helper")
 
 test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup", function()
+    local previousDB = PersistentDB
+    local stored = {}
+    PersistentDB = {
+        GetString = function(_, key) return stored[key] end,
+        SetString = function(_, key, value) stored[key] = value; return true end,
+    }
     local previousEditor = package.loaded["editor/view"]
     local built, windows, infoClicks, sprites = {}, {}, 0, {}
     local root = { width = 900, height = 890 }
@@ -79,8 +85,11 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(info.destroyed, true, "Sibling overlay is explicitly destroyed")
     test.equal(next(first.overlays), nil)
     test.equal(built[2].slot, 2)
+    test.equal(windows[2].root.x, 100, "Reopening retains dragged x")
+    test.equal(windows[2].root.y, 120, "Reopening retains dragged y")
     windows[2].options.onClose()
     test.equal(windows[2].destroyed, true)
+    test.equal(stored["presetEditor.position.v1"], "100,120")
     popup.close()
     popup.open(3, {}, bindings, library)
     built[3].parent.disposed = true
@@ -109,4 +118,19 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     source = nil
     popup.open(1, {}, bindings, library)
     test.equal(#windows, count)
+    source = { parent = bank, visibleGlobal = true }
+    package.loaded["editor/view"] = { build = function() return function() end, function() end end }
+    local reloaded = dofile("editor/popup.lua")
+    package.loaded["editor/view"] = previousEditor
+    reloaded.open(1, {}, bindings, library)
+    test.equal(windows[#windows].root.x, 100, "Position survives module reload")
+    test.equal(windows[#windows].root.y, 120)
+    reloaded.close()
+    root.width, root.height = 400, 350
+    reloaded.open(1, {}, bindings, library)
+    local bounded = windows[#windows]
+    test.equal(bounded.root.x, math.max(0, root.width - bounded.root.width))
+    test.equal(bounded.root.y, math.min(120, math.max(0, root.height - bounded.root.height)))
+    reloaded.close()
+    PersistentDB = previousDB
 end)
