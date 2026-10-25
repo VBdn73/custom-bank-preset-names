@@ -4,6 +4,9 @@ local bankLabels = require("bank/labels")
 local nameEditor = require("editor/view")
 local presetMenu = require("bank/menu")
 local editorPopup = require("editor/popup")
+local bankAppearance = require("bank/appearance")
+local presetColours = require("presets/colours")
+bankBindings.colours = presetColours
 
 -- Each open editor supplies a callback that follows character changes.
 local editorRefreshCallbacks = {}
@@ -39,10 +42,12 @@ end)
 -- Apply again at the render boundary so the predefined text is not drawn for
 -- one frame before the next logic tick restores the custom name.
 Event.Draw.Subscribe("presetNames.labels", function()
+    bankAppearance.update(bankBindings.appearance, presetColours)
     bankLabels.update(bankBindings.labels, presetNames)
 end)
 
 function PluginShutdown()
+    bankAppearance.restore(bankBindings.appearance)
     Event.MiniMenuReady.Unsubscribe("presetNames.menu")
     editorPopup.close()
     Event.Logic.Unsubscribe("presetNames.labels")

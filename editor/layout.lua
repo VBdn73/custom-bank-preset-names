@@ -16,6 +16,10 @@ local layout = {
         selector = 48,
         nameLabel = 90,
         input = 122,
+        colourLabel = 166,
+        colourInput = 198,
+        colourStatus = 270,
+        colourButtons = 238,
         buttons = 166,
         status = 198,
         storageNote = 226,
@@ -42,5 +46,6 @@ layout.compactBodyHeight = layout.compactHeight - layout.titleHeight
 layout.popupWidth = layout.width + layout.popupPadding * 2
 layout.popupHeight = layout.popupHeaderHeight + layout.bodyHeight + layout.popupBottomPadding
 layout.compactPopupHeight = layout.popupHeaderHeight + layout.compactBodyHeight + layout.popupBottomPadding
+layout.colourHeight = 64
 
 return layout

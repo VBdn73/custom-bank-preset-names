@@ -7,16 +7,17 @@ changing the game's server-side preset names or how presets work.
 ## Features
 
 - Custom names for all 18 mapped bank preset slots.
+- Independent background and preset-name colours with 13 standard colours plus Default.
 - A scrollable preset selector, with **Save** and **Reset** controls.
-- Right-click a bank preset name and choose **Edit name** to open a popup for that slot.
+- Right-click a bank preset name and choose **Customize preset** to open a popup for that slot.
 - Names up to 40 Unicode characters long.
 - Local settings kept separately for each character name.
 - Restore the game's predefined name by resetting a slot or saving a blank name.
 - No extra permissions, external dependencies, or network requests.
 
-The plugin only changes displayed text. It does not load presets, automate bank
+The plugin only changes displayed text and colours. It does not load presets, automate bank
 actions, or unlock unavailable preset slots. Disabling it restores the original
-labels where the bank components are still available.
+labels and colours where the bank components are still available.
 
 ## Availability
 
@@ -28,17 +29,25 @@ For local testing, use the RuneScape plugin development beta as described below.
 
 1. Enable the plugin and open its ribbon entry or its Settings icon in the Plugin Hub.
 2. Choose a preset number from the dropdown.
-3. Enter a name and click **Save**, or press Enter.
-4. Click **Reset**, or save a blank name, to use the game's predefined name again.
+3. Enter a name, choose colours, and click **Save**, or press Enter, to save all three.
+4. Click **Reset** to restore the game's predefined name and default colours.
+   Saving a blank name restores only the predefined name, keeping your chosen colours.
 
 An asterisk in the preset dropdown (for example, **Preset 3 \***) marks a slot
-with a saved custom name. Resetting it or saving a blank name removes the marker.
+with a saved custom name, background colour, or text colour. Resetting the preset
+removes the marker; saving a blank name removes it only if both colours are Default.
 
 Click **i** to show or hide the storage and display-only information. These notes
 start hidden in both editors. In the bank popup the button sits beside **×**;
 in plugin settings it sits at the top-right of the content area.
 
-Alternatively, right-click the preset's name in the bank and choose **Edit name**.
+Each preset editor includes **Background** and **Text colour** dropdowns with
+**Default**, **Red**, **Green**, **Blue**, **White**, **Black**, **Purple**, **Cyan**,
+**Yellow**, **Orange**, **Pink**, **Magenta**, **Lime**, and **Grey**. Colour selections are saved together
+with the name using **Save** at the bottom of the editor, on this device per character.
+Default restores the game's colour. Text colour affects only the preset name.
+
+Alternatively, right-click the preset's name in the bank and choose **Customize preset**.
 The popup starts on the clicked slot, regardless of which preset is selected in
 the bank. The popup opens centered within the bank; drag its title bar to move it
 within the outer game UI, outside the bank's nested popover. This does not change
@@ -98,10 +107,14 @@ prl custom-bank-preset-names
 
 ### Tests
 
-The bank popup currently trials the native `RS3_BUTTON_INFO_PARENT_0/1/2`
+In-client checks: test several rows including preset 18, reopen the bank and
+reload the plugin to verify persistence, and check scrolling, hover/selection
+outlines, independent Default resets, and restoration when disabling the plugin.
+
+The bank popup uses the native `RS3_BUTTON_INFO_PARENT_0/1/2`
 and `RS3_BUTTON_CLOSE_PARENT_0/1/2` sprites as idle, hover, and pressed artwork.
 Their exact match to the bank icons still needs an in-client visual check:
-reload the plugin, right-click a preset name, and choose **Edit name**. Compare
+reload the plugin, right-click a preset name, and choose **Customize preset**. Compare
 the icons with the bank's top-right controls, hover/click them, and confirm that
 info toggles the help notes and close dismisses only the editor, not the bank.
 The plugin settings editor uses the same native info icon and states.
@@ -122,7 +135,7 @@ Start with `main.lua` to follow the plugin's lifecycle:
 | `constants.lua` | Shares the editor title and maximum name length between modules. |
 | `bank/bindings.lua` | Maps the 18 preset slots to their bank label component IDs. |
 | `bank/labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
-| `bank/menu.lua` | Adds a low-priority Edit name action using component identity or the hovered name label when native actions belong to a row hit target. |
+| `bank/menu.lua` | Adds a Customize preset action using component identity or the hovered name label when native actions belong to a row hit target. |
 | `editor/view.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
 | `editor/popup.lua` | Hosts the editor in a bank popup with the clicked slot preselected. |
 | `editor/layout.lua` | Defines control positions and dimensions, including derived popup sizes. |
