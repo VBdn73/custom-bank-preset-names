@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 
 -- Mock only the native API used by the editor. No actual client UI is created.
-local function createFixture()
+local function createFixture(colours)
     local f = { controls = {}, stored = { [18] = "Last preset" }, context = "first",
         saveCalls = 0, saveMode = "success" }
     local function createControl(kind, parent)
@@ -62,10 +62,10 @@ local function createFixture()
     f.parent.width, f.parent.height = 580, 360
     function f:open(initialSlot, options)
         local firstNewControl = #self.controls + 1
-        self.refresh, self.toggleInfo = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18 }, initialSlot, options)
+        self.refresh, self.toggleInfo = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18, colours = colours }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
-            if control.kind == "list" then self.selector = control
+            if control.kind == "list" and control.entries[17] then self.selector = control
             elseif control.kind == "input" then self.input = control
             elseif control.label == "Save" then self.save = control
             elseif control.label == "Reset" then self.reset = control
@@ -87,6 +87,41 @@ local function createFixture()
     f:open()
     return f
 end
+
+test.case("Colour dropdowns save independently for the selected slot and block stale characters", function()
+    local values, calls = {}, 0
+    local colours = {
+        palette = { { name = "Default", value = "" }, { name = "Red", value = "red" },
+            { name = "Green", value = "green" }, { name = "Blue", value = "blue" } },
+        get = function(slot, kind) return values[slot .. kind] or "" end,
+        save = function(slot, kind, value)
+            calls = calls + 1
+            values[slot .. kind] = value
+            return true, "Colour saved."
+        end,
+    }
+    local f = createFixture(colours)
+    local controls = {}
+    for _, control in ipairs(f.controls) do
+        if control.kind == "list" and not control.entries[17] then controls[#controls + 1] = control end
+    end
+    test.equal(#controls, 2)
+    test.equal(calls, 0)
+    f:select(17)
+    controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 2, ui.SelectionChangeEvent.SELECTED)
+    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 1, ui.SelectionChangeEvent.SELECTED)
+    test.equal(values["18background"], "green")
+    test.equal(values["18text"], "red")
+    test.equal(f.saveCalls, 0)
+    controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 0, ui.SelectionChangeEvent.SELECTED)
+    test.equal(values["18background"], "")
+    f.context = "second"
+    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
+    test.equal(calls, 3)
+    f.refresh()
+    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
+    test.equal(calls, 4)
+end)
 
 test.case("Settings info uses the same native icon states as the popup", function()
     local f = createFixture()
@@ -236,7 +271,7 @@ test.case("Editor info button reveals and hides scope notes without saving or ch
     for _, control in ipairs(f.controls) do
         if control.kind == "text" then text[control.content] = true end
     end
-    test.equal(text["Changes displayed names only."], true)
+    test.equal(text["Changes names and colours only."], true)
     test.equal(text["Does not load presets or unlock slots."], true)
     test.equal(text["Stored on this device, per character name."], true)
     test.equal(f.input.y, originalY, "Help must not move the form")

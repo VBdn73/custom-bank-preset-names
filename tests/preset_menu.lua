@@ -24,9 +24,7 @@ local function fixture(entries)
         table.insert(self.entries, 1, { label = label, action = action, slot = slot })
     end
     function m:Swap(a, b)
-        test.equal(a, 1, "Only swap the lowest-priority entries")
-        test.equal(b, 2, "Never move Select, Load or Reset")
-        test.equal(self.entries[2].actionType, MiniMenuActionType.CANCEL)
+        test.equal(b, a + 1, "Reordering uses adjacent swaps to preserve native order")
         self.entries[a], self.entries[b] = self.entries[b], self.entries[a]
     end
     return m
@@ -41,7 +39,7 @@ test.case("Preset menu adds one edit action and preserves native ordering and le
     test.equal(m.added, 1)
     test.equal(opened, nil, "Building a menu must not open the editor")
     test.equal(m.entries[1], cancel)
-    test.equal(m.entries[2].label, "Edit name")
+    test.equal(m.entries[2].label, "Customize preset")
     test.equal(m.entries[3], reset)
     test.equal(m.entries[4], load)
     test.equal(m.entries[5], select)
@@ -59,7 +57,7 @@ test.case("Menu captures each preset independently of the game's selected preset
 end)
 
 test.case("Adding an edit action never swaps or removes Select even with different Add metadata", function()
-    local select, load, reset, cancel = entry(1), entry(1), entry(1), {}
+    local select, load, reset, cancel = entry(1), entry(1), entry(1), { actionType = MiniMenuActionType.CANCEL }
     select.verbText, load.verbText, reset.verbText = "Select", "Load", "Reset"
     local m = fixture({ cancel, reset, load, select })
     function m:Add(label, action, slot)
@@ -69,10 +67,29 @@ test.case("Adding an edit action never swaps or removes Select even with differe
     end
     menu.add(m, bindings.labels, function() end)
     test.equal(m.entries[1], cancel)
-    test.equal(m.entries[2], reset)
-    test.equal(m.entries[3], load)
-    test.equal(m.entries[4], select)
-    test.equal(m.entries[5].label, "Edit name")
+    test.equal(m.entries[2].label, "Customize preset")
+    test.equal(m.entries[3], reset)
+    test.equal(m.entries[4], load)
+    test.equal(m.entries[5], select)
+end)
+
+test.case("Customize preset sits below Reset and above client configuration actions", function()
+    local cancel = { actionType = MiniMenuActionType.CANCEL }
+    local configure = { verbText = "Configure Menu Entries" }
+    local shift = { verbText = "Set shift click" }
+    local default = { verbText = "Set default click" }
+    local reset, load, select = entry(1), entry(1), entry(1)
+    reset.verbText = "Reset"
+    local m = fixture({ cancel, configure, shift, default, reset, load, select })
+    menu.add(m, bindings.labels, function() end)
+    test.equal(m.entries[1], cancel)
+    test.equal(m.entries[2], configure)
+    test.equal(m.entries[3], shift)
+    test.equal(m.entries[4], default)
+    test.equal(m.entries[5].label, "Customize preset")
+    test.equal(m.entries[6], reset)
+    test.equal(m.entries[7], load)
+    test.equal(m.entries[8], select)
 end)
 
 test.case("Menu ignores unrelated, restricted and missing components", function()

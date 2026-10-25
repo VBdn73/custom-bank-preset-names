@@ -56,7 +56,7 @@ function popup.open(slot, names, bindings)
         -- The outer host can survive a bank close or a change in availability.
         return current == source and not current.isRestricted and current.visibleGlobal
     end
-    height = layout.compactPopupHeight
+    height = layout.compactPopupHeight + (bindings.colours and layout.colourHeight or 0)
     layer = ui.Layer.new(parent)
     layer:SetSize(width, height)
     -- Nested native bank containers do not reliably apply percentage anchors
@@ -102,7 +102,7 @@ function popup.open(slot, names, bindings)
     title.clickthrough = true
     local content = ui.Layer.new(layer)
     content:SetPos(0, layout.popupHeaderHeight)
-    content:SetSize(width, layout.compactBodyHeight)
+    content:SetSize(width, layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0))
     local toggleInfo
     refresh, toggleInfo = nameEditor.build(content, names, bindings, slot,
         { hideTitle = true, externalInfoButton = true, infoParent = layer })

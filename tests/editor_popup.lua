@@ -59,7 +59,7 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
     test.equal(built[1].parent.y, 36, "Editor must sit below the title bar")
     test.equal(built[1].options.externalInfoButton, true)
     local info = controls[8]
-    test.equal(info.label, nil, "Trial icon has no text label")
+    test.equal(info.label, nil, "Info icon has no text label")
     test.equal(info.sprite, 28787)
     test.equal(info.clickthrough, false)
     info.isMouseOver = true
@@ -162,6 +162,14 @@ test.case("Popup opens the requested slot, replaces old popups and closes safely
         popup.update()
         test.equal(opened.destroyed, true, "Close when source becomes " .. unavailable)
     end
+    source = { parent = scroll, visibleGlobal = true }
+    local colourBindings = { labels = bindings.labels, colours = {} }
+    popup.open(1, {}, colourBindings)
+    local colourContent = built[#built].parent
+    test.equal(colourContent.height, layout.compactBodyHeight + layout.colourHeight,
+        "Bank popup content must include colour controls, not clip them")
+    test.equal(colourContent.parent.height, layout.compactPopupHeight + layout.colourHeight)
+    popup.close()
     local buildCount = #built
     for _, unavailableSource in ipairs({
         { parent = scroll, visibleGlobal = false },

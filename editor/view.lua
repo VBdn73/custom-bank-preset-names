@@ -27,6 +27,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     -- is positioned unexpectedly by the beta client's settings host.
     local contentWidth = layout.width
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
+    if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = {
@@ -87,6 +88,48 @@ function editor.build(parent, names, bindings, initialSlot, options)
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
     local infoVisible = false
+    local colourControls = {}
+    local displayedColourContext = names.getContext()
+    local function refreshColours()
+        if not bindings.colours then return end
+        for kind, control in pairs(colourControls) do
+            local value = bindings.colours.get(selectedSlot, kind)
+            for index, item in ipairs(bindings.colours.palette) do
+                if item.value == value then control:SetEntrySelected(index - 1, true, false) end
+            end
+        end
+    end
+    if bindings.colours then
+        for index, kind in ipairs({ "background", "text" }) do
+            local x = layout.padding + (index - 1) * (layout.buttonWidth + layout.buttonGap)
+            trackPosition(createText(parent, kind == "background" and "Background" or "Text colour", smallFont),
+                x, 234)
+            local control = ui.List.new(parent)
+            control:SetSize(layout.buttonWidth, layout.fieldHeight)
+            control.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
+            control.dropdownMaxVisibleEntries = 4
+            control.entryHeight = layout.textHeight
+            trackPosition(control, x, 266)
+            colourControls[kind] = control
+            for paletteIndex, item in ipairs(bindings.colours.palette) do
+                control:Add(item.name, paletteIndex - 1)
+            end
+            control:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
+                if event ~= ui.SelectionChangeEvent.SELECTED then return end
+                local item = bindings.colours.palette[entryID + 1]
+                if not item then return end
+                -- Colour changes save immediately; never save across a character switch.
+                if names.getContext() ~= displayedColourContext then
+                    refreshColours()
+                    setStatus("Character changed. Choose the colour again.", false)
+                    return
+                end
+                local ok, saved, message = pcall(bindings.colours.save, selectedSlot, kind, item.value)
+                setStatus(ok and message or "Colour save error. See the client console.", ok and saved)
+                refreshColours()
+            end)
+        end
+    end
     local infoControls = {}
     local function positionInfo()
         local host = options.infoParent or parent
@@ -114,7 +157,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             infoControls[#infoControls + 1] = { control = box, x = 0, y = 0 }
         end
         for index, text in ipairs({ "Stored on this device, per character name.",
-            "Changes displayed names only.", "Does not load presets or unlock slots." }) do
+            "Changes names and colours only.", "Does not load presets or unlock slots." }) do
             local note = createText(host, text, smallFont)
             note:SetSize(layout.controlWidth - layout.padding * 2, layout.noteHeight)
             note.clickthrough = true
@@ -136,6 +179,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local displayedCharacterContext = names.getContext()
     local function refreshSelectedName()
         displayedCharacterContext = names.getContext()
+        displayedColourContext = displayedCharacterContext
+        refreshColours()
         refreshPresetLabels()
         nameInput.content = names.get(selectedSlot) or ""
         statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
@@ -211,6 +256,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             refreshSelectedName()
         end
         refreshPresetLabels()
+        refreshColours()
     end, toggleInfo
 end
 

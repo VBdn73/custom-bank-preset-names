@@ -42,5 +42,6 @@ layout.compactBodyHeight = layout.compactHeight - layout.titleHeight
 layout.popupWidth = layout.width + layout.popupPadding * 2
 layout.popupHeight = layout.popupHeaderHeight + layout.bodyHeight + layout.popupBottomPadding
 layout.compactPopupHeight = layout.popupHeaderHeight + layout.compactBodyHeight + layout.popupBottomPadding
+layout.colourHeight = 104
 
 return layout
