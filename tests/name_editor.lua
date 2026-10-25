@@ -75,7 +75,7 @@ local function createFixture(colours)
                 and control.y == math.max(0, math.floor((self.parent.height
                      - (options and options.hideTitle and 194 or 226)) / 2))
                     + 226 - (options and options.hideTitle and 32 or 0) then self.note = control
-            elseif control.kind == "text" and control.content == "" and control.height == 28 then self.status = control end
+            elseif control.kind == "text" and control.content == "" then self.status = control end
         end
     end
     function f:select(entryID, event)
@@ -88,7 +88,7 @@ local function createFixture(colours)
     return f
 end
 
-test.case("Colour dropdowns save independently for the selected slot and block stale characters", function()
+test.case("Bottom buttons save and reset names and staged colours for the selected slot", function()
     local values, calls = {}, 0
     local colours = {
         palette = { { name = "Default", value = "" }, { name = "Red", value = "red" },
@@ -106,21 +106,51 @@ test.case("Colour dropdowns save independently for the selected slot and block s
         if control.kind == "list" and not control.entries[17] then controls[#controls + 1] = control end
     end
     test.equal(#controls, 2)
+    test.equal(f.save.y > controls[1].y + controls[1].height, true)
+    test.equal(f.save.y - (controls[1].y + controls[1].height), 8,
+        "Buttons sit close beneath the colour dropdowns")
+    test.equal(f.reset.y, f.save.y)
+    test.equal(f.status.y >= f.save.y + f.save.height, true,
+        "Save and failure messages sit below the buttons")
     test.equal(calls, 0)
     f:select(17)
     controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 2, ui.SelectionChangeEvent.SELECTED)
     controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 1, ui.SelectionChangeEvent.SELECTED)
+    f.refresh()
+    test.equal(controls[1].selectedID, 2, "Ticks preserve unsaved colours")
+    test.equal(calls, 0)
+    test.equal(f.saveCalls, 0)
+    f.input.content = "Coloured preset"
+    f:clickSave()
     test.equal(values["18background"], "green")
     test.equal(values["18text"], "red")
-    test.equal(f.saveCalls, 0)
+    test.equal(f.stored[18], "Coloured preset")
+    f:clickReset()
+    test.equal(values["18background"], "")
+    test.equal(values["18text"], "")
+    test.equal(f.stored[18], "")
+    test.equal(controls[1].selectedID, 0)
+    test.equal(controls[2].selectedID, 0)
+    test.equal(f.selector.entries[17], "Preset 18")
+    controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 1, ui.SelectionChangeEvent.SELECTED)
+    f:clickSave()
+    test.equal(f.selector.entries[17], "Preset 18 *", "Background alone marks the preset")
+    f:clickReset()
     controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 0, ui.SelectionChangeEvent.SELECTED)
     test.equal(values["18background"], "")
     f.context = "second"
     controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
-    test.equal(calls, 3)
+    f:clickSave()
+    test.equal(calls, 8, "Character change blocks all stale writes")
     f.refresh()
     controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
-    test.equal(calls, 4)
+    f:select(0)
+    f:select(17)
+    test.equal(controls[2].selectedID, 0, "Switching slots discards unsaved colours")
+    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
+    f:clickSave()
+    test.equal(calls, 10)
+    test.equal(f.selector.entries[17], "Preset 18 *", "Text colour alone marks the preset")
 end)
 
 test.case("Settings info uses the same native icon states as the popup", function()

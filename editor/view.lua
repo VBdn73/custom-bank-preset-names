@@ -56,7 +56,12 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local labels, changed = {}, false
         for preset = 1, bindings.presetCount do
             local name = names.get(preset)
-            labels[preset] = "Preset " .. preset .. (name and name ~= "" and " *" or "")
+            local customized = name and name ~= ""
+            if bindings.colours then
+                customized = customized or bindings.colours.get(preset, "background") ~= ""
+                    or bindings.colours.get(preset, "text") ~= ""
+            end
+            labels[preset] = "Preset " .. preset .. (customized and " *" or "")
             changed = changed or labels[preset] ~= presetLabels[preset]
         end
         if not changed then return end
@@ -82,18 +87,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
     nameInput.emptyText = "Use predefined name"
 
     local statusLabel = createText(parent, "", smallFont)
-    trackPosition(statusLabel, layout.padding, layout.rows.status)
+    if bindings.colours then
+        statusLabel:SetSize(layout.controlWidth, layout.noteHeight)
+    end
+    trackPosition(statusLabel, layout.padding,
+        bindings.colours and layout.rows.colourStatus or layout.rows.status)
     local function setStatus(message, succeeded)
         statusLabel.content = message
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
     local infoVisible = false
     local colourControls = {}
-    local displayedColourContext = names.getContext()
+    local pendingColours = {}
     local function refreshColours()
         if not bindings.colours then return end
         for kind, control in pairs(colourControls) do
-            local value = bindings.colours.get(selectedSlot, kind)
+            local value = pendingColours[kind]
             for index, item in ipairs(bindings.colours.palette) do
                 if item.value == value then control:SetEntrySelected(index - 1, true, false) end
             end
@@ -103,13 +112,13 @@ function editor.build(parent, names, bindings, initialSlot, options)
         for index, kind in ipairs({ "background", "text" }) do
             local x = layout.padding + (index - 1) * (layout.buttonWidth + layout.buttonGap)
             trackPosition(createText(parent, kind == "background" and "Background" or "Text colour", smallFont),
-                x, 234)
+                 x, layout.rows.colourLabel)
             local control = ui.List.new(parent)
             control:SetSize(layout.buttonWidth, layout.fieldHeight)
             control.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
             control.dropdownMaxVisibleEntries = 4
             control.entryHeight = layout.textHeight
-            trackPosition(control, x, 266)
+            trackPosition(control, x, layout.rows.colourInput)
             colourControls[kind] = control
             for paletteIndex, item in ipairs(bindings.colours.palette) do
                 control:Add(item.name, paletteIndex - 1)
@@ -118,14 +127,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 if event ~= ui.SelectionChangeEvent.SELECTED then return end
                 local item = bindings.colours.palette[entryID + 1]
                 if not item then return end
-                -- Colour changes save immediately; never save across a character switch.
-                if names.getContext() ~= displayedColourContext then
-                    refreshColours()
-                    setStatus("Character changed. Choose the colour again.", false)
-                    return
-                end
-                local ok, saved, message = pcall(bindings.colours.save, selectedSlot, kind, item.value)
-                setStatus(ok and message or "Colour save error. See the client console.", ok and saved)
+                pendingColours[kind] = item.value
+                statusLabel.content = ""
                 refreshColours()
             end)
         end
@@ -179,14 +182,18 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local displayedCharacterContext = names.getContext()
     local function refreshSelectedName()
         displayedCharacterContext = names.getContext()
-        displayedColourContext = displayedCharacterContext
+        if bindings.colours then
+            for kind in pairs(colourControls) do
+                pendingColours[kind] = bindings.colours.get(selectedSlot, kind)
+            end
+        end
         refreshColours()
         refreshPresetLabels()
         nameInput.content = names.get(selectedSlot) or ""
         statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
     end
 
-    local function saveValue(value)
+    local function saveValue(value, reset)
         -- Do not save an old character's unfinished edit under a new character.
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
@@ -200,6 +207,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
             print("[Preset names] Save error: " .. tostring(saveSucceeded))
             setStatus("Save error. See the client console.", false)
             return false
+        end
+        if saveSucceeded then refreshPresetLabels() end
+        if saveSucceeded and bindings.colours then
+            for _, kind in ipairs({ "background", "text" }) do
+                local ok, saved, colourMessage = pcall(bindings.colours.save,
+                    selectedSlot, kind, reset and "" or pendingColours[kind])
+                if not ok or not saved then
+                    setStatus(ok and colourMessage or "Colour save error. See the client console.", false)
+                    return false
+                end
+            end
+            if reset then
+                pendingColours.background, pendingColours.text = "", ""
+                refreshColours()
+            end
+            message = reset and "Name and colours reset." or "Name and colours saved."
         end
         setStatus(message, saveSucceeded)
         if saveSucceeded then refreshPresetLabels() end
@@ -220,13 +243,14 @@ function editor.build(parent, names, bindings, initialSlot, options)
             refreshSelectedName()
         end
     end)
-    trackPosition(createButton(parent, "Save", saveInput), layout.padding, layout.rows.buttons)
+    local buttonsY = bindings.colours and layout.rows.colourButtons or layout.rows.buttons
+    trackPosition(createButton(parent, "Save", saveInput), layout.padding, buttonsY)
     trackPosition(createButton(parent, "Reset", function()
-        local saveSucceeded = saveValue("")
+        local saveSucceeded = saveValue("", true)
         if saveSucceeded then
             nameInput.content = ""
         end
-    end), layout.resetX, layout.rows.buttons)
+    end), layout.resetX, buttonsY)
     nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
         if reason == ui.InputFieldActionResult.SUBMIT then
             saveInput()

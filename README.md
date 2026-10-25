@@ -29,19 +29,21 @@ For local testing, use the RuneScape plugin development beta as described below.
 
 1. Enable the plugin and open its ribbon entry or its Settings icon in the Plugin Hub.
 2. Choose a preset number from the dropdown.
-3. Enter a name and click **Save**, or press Enter.
-4. Click **Reset**, or save a blank name, to use the game's predefined name again.
+3. Enter a name, choose colours, and click **Save**, or press Enter, to save all three.
+4. Click **Reset** to restore the game's predefined name and default colours.
+   Saving a blank name restores only the predefined name, keeping your chosen colours.
 
 An asterisk in the preset dropdown (for example, **Preset 3 \***) marks a slot
-with a saved custom name. Resetting it or saving a blank name removes the marker.
+with a saved custom name, background colour, or text colour. Resetting the preset
+removes the marker; saving a blank name removes it only if both colours are Default.
 
 Click **i** to show or hide the storage and display-only information. These notes
 start hidden in both editors. In the bank popup the button sits beside **×**;
 in plugin settings it sits at the top-right of the content area.
 
 Each preset editor includes **Background** and **Text colour** dropdowns with
-**Default**, **Red**, **Green**, and **Blue**. Colour selections save immediately,
-independently of the name's Save/Reset buttons, on this device per character.
+**Default**, **Red**, **Green**, and **Blue**. Colour selections are saved together
+with the name using **Save** at the bottom of the editor, on this device per character.
 Default restores the game's colour. Text colour affects only the preset name.
 
 Alternatively, right-click the preset's name in the bank and choose **Customize preset**.
