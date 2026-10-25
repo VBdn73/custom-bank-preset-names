@@ -1,0 +1,20 @@
+# Changelog
+
+## 0.3.0 - 2026-10-25
+
+- Added independent preset background and text colours, with 13 colours plus Default.
+- Bank editor now remembers its position between sessions.
+- Improved editor layout and scrolling with PrettyUI controls.
+
+## 0.2.0 - 2026-10-24
+
+- Custom names are now saved separately for each character.
+- Added a right-click option to edit names directly from the bank in a draggable popup.
+- Marked renamed presets with an asterisk in the preset selector.
+- Improved editor styling, save/error feedback, and collapsible information notes.
+
+## 0.1.0 - 2026-10-24
+
+- Initial release with local custom names for all 18 bank preset slots.
+- Added a preset selector with Save and Reset controls and support for names up to 40 Unicode characters.
+- Saved names locally and restored predefined names when reset or disabled.
