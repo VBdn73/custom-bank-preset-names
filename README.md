@@ -13,7 +13,7 @@ changing the game's server-side preset names or how presets work.
 - Names up to 40 Unicode characters long.
 - Local settings kept separately for each character name.
 - Restore the game's predefined name by resetting a slot or saving a blank name.
-- No extra permissions, external dependencies, or network requests.
+- No extra permissions or network requests. Uses PrettyUI for the ribbon scrollbar.
 
 The plugin only changes displayed text and colours. It does not load presets, automate bank
 actions, or unlock unavailable preset slots. Disabling it restores the original
@@ -34,8 +34,8 @@ For local testing, use the RuneScape plugin development beta as described below.
     Saving a blank name restores only the predefined name, keeping your chosen colours.
 
 The ribbon editor adapts as you resize its panel. Short panels use tighter spacing;
-when the form still does not fit, scroll over the form or use the **^ / v** buttons
-on the right to reach the remaining controls. Scrolling over a dropdown operates
+when the form still does not fit, scroll over the form, drag the scrollbar thumb,
+or click its track on the right to reach the remaining controls. Scrolling over a dropdown operates
 that dropdown instead. Resizing keeps the selected preset and unfinished edits.
 
 An asterisk in the preset dropdown (for example, **Preset 3 \***) marks a slot
@@ -109,6 +109,20 @@ After changing Lua files, reload the plugin:
 ```text
 prl custom-bank-preset-names
 ```
+
+After changing `plugin.json` (including dependencies), refresh the manifest before
+reloading. Reload alone does not rescan the manifest:
+
+```text
+prf
+prl custom-bank-preset-names
+```
+
+PrettyUI (mod.io ID `6398181`) must be installed. Development enable commands do
+not download missing dependencies automatically. The client exposes its exports
+as the `prettyui` global in `main.lua`; no Lua `require("prettyui")` is needed.
+The entry point passes that library explicitly to the editor module rather than
+relying on dependency globals being available in required modules.
 
 ### Tests
 

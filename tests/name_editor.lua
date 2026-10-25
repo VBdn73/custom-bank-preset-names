@@ -33,6 +33,7 @@ local function createFixture(colours)
         return control
     end
     ui = {
+        Layer = { new = function(parent) return createControl("layer", parent) end },
         Rectangle = { new = function(parent) return createControl("rectangle", parent) end },
         Text = { new = function(parent) return createControl("text", parent) end },
         Button = { new = function(parent) return createControl("button", parent) end },
@@ -40,12 +41,36 @@ local function createFixture(colours)
         InputField = { new = function(parent) return createControl("input", parent) end },
         List = { new = function(parent) return createControl("list", parent) end },
         Hook = { ONBUTTONPRESSED = 1, ONCONTENTCHANGED = 2, ONSELECTIONCHANGED = 3, ONRESIZE = 4, ONCLICK = 5,
-            ONSCROLLWHEEL = 6 },
+            ONSCROLLWHEEL = 6, ONHOLD = 7, ONRELEASE = 8,
+            ONMOUSEOVER = 9, ONMOUSELEAVE = 10 },
         SelectionChangeEvent = { SELECTED = 1, DESELECTED = 0 },
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
         InputFieldActionResult = { SUBMIT = 1 },
     }
     Vector4 = { new = function(...) return { ... } end }
+    -- Mock the public PrettyUI interface, not its scrollbar implementation.
+    prettyui = { SimpleView = { new = function(parent, options)
+        local view = { content = createControl("layer", parent), scrollY = 0,
+            width = options.width, height = options.height, contentHeight = 0 }
+        function view:ScrollBy(delta)
+            self.scrollY = math.max(0, math.min(math.max(0, self.contentHeight - self.height),
+                self.scrollY + delta))
+        end
+        function view:SetContentHeight(height)
+            self.contentHeight = height
+            self.scrollbarVisible = height > self.height
+            self.contentWidth = self.width - (self.scrollbarVisible and 18 or 0)
+            self.content:SetSize(self.contentWidth, math.max(self.height, height))
+            self:ScrollBy(0)
+        end
+        function view:SetSize(width, height)
+            self.width, self.height = width, height
+            self:SetContentHeight(self.contentHeight)
+        end
+        function view:Destroy() self.destroyed = true end
+        f.scrollView = view
+        return view
+    end } }
     id = {
         Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
         StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 },
@@ -68,15 +93,18 @@ local function createFixture(colours)
     f.parent = createControl("parent", f.host)
     f.parent.width, f.parent.height = 580, 360
     function f:open(initialSlot, options)
+        if options and options.scrollable and options.prettyui == nil then
+            options.prettyui = prettyui
+        end
         local firstNewControl = #self.controls + 1
-        self.refresh, self.toggleInfo = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18, colours = colours }, initialSlot, options)
+        self.refresh, self.toggleInfo, self.destroy = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18, colours = colours }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" and control.entries[17] then self.selector = control
             elseif control.kind == "input" then self.input = control
             elseif control.label == "Save" then self.save = control
             elseif control.label == "Reset" then self.reset = control
-            elseif control.kind == "sprite" then self.info = control
+            elseif control.kind == "sprite" and control.sprite == 28787 then self.info = control
             elseif control.content == "Custom bank preset names" then self.title = control
             elseif control.kind == "text" and control.height == 18
                 and control.y == math.max(0, math.floor((self.parent.height
@@ -340,37 +368,59 @@ test.case("Resizable ribbon fits narrow panels and restores the wide layout with
     test.equal(f.saveCalls, 0)
 end)
 
+test.case("Ribbon reports an unavailable PrettyUI dependency before creating controls", function()
+    local f = createFixture()
+    local dependency = prettyui
+    prettyui = nil
+    local before = #f.controls
+    local ok, message = pcall(function() f:open(nil, { scrollable = true }) end)
+    prettyui = dependency
+    test.equal(ok, false)
+    test.equal(tostring(message):find("PrettyUI is required", 1, true) ~= nil, true)
+    test.equal(#f.controls, before)
+end)
+
+test.case("Ribbon uses the dependency passed by main even without a module global", function()
+    local f = createFixture()
+    local dependency = prettyui
+    prettyui = nil
+    local ok, message = pcall(function()
+        f:open(18, { scrollable = true, prettyui = dependency })
+    end)
+    prettyui = dependency
+    test.equal(ok, true, tostring(message))
+    test.equal(f.input.parent, f.scrollView.content)
+    test.equal(f.selector.selectedID, 17)
+    f.destroy()
+end)
+
 test.case("Small ribbon panels scroll to Save and reset their offset when enlarged", function()
     local f = createFixture({
         palette = { { name = "Default", value = "" } },
         get = function() return "" end, save = function() return true end,
     })
     f.parent.width, f.parent.height = 200, 120
-    local first = #f.controls + 1
     f:open(18, { scrollable = true })
     f.input.content = "Keep this edit"
     test.equal(f.save.hidden, true)
-    local up, down
-    for index = first, #f.controls do
-        local c = f.controls[index]
-        if c.label == "^" then up = c elseif c.label == "v" then down = c end
-    end
-    test.equal(up.enabled, false)
-    test.equal(down.hidden, false)
-    test.equal(f.parent.hooks[ui.Hook.ONSCROLLWHEEL](f.parent, 100), false)
+    test.equal(f.scrollView.scrollbarVisible, true)
+    test.equal(f.input.parent, f.scrollView.content)
+    test.equal(f.input.width <= f.scrollView.contentWidth, true)
+    test.equal(f.input.hooks[ui.Hook.ONSCROLLWHEEL](f.input, 100), false)
+    f.refresh()
     test.equal(f.save.hidden, false)
-    test.equal(f.save.y >= 0 and f.save.y + f.save.height <= 120, true)
-    test.equal(down.enabled, false)
-    up.hooks[ui.Hook.ONBUTTONPRESSED]()
-    test.equal(down.enabled, true)
+    local visibleY = f.save.y - f.scrollView.scrollY
+    test.equal(visibleY >= 0 and visibleY + f.save.height <= 120, true)
     f.parent.width, f.parent.height = 580, 360
     f.parent.hooks[ui.Hook.ONRESIZE]()
-    test.equal(up.hidden, true)
-    test.equal(down.hidden, true)
+    test.equal(f.scrollView.scrollbarVisible, false)
+    test.equal(f.scrollView.scrollY, 0)
     test.equal(f.save.hidden, false)
     test.equal(f.input.content, "Keep this edit")
     test.equal(f.selector.selectedID, 17)
     test.equal(f.saveCalls, 0)
+    f.destroy()
+    test.equal(f.scrollView.destroyed, true)
 end)
 
 test.case("Editor info button reveals and hides scope notes without saving or changing edits", function()

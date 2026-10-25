@@ -4,6 +4,7 @@ utf8 = nil
 local test = require("tests.test_helper")
 print("\ncolours")
 dofile("tests/colours.lua")
+dofile("tests/main.lua")
 
 for _, suite in ipairs({ "text_validation", "preset_names", "bank_labels", "editor_style", "name_editor", "preset_menu", "editor_popup", }) do
     print("\n" .. suite)

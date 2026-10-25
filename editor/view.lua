@@ -23,6 +23,20 @@ end
 
 function editor.build(parent, names, bindings, initialSlot, options)
     options = options or {}
+    local host = parent
+    local scrollView
+    if options.scrollable then
+        -- Receive dependency exports explicitly from the entry point.
+        local prettyui = options.prettyui
+        assert(prettyui,
+            "PrettyUI is required for the ribbon editor.")
+        assert(prettyui.SimpleView and prettyui.SimpleView.new,
+            "The installed PrettyUI version does not provide SimpleView.")
+        scrollView = prettyui.SimpleView.new(host, {
+            width = math.max(1, host.width), height = math.max(1, host.height),
+        })
+        parent = scrollView.content
+    end
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
     local contentWidth = layout.width
@@ -135,7 +149,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local infoControls = {}
     local function positionInfo()
-        local host = options.infoParent or parent
+        local host = options.infoParent or host
         local width = math.min(layout.controlWidth, math.max(1, host.width - layout.padding * 2))
         local x = math.max(0, host.width - layout.padding - width)
         local y = options.infoParent and layout.popupHeaderHeight or layout.padding + layout.popupCloseSize + 4
@@ -152,7 +166,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             infoControls = {}
             return
         end
-        local host = options.infoParent or parent
+        local host = options.infoParent or host
         local height = layout.padding * 2 + layout.noteSpacing * 3
         for _, fill in ipairs({ true, false }) do
             local box = ui.Rectangle.new(host)
@@ -178,7 +192,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     -- the client, so keep the embedded button in our content's top-right corner.
     local infoButton, updateInfo
     if not options.externalInfoButton then
-        infoButton, updateInfo = icons.new(parent, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
+        infoButton, updateInfo = icons.new(host, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
             id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, toggleInfo)
     end
 
@@ -265,43 +279,49 @@ function editor.build(parent, names, bindings, initialSlot, options)
         position.width, position.height = position.component.width, position.component.height
     end
 
-    local scrollY, maxScroll = 0, 0
-    local scrollUp, scrollDown
-    local centreContent
-    local function scrollBy(amount)
-        scrollY = math.max(0, math.min(maxScroll, scrollY + amount))
-        centreContent()
-    end
-    if options.scrollable then
-        scrollUp = createButton(parent, "^", function() scrollBy(-layout.fieldHeight) end)
-        scrollDown = createButton(parent, "v", function() scrollBy(layout.fieldHeight) end)
-        local function onWheel(_, delta)
-            if maxScroll == 0 then return true end
-            scrollBy(delta * layout.fieldHeight)
-            return false
-        end
-        parent:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", onWheel)
+    if scrollView then
         for _, position in ipairs(controlPositions) do
             -- Lists own their wheel events for navigating their entries.
             if position.component ~= presetSelector
                 and position.component ~= colourControls.background
                 and position.component ~= colourControls.text then
-                position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", onWheel)
+                position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", function(_, delta)
+                    if not scrollView.scrollbarVisible then return true end
+                    scrollView:ScrollBy(delta * layout.fieldHeight)
+                    return false
+                end)
             end
         end
     end
 
-    centreContent = function()
+    local function updateClipping()
+        if not scrollView then return end
+        for _, position in ipairs(controlPositions) do
+            local control = position.component
+            local top = control.y - scrollView.scrollY
+            -- Native input text can escape ancestor clipping; suppress controls
+            -- crossing the viewport boundary, as in the previous ribbon editor.
+            control.hidden = top < 0 or top + control.height > host.height
+        end
+    end
+
+    local function centreContent()
         local minimumHeight = (bindings.colours and 246 or 194)
             - (options.hideTitle and layout.titleHeight or 0)
-        local overflowing = options.scrollable == true and parent.height < minimumHeight
-        local gutter = overflowing and layout.popupCloseSize + 4 or 0
-        local width = math.min(contentWidth, math.max(1, parent.width - gutter))
+        local overflowing = scrollView ~= nil and host.height < minimumHeight
+        local compact = host.height < contentHeight
+        local titleOffset = options.hideTitle and layout.titleHeight or 0
+        local height = compact and minimumHeight or contentHeight
+        if scrollView then
+            scrollView:SetSize(host.width, host.height)
+            scrollView:SetContentHeight(height)
+        end
+        local availableHostWidth = scrollView and scrollView.contentWidth or host.width
+        local width = math.min(contentWidth, math.max(1, availableHostWidth))
         local controlWidth = math.max(1, width - layout.padding * 2)
         local buttonWidth = math.max(1, (controlWidth - layout.buttonGap) / 2)
         -- Tight ribbon panels need smaller gaps, not smaller text or fields.
         -- Leave the established popup/settings spacing alone when it fits.
-        local compact = parent.height < contentHeight
         local compactRows = {
             [8] = 8, [48] = 36, [90] = 72, [122] = 94,
             [166] = 130, [198] = 150, [238] = 188, [270] = 220,
@@ -309,12 +329,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         if not bindings.colours then
             compactRows[166], compactRows[198] = 134, 166
         end
-        local titleOffset = options.hideTitle and layout.titleHeight or 0
-        local height = compact and ((bindings.colours and 246 or 194) - titleOffset) or contentHeight
-        maxScroll = options.scrollable and math.max(0, height - parent.height) or 0
-        scrollY = math.min(scrollY, maxScroll)
-        local offsetX = math.max(0, math.floor((parent.width - gutter - width) / 2))
-        local offsetY = math.max(0, math.floor((parent.height - height) / 2))
+        local offsetX = math.max(0, math.floor((availableHostWidth - width) / 2))
+        local offsetY = math.max(0, math.floor((host.height - height) / 2))
         for _, position in ipairs(controlPositions) do
             local control = position.component
             local x = position.x == layout.resetX
@@ -330,39 +346,29 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end
             control:SetSize(availableWidth, compact and position.height == layout.textHeight
                 and layout.noteHeight or position.height)
-            control:SetPos(offsetX + x, offsetY + y - scrollY)
-            -- Do not let offscreen controls intercept clicks outside the panel.
-            control.hidden = options.scrollable and (offsetY + y - scrollY < 0
-                or offsetY + y - scrollY + control.height > parent.height) or false
-        end
-        if scrollUp then
-            for index, control in ipairs({ scrollUp, scrollDown }) do
-                control.hidden = not overflowing
-                control:SetSize(layout.popupCloseSize, math.min(layout.popupCloseSize, parent.height / 2))
-                control:SetPos(math.max(0, parent.width - layout.popupCloseSize),
-                    index == 1 and 0 or parent.height - control.height)
-            end
-            scrollUp.enabled, scrollDown.enabled = scrollY > 0, scrollY < maxScroll
+            control:SetPos(offsetX + x, offsetY + y)
         end
         if infoButton then
             infoButton.hidden = overflowing
-            infoButton:SetPos(math.max(0, parent.width - layout.padding - layout.popupCloseSize),
+            infoButton:SetPos(math.max(0, host.width - layout.padding - layout.popupCloseSize),
                 layout.padding)
         end
         positionInfo()
+        updateClipping()
     end
     centreContent()
-    parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)
+    host:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)
 
     -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()
+        updateClipping()
         if updateInfo then updateInfo() end
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
         end
         refreshPresetLabels()
         refreshColours()
-    end, toggleInfo
+    end, toggleInfo, scrollView and function() scrollView:Destroy() end or nil
 end
 
 return editor

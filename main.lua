@@ -1,3 +1,5 @@
+-- Retain the dependency export for editor instances created by later events.
+local prettyUILibrary = prettyui
 local bankBindings = require("bank/bindings")
 local presetNames = require("presets/names")
 local bankLabels = require("bank/labels")
@@ -10,6 +12,7 @@ bankBindings.colours = presetColours
 
 -- Each open editor supplies a callback that follows character changes.
 local editorRefreshCallbacks = {}
+local destroyContentView
 
 Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
     presetMenu.add(event.miniMenu, bankBindings.labels, function(slot)
@@ -23,8 +26,23 @@ Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
 end)
 
 Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
-    editorRefreshCallbacks.content = nameEditor.build(event.component, presetNames, bankBindings,
-        nil, { scrollable = true })
+    if destroyContentView then pcall(destroyContentView) end
+    editorRefreshCallbacks.content, destroyContentView = nil, nil
+    local ok, refresh, _, destroy = pcall(nameEditor.build, event.component, presetNames, bankBindings,
+        nil, { scrollable = true, prettyui = prettyUILibrary })
+    if ok then
+        editorRefreshCallbacks.content, destroyContentView = refresh, destroy
+    else
+        print("[Preset names] Ribbon editor error: " .. tostring(refresh))
+        for index, text in ipairs({ "Could not open preset editor.",
+            "See the client console for the error." }) do
+            local message = ui.Text.new(event.component)
+            message:SetPos(8, 8 + (index - 1) * 24)
+            message:SetSize(math.max(1, event.component.width - 16), 24)
+            message.font = id.Font.MUSEO_SANS_11PT_REGULAR
+            message.content = text
+        end
+    end
 end)
 
 -- Reacquire components each tick: bank interfaces can close or rebuild at any time.
@@ -48,6 +66,8 @@ Event.Draw.Subscribe("presetNames.labels", function()
 end)
 
 function PluginShutdown()
+    if destroyContentView then pcall(destroyContentView) end
+    destroyContentView = nil
     bankAppearance.restore(bankBindings.appearance)
     Event.MiniMenuReady.Unsubscribe("presetNames.menu")
     editorPopup.close()
