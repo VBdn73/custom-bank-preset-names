@@ -8,6 +8,7 @@ local presetMenu = require("bank/menu")
 local editorPopup = require("editor/popup")
 local bankAppearance = require("bank/appearance")
 local presetColours = require("presets/colours")
+local bankReorder = require("bank/reorder")
 bankBindings.colours = presetColours
 
 -- Each open editor supplies a callback that follows character changes.
@@ -47,6 +48,7 @@ end)
 
 -- Reacquire components each tick: bank interfaces can close or rebuild at any time.
 Event.Logic.Subscribe("presetNames.labels", function()
+    bankReorder.update(bankBindings)
     editorPopup.update()
     for layer, refresh in pairs(editorRefreshCallbacks) do
         -- A closed host may already have disposed its controls.
@@ -66,6 +68,7 @@ Event.Draw.Subscribe("presetNames.labels", function()
 end)
 
 function PluginShutdown()
+    bankReorder.clear()
     if destroyContentView then pcall(destroyContentView) end
     destroyContentView = nil
     bankAppearance.restore(bankBindings.appearance)

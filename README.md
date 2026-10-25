@@ -7,6 +7,7 @@ plugin changes their appearance locally, not their server-side names or behaviou
 
 - Custom names for all 18 mapped preset slots, up to 40 Unicode characters each.
 - Independent background and name-text colours: 13 colours plus Default.
+- Dragging one bank preset onto another swaps their saved names and colours too.
 - Edit through the plugin's ribbon/settings panel or directly from the bank.
 - Save settings locally for each character; reset individual presets at any time.
 - Draggable bank editor with a position remembered between client sessions.

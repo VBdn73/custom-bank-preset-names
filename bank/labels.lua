@@ -15,6 +15,23 @@ local function isEditableLabel(component)
     return component and component.type == ui.ComponentType.LABEL and not component.isRestricted
 end
 
+-- The predefined name belongs to the preset too. Move the cached fallback
+-- before a newly uncustomised slot is painted, rather than showing the old
+-- slot's predefined name until the game's next label rebuild.
+function bankLabels.swapOriginals(bindings, first, second)
+    local firstState, secondState
+    for index, binding in ipairs(bindings) do
+        local state = labelStates[index]
+        if state and resolveComponent(binding) == state.component then
+            if binding.slot == first then firstState = state end
+            if binding.slot == second then secondState = state end
+        end
+    end
+    if firstState and secondState then
+        firstState.originalText, secondState.originalText = secondState.originalText, firstState.originalText
+    end
+end
+
 function bankLabels.update(bindings, names)
     for index, binding in ipairs(bindings) do
         local component = resolveComponent(binding)

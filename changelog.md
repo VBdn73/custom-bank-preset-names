@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 - 2026-10-25
+
+- Custom names, background colours, and text colours now follow presets when swapping them by drag and drop in the bank.
+- Prevented the previous slot's predefined name briefly appearing when moving a custom name to another slot.
+
 ## 0.3.0 - 2026-10-25
 
 - Added independent preset background and text colours, with 13 colours plus Default.

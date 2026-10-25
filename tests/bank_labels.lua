@@ -16,6 +16,37 @@ local function createFixture()
     return f
 end
 
+test.case("Swapping with an uncustomised preset moves the cached predefined fallback immediately", function()
+    local labels = { [9] = { type = 1, content = "Farming" },
+        [10] = { type = 1, content = "10" } }
+    local bindings = {
+        { slot = 9, interfaceID = 517, staticID = 266, categoryID = 0, dynamicID = 25 },
+        { slot = 10, interfaceID = 517, staticID = 266, categoryID = 0, dynamicID = 28 },
+    }
+    ui = { ComponentType = { LABEL = 1 }, Interfaces = {
+        GetComponent = function(_, _, _, _, dynamicID)
+            return labels[dynamicID == 25 and 9 or 10]
+        end,
+    } }
+    local custom = { [9] = "Dragonkin Laboratory" }
+    local names = { get = function(slot) return custom[slot] end }
+    local bank = dofile("bank/labels.lua")
+    bank.update(bindings, names)
+    custom[9], custom[10] = custom[10], custom[9]
+    bank.swapOriginals(bindings, 9, 10)
+    bank.update(bindings, names)
+    test.equal(labels[9].content, "10", "Never restore the old slot's Farming fallback")
+    test.equal(labels[10].content, "Dragonkin Laboratory")
+    bank.update(bindings, names)
+    test.equal(labels[9].content, "10")
+    -- The eventual native refresh agrees with the swapped fallback.
+    labels[9].content, labels[10].content = "10", "Farming"
+    bank.update(bindings, names)
+    bank.restore(bindings)
+    test.equal(labels[9].content, "10")
+    test.equal(labels[10].content, "Farming")
+end)
+
 test.case("Labels apply custom names and reset to predefined text", function()
     local f = createFixture()
     f:update()
