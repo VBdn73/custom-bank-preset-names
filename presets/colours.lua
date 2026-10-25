@@ -5,6 +5,16 @@ colours.palette = {
     { name = "Red", value = "red", rgba = 0xFF0000FF },
     { name = "Green", value = "green", rgba = 0x008000FF },
     { name = "Blue", value = "blue", rgba = 0x0080FFFF },
+    { name = "White", value = "white", rgba = 0xFFFFFFFF },
+    { name = "Black", value = "black", rgba = 0x000000FF },
+    { name = "Purple", value = "purple", rgba = 0x800080FF },
+    { name = "Cyan", value = "cyan", rgba = 0x00FFFFFF },
+    { name = "Yellow", value = "yellow", rgba = 0xFFFF00FF },
+    { name = "Orange", value = "orange", rgba = 0xFFA500FF },
+    { name = "Pink", value = "pink", rgba = 0xFFC0CBFF },
+    { name = "Magenta", value = "magenta", rgba = 0xFF00FFFF },
+    { name = "Lime", value = "lime", rgba = 0x00FF00FF },
+    { name = "Grey", value = "grey", rgba = 0x808080FF },
 }
 local cache, context = {}, nil
 local function key(slot, kind)

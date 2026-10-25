@@ -7,7 +7,7 @@ changing the game's server-side preset names or how presets work.
 ## Features
 
 - Custom names for all 18 mapped bank preset slots.
-- Independent background and preset-name colours: Default, Red, Green, or Blue.
+- Independent background and preset-name colours with 13 standard colours plus Default.
 - A scrollable preset selector, with **Save** and **Reset** controls.
 - Right-click a bank preset name and choose **Customize preset** to open a popup for that slot.
 - Names up to 40 Unicode characters long.
@@ -42,7 +42,8 @@ start hidden in both editors. In the bank popup the button sits beside **×**;
 in plugin settings it sits at the top-right of the content area.
 
 Each preset editor includes **Background** and **Text colour** dropdowns with
-**Default**, **Red**, **Green**, and **Blue**. Colour selections are saved together
+**Default**, **Red**, **Green**, **Blue**, **White**, **Black**, **Purple**, **Cyan**,
+**Yellow**, **Orange**, **Pink**, **Magenta**, **Lime**, and **Grey**. Colour selections are saved together
 with the name using **Save** at the bottom of the editor, on this device per character.
 Default restores the game's colour. Text colour affects only the preset name.
 

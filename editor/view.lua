@@ -116,7 +116,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local control = ui.List.new(parent)
             control:SetSize(layout.buttonWidth, layout.fieldHeight)
             control.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
-            control.dropdownMaxVisibleEntries = 4
+            control.dropdownMaxVisibleEntries = layout.dropdownVisibleEntries
             control.entryHeight = layout.textHeight
             trackPosition(control, x, layout.rows.colourInput)
             colourControls[kind] = control

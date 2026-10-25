@@ -23,7 +23,14 @@ test.case("Colours persist independently per slot, kind, and character", functio
     test.equal(colours.rgba(1, "text"), nil)
     test.equal(colours.get(1, "background"), "green")
     test.equal(colours.save(19, "text", "red"), false)
-    test.equal(colours.save(1, "text", "purple"), false)
+    test.equal(colours.save(1, "text", "not-a-colour"), false)
+    for _, item in ipairs(colours.palette) do
+        test.equal(colours.save(2, "text", item.value), true, item.name)
+        test.equal(colours.get(2, "text"), item.value, item.name)
+        test.equal(colours.rgba(2, "text"), item.rgba, item.name)
+        test.equal(colours.save(2, "background", item.value), true, item.name)
+        test.equal(colours.rgba(2, "background"), item.rgba, item.name)
+    end
     PersistentDB.SetString = function() return false end
     test.equal(colours.save(1, "background", "blue"), false)
     test.equal(colours.get(1, "background"), "green")
