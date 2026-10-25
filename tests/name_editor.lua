@@ -56,6 +56,40 @@ local function createFixture(colours)
             self.scrollY = math.max(0, math.min(math.max(0, self.contentHeight - self.height),
                 self.scrollY + delta))
         end
+        function view:SetScrollPosition(value)
+            self:ScrollBy(value - self.scrollY)
+            if self.input then
+                local root = self.input.root
+                root.contentClipped = root.y - self.scrollY < 0
+                    or root.y - self.scrollY + root.height > self.height
+            end
+        end
+        function view:AddTextField(options)
+            test.equal(options._scrollController, self)
+            local root = createControl("input", self.content)
+            root:SetPos(options.x, options.y)
+            root:SetSize(options.width, options.height)
+            root.limit = options.maxLength
+            local field = { root = root }
+            root:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+                if reason == ui.InputFieldActionResult.SUBMIT and field.onSubmit then field.onSubmit() end
+            end)
+            root:Subscribe(ui.Hook.ONSCROLLWHEEL, function(_, delta)
+                self:SetScrollPosition(self.scrollY + delta * 32)
+                return false
+            end)
+            self.input = field
+            return field
+        end
+        function view:AddSimpleButton(label, callback, options)
+            test.equal(options.absolute, true)
+            local root = createControl("button", self.content)
+            root.label = label
+            root:SetPos(options.x, options.y)
+            root:SetSize(options.width, options.height)
+            root:Subscribe(ui.Hook.ONBUTTONPRESSED, callback)
+            return { root = root }
+        end
         function view:SetContentHeight(height)
             self.contentHeight = height
             self.scrollbarVisible = height > self.height
@@ -421,6 +455,24 @@ test.case("Small ribbon panels scroll to Save and reset their offset when enlarg
     test.equal(f.saveCalls, 0)
     f.destroy()
     test.equal(f.scrollView.destroyed, true)
+end)
+
+test.case("Managed ribbon input submits once and uses PrettyUI clipping", function()
+    local f = createFixture()
+    f.parent.width, f.parent.height = 200, 120
+    f:open(18, { scrollable = true })
+    test.equal(f.input.contentClipped, true)
+    test.equal(f.input.hidden, nil, "PrettyUI clips input visuals rather than hiding the field")
+    f.input.content = "Managed input"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input, 0)
+    test.equal(f.saveCalls, 0)
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input, ui.InputFieldActionResult.SUBMIT)
+    test.equal(f.saveCalls, 1)
+    test.equal(f.stored[18], "Managed input")
+    f.parent.height = 400
+    f.parent.hooks[ui.Hook.ONRESIZE]()
+    test.equal(f.input.contentClipped, false)
+    f.destroy()
 end)
 
 test.case("Editor info button reveals and hides scope notes without saving or changing edits", function()

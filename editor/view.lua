@@ -25,6 +25,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     options = options or {}
     local host = parent
     local scrollView
+    local contentHost = options.contentHost
     if options.scrollable then
         -- Receive dependency exports explicitly from the entry point.
         local prettyui = options.prettyui
@@ -36,6 +37,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             width = math.max(1, host.width), height = math.max(1, host.height),
         })
         parent = scrollView.content
+        contentHost = scrollView
     end
     -- Position controls directly on the supplied layer. An extra nested layer
     -- is positioned unexpectedly by the beta client's settings host.
@@ -92,12 +94,21 @@ function editor.build(parent, names, bindings, initialSlot, options)
     trackPosition(createText(parent, "Custom name (blank = predefined):", smallFont),
         layout.padding, layout.rows.nameLabel)
 
-    local nameInput = ui.InputField.new(parent)
+    local managedInput = contentHost and contentHost:AddTextField({
+        absolute = true, x = 0, y = 0, width = layout.controlWidth,
+        height = layout.fieldHeight, maxLength = constants.maximumNameLength,
+        placeholder = "Use predefined name",
+        -- SimpleView is itself the scroll controller; Window wraps one.
+        _scrollController = contentHost._scroll or contentHost,
+    })
+    local nameInput = managedInput and managedInput.root or ui.InputField.new(parent)
     trackPosition(nameInput, layout.padding, layout.rows.input)
     nameInput:SetSize(layout.controlWidth, layout.fieldHeight)
     nameInput.stylesheetID = id.StyleSheet.INPUT_DEFAULT
-    nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE,
-        constants.maximumNameLength)
+    if not managedInput then
+        nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE,
+            constants.maximumNameLength)
+    end
     nameInput.emptyText = "Use predefined name"
 
     local statusLabel = createText(parent, "", smallFont)
@@ -250,6 +261,14 @@ function editor.build(parent, names, bindings, initialSlot, options)
         saveValue(nameInput.content)
     end
 
+    local function actionButton(label, callback)
+        if not contentHost then return createButton(parent, label, callback) end
+        return contentHost:AddSimpleButton(label, callback, {
+            absolute = true, x = 0, y = 0,
+            width = layout.buttonWidth, height = layout.buttonHeight,
+        }).root
+    end
+
     -- Wire user actions after the controls and their shared state exist.
     presetSelector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
         local selectedPreset = entryID + 1
@@ -261,18 +280,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
     end)
     local buttonsY = bindings.colours and layout.rows.colourButtons or layout.rows.buttons
-    trackPosition(createButton(parent, "Save", saveInput), layout.padding, buttonsY)
-    trackPosition(createButton(parent, "Reset", function()
+    trackPosition(actionButton("Save", saveInput), layout.padding, buttonsY)
+    trackPosition(actionButton("Reset", function()
         local saveSucceeded = saveValue("", true)
         if saveSucceeded then
             nameInput.content = ""
         end
     end), layout.resetX, buttonsY)
-    nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
-        if reason == ui.InputFieldActionResult.SUBMIT then
-            saveInput()
-        end
-    end)
+    if managedInput then
+        managedInput.onSubmit = saveInput
+    else
+        nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+            if reason == ui.InputFieldActionResult.SUBMIT then
+                saveInput()
+            end
+        end)
+    end
     refreshSelectedName()
 
     for _, position in ipairs(controlPositions) do
@@ -283,6 +306,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         for _, position in ipairs(controlPositions) do
             -- Lists own their wheel events for navigating their entries.
             if position.component ~= presetSelector
+                and not (managedInput and position.component == nameInput)
                 and position.component ~= colourControls.background
                 and position.component ~= colourControls.text then
                 position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", function(_, delta)
@@ -301,15 +325,18 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local top = control.y - scrollView.scrollY
             -- Native input text can escape ancestor clipping; suppress controls
             -- crossing the viewport boundary, as in the previous ribbon editor.
-            control.hidden = top < 0 or top + control.height > host.height
+            if not (managedInput and control == nameInput) then
+                control.hidden = top < 0 or top + control.height > host.height
+            end
         end
     end
 
     local function centreContent()
+        local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and 246 or 194)
             - (options.hideTitle and layout.titleHeight or 0)
         local overflowing = scrollView ~= nil and host.height < minimumHeight
-        local compact = host.height < contentHeight
+        local compact = hostHeight < contentHeight
         local titleOffset = options.hideTitle and layout.titleHeight or 0
         local height = compact and minimumHeight or contentHeight
         if scrollView then
@@ -330,7 +357,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             compactRows[166], compactRows[198] = 134, 166
         end
         local offsetX = math.max(0, math.floor((availableHostWidth - width) / 2))
-        local offsetY = math.max(0, math.floor((host.height - height) / 2))
+        local offsetY = math.max(0, math.floor((hostHeight - height) / 2))
         for _, position in ipairs(controlPositions) do
             local control = position.component
             local x = position.x == layout.resetX
@@ -355,6 +382,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         positionInfo()
         updateClipping()
+        if managedInput then
+            -- Refresh after repositioning too, not only when the user scrolls.
+            (contentHost._scroll or contentHost):SetScrollPosition(contentHost.scrollY or 0)
+        end
     end
     centreContent()
     host:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)

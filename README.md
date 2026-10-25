@@ -13,7 +13,8 @@ changing the game's server-side preset names or how presets work.
 - Names up to 40 Unicode characters long.
 - Local settings kept separately for each character name.
 - Restore the game's predefined name by resetting a slot or saving a blank name.
-- No extra permissions or network requests. Uses PrettyUI for the ribbon scrollbar.
+- No extra permissions or network requests. Uses PrettyUI for the bank window,
+  ribbon scrolling, and managed name fields and action buttons in those editors.
 
 The plugin only changes displayed text and colours. It does not load presets, automate bank
 actions, or unlock unavailable preset slots. Disabling it restores the original
@@ -43,7 +44,7 @@ with a saved custom name, background colour, or text colour. Resetting the prese
 removes the marker; saving a blank name removes it only if both colours are Default.
 
 Click **i** to show or hide the storage and display-only information. These notes
-start hidden in both editors. In the bank popup the button sits beside **×**;
+start hidden in both editors. In the bank popup the button sits in the header beside **×**;
 in plugin settings it sits at the top-right of the content area.
 
 Each preset editor includes **Background** and **Text colour** dropdowns with
@@ -55,7 +56,8 @@ Default restores the game's colour. Text colour affects only the preset name.
 Alternatively, right-click the preset's name in the bank and choose **Customize preset**.
 The popup starts on the clicked slot, regardless of which preset is selected in
 the bank. The popup opens centered within the bank; drag its title bar to move it
-within the outer game UI, outside the bank's nested popover. This does not change
+within the outer game UI, outside the bank's nested popover. PrettyUI supplies the
+window artwork, dragging, and resize bounds handling. This does not change
 the plugin settings editor. Click **×** in the top-right
 corner to dismiss it. The normal bank menu actions and default
 left-click action are unchanged.
@@ -130,11 +132,11 @@ In-client checks: test several rows including preset 18, reopen the bank and
 reload the plugin to verify persistence, and check scrolling, hover/selection
 outlines, independent Default resets, and restoration when disabling the plugin.
 
-The bank popup uses the native `RS3_BUTTON_INFO_PARENT_0/1/2`
-and `RS3_BUTTON_CLOSE_PARENT_0/1/2` sprites as idle, hover, and pressed artwork.
-Their exact match to the bank icons still needs an in-client visual check:
+The bank popup uses PrettyUI's window close control and native
+`RS3_BUTTON_INFO_PARENT_0/1/2` sprites for the header info button.
+The window and managed controls still need an in-client visual check:
 reload the plugin, right-click a preset name, and choose **Customize preset**. Compare
-the icons with the bank's top-right controls, hover/click them, and confirm that
+the window artwork and header info icon, hover/click the controls, and confirm that
 info toggles the help notes and close dismisses only the editor, not the bank.
 The plugin settings editor uses the same native info icon and states.
 
@@ -156,7 +158,7 @@ Start with `main.lua` to follow the plugin's lifecycle:
 | `bank/labels.lua` | Applies custom labels while remembering the latest predefined text for restoration. |
 | `bank/menu.lua` | Adds a Customize preset action using component identity or the hovered name label when native actions belong to a row hit target. |
 | `editor/view.lua` | Builds the editor, handles selection and saving, and centres controls when resized. |
-| `editor/popup.lua` | Hosts the editor in a bank popup with the clicked slot preselected. |
+| `editor/popup.lua` | Hosts the editor in a PrettyUI window with the clicked slot preselected and closes it when the bank disappears. |
 | `editor/layout.lua` | Defines control positions and dimensions, including derived popup sizes. |
 | `editor/theme.lua` | Defines named UI colours and creates native colour values on demand. |
 | `editor/icon.lua` | Builds native sprite controls and updates their hover/pressed artwork. |

@@ -16,7 +16,7 @@ local destroyContentView
 
 Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
     presetMenu.add(event.miniMenu, bankBindings.labels, function(slot)
-        editorPopup.open(slot, presetNames, bankBindings)
+        editorPopup.open(slot, presetNames, bankBindings, prettyUILibrary)
     end)
 end)
 
