@@ -31,7 +31,12 @@ For local testing, use the RuneScape plugin development beta as described below.
 2. Choose a preset number from the dropdown.
 3. Enter a name, choose colours, and click **Save**, or press Enter, to save all three.
 4. Click **Reset** to restore the game's predefined name and default colours.
-   Saving a blank name restores only the predefined name, keeping your chosen colours.
+    Saving a blank name restores only the predefined name, keeping your chosen colours.
+
+The ribbon editor adapts as you resize its panel. Short panels use tighter spacing;
+when the form still does not fit, scroll over the form or use the **^ / v** buttons
+on the right to reach the remaining controls. Scrolling over a dropdown operates
+that dropdown instead. Resizing keeps the selected preset and unfinished edits.
 
 An asterisk in the preset dropdown (for example, **Preset 3 \***) marks a slot
 with a saved custom name, background colour, or text colour. Resetting the preset

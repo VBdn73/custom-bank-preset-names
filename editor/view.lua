@@ -136,9 +136,12 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local infoControls = {}
     local function positionInfo()
         local host = options.infoParent or parent
-        local x = math.max(0, host.width - layout.padding - layout.controlWidth)
+        local width = math.min(layout.controlWidth, math.max(1, host.width - layout.padding * 2))
+        local x = math.max(0, host.width - layout.padding - width)
         local y = options.infoParent and layout.popupHeaderHeight or layout.padding + layout.popupCloseSize + 4
         for _, entry in ipairs(infoControls) do
+            entry.control:SetSize(entry.x == 0 and width or math.max(1, width - layout.padding * 2),
+                entry.control.height)
             entry.control:SetPos(x + entry.x, y + entry.y)
         end
     end
@@ -258,13 +261,91 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end)
     refreshSelectedName()
 
-    local function centreContent()
-        local offsetX = math.max(0, math.floor((parent.width - contentWidth) / 2))
-        local offsetY = math.max(0, math.floor((parent.height - contentHeight) / 2))
+    for _, position in ipairs(controlPositions) do
+        position.width, position.height = position.component.width, position.component.height
+    end
+
+    local scrollY, maxScroll = 0, 0
+    local scrollUp, scrollDown
+    local centreContent
+    local function scrollBy(amount)
+        scrollY = math.max(0, math.min(maxScroll, scrollY + amount))
+        centreContent()
+    end
+    if options.scrollable then
+        scrollUp = createButton(parent, "^", function() scrollBy(-layout.fieldHeight) end)
+        scrollDown = createButton(parent, "v", function() scrollBy(layout.fieldHeight) end)
+        local function onWheel(_, delta)
+            if maxScroll == 0 then return true end
+            scrollBy(delta * layout.fieldHeight)
+            return false
+        end
+        parent:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", onWheel)
         for _, position in ipairs(controlPositions) do
-            position.component:SetPos(offsetX + position.x, offsetY + position.y)
+            -- Lists own their wheel events for navigating their entries.
+            if position.component ~= presetSelector
+                and position.component ~= colourControls.background
+                and position.component ~= colourControls.text then
+                position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", onWheel)
+            end
+        end
+    end
+
+    centreContent = function()
+        local minimumHeight = (bindings.colours and 246 or 194)
+            - (options.hideTitle and layout.titleHeight or 0)
+        local overflowing = options.scrollable == true and parent.height < minimumHeight
+        local gutter = overflowing and layout.popupCloseSize + 4 or 0
+        local width = math.min(contentWidth, math.max(1, parent.width - gutter))
+        local controlWidth = math.max(1, width - layout.padding * 2)
+        local buttonWidth = math.max(1, (controlWidth - layout.buttonGap) / 2)
+        -- Tight ribbon panels need smaller gaps, not smaller text or fields.
+        -- Leave the established popup/settings spacing alone when it fits.
+        local compact = parent.height < contentHeight
+        local compactRows = {
+            [8] = 8, [48] = 36, [90] = 72, [122] = 94,
+            [166] = 130, [198] = 150, [238] = 188, [270] = 220,
+        }
+        if not bindings.colours then
+            compactRows[166], compactRows[198] = 134, 166
+        end
+        local titleOffset = options.hideTitle and layout.titleHeight or 0
+        local height = compact and ((bindings.colours and 246 or 194) - titleOffset) or contentHeight
+        maxScroll = options.scrollable and math.max(0, height - parent.height) or 0
+        scrollY = math.min(scrollY, maxScroll)
+        local offsetX = math.max(0, math.floor((parent.width - gutter - width) / 2))
+        local offsetY = math.max(0, math.floor((parent.height - height) / 2))
+        for _, position in ipairs(controlPositions) do
+            local control = position.component
+            local x = position.x == layout.resetX
+                and layout.padding + buttonWidth + layout.buttonGap or position.x
+            local y = compact and (compactRows[position.y + titleOffset] or position.y + titleOffset)
+                - titleOffset or position.y
+            local isColumn = position.width == layout.buttonWidth
+                or (bindings.colours and position.y + titleOffset == layout.rows.colourLabel)
+            local availableWidth = isColumn and buttonWidth or controlWidth
+            if control.content == constants.editorTitle or control.content == "Preset customisation" then
+                control.content = width < layout.width and "Preset customisation" or constants.editorTitle
+                availableWidth = math.max(1, controlWidth - layout.popupCloseSize - 4)
+            end
+            control:SetSize(availableWidth, compact and position.height == layout.textHeight
+                and layout.noteHeight or position.height)
+            control:SetPos(offsetX + x, offsetY + y - scrollY)
+            -- Do not let offscreen controls intercept clicks outside the panel.
+            control.hidden = options.scrollable and (offsetY + y - scrollY < 0
+                or offsetY + y - scrollY + control.height > parent.height) or false
+        end
+        if scrollUp then
+            for index, control in ipairs({ scrollUp, scrollDown }) do
+                control.hidden = not overflowing
+                control:SetSize(layout.popupCloseSize, math.min(layout.popupCloseSize, parent.height / 2))
+                control:SetPos(math.max(0, parent.width - layout.popupCloseSize),
+                    index == 1 and 0 or parent.height - control.height)
+            end
+            scrollUp.enabled, scrollDown.enabled = scrollY > 0, scrollY < maxScroll
         end
         if infoButton then
+            infoButton.hidden = overflowing
             infoButton:SetPos(math.max(0, parent.width - layout.padding - layout.popupCloseSize),
                 layout.padding)
         end

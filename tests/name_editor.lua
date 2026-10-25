@@ -6,6 +6,12 @@ local function createFixture(colours)
         saveCalls = 0, saveMode = "success" }
     local function createControl(kind, parent)
         local control = { kind = kind, parent = parent, entries = {}, hooks = {} }
+        setmetatable(control, { __newindex = function(target, key, value)
+            if key == "hidden" then
+                test.equal(type(value), "boolean", "Native visibility requires a boolean")
+            end
+            rawset(target, key, value)
+        end })
         function control:SetPos(x, y, parentX, parentY, selfX, selfY)
             self.x, self.y = x, y
             self.parentX, self.selfX = parentX, selfX
@@ -33,7 +39,8 @@ local function createFixture(colours)
         Sprite = { new = function(parent) return createControl("sprite", parent) end },
         InputField = { new = function(parent) return createControl("input", parent) end },
         List = { new = function(parent) return createControl("list", parent) end },
-        Hook = { ONBUTTONPRESSED = 1, ONCONTENTCHANGED = 2, ONSELECTIONCHANGED = 3, ONRESIZE = 4, ONCLICK = 5 },
+        Hook = { ONBUTTONPRESSED = 1, ONCONTENTCHANGED = 2, ONSELECTIONCHANGED = 3, ONRESIZE = 4, ONCLICK = 5,
+            ONSCROLLWHEEL = 6 },
         SelectionChangeEvent = { SELECTED = 1, DESELECTED = 0 },
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
         InputFieldActionResult = { SUBMIT = 1 },
@@ -289,7 +296,81 @@ test.case("Editor centres controls without resizing host layers and clamps small
     f.parent.width, f.parent.height = 300, 200
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 8)
-    test.equal(f.title.y, 8)
+    test.equal(f.title.y, 11)
+    test.equal(f.input.x + f.input.width <= 300, true)
+    test.equal(f.status.y + f.status.height <= 200, true)
+end)
+
+test.case("Plugin Hub settings info stays at the top-right after resizing", function()
+    local f = createFixture()
+    f:open(nil, { hideTitle = true })
+    for _, size in ipairs({ { 580, 360 }, { 700, 400 }, { 300, 240 } }) do
+        f.parent.width, f.parent.height = size[1], size[2]
+        f.parent.hooks[ui.Hook.ONRESIZE]()
+        test.equal(f.info.hidden, false)
+        test.equal(f.info.x, size[1] - 8 - 22)
+        test.equal(f.info.y, 8)
+    end
+end)
+
+test.case("Resizable ribbon fits narrow panels and restores the wide layout without losing edits", function()
+    local colours = {
+        palette = { { name = "Default", value = "" } },
+        get = function() return "" end,
+        save = function() return true end,
+    }
+    local f = createFixture(colours)
+    local first = #f.controls + 1
+    f.parent.width, f.parent.height = 260, 260
+    f:open(18)
+    f.input.content = "Unsaved edit"
+    for _, size in ipairs({ { 260, 260 }, { 300, 280 }, { 240, 246 }, { 580, 360 } }) do
+        f.parent.width, f.parent.height = size[1], size[2]
+        f.parent.hooks[ui.Hook.ONRESIZE]()
+        for index = first, #f.controls do
+            local c = f.controls[index]
+            test.equal(c.x >= 0 and c.x + c.width <= size[1], true, "Control fits panel width")
+            test.equal(c.y >= 0 and c.y + c.height <= size[2], true, "Control fits panel height")
+        end
+        test.equal(f.input.content, "Unsaved edit")
+        test.equal(f.selector.selectedID, 17)
+    end
+    test.equal(f.input.width, 320)
+    test.equal(f.title.content, "Custom bank preset names")
+    test.equal(f.saveCalls, 0)
+end)
+
+test.case("Small ribbon panels scroll to Save and reset their offset when enlarged", function()
+    local f = createFixture({
+        palette = { { name = "Default", value = "" } },
+        get = function() return "" end, save = function() return true end,
+    })
+    f.parent.width, f.parent.height = 200, 120
+    local first = #f.controls + 1
+    f:open(18, { scrollable = true })
+    f.input.content = "Keep this edit"
+    test.equal(f.save.hidden, true)
+    local up, down
+    for index = first, #f.controls do
+        local c = f.controls[index]
+        if c.label == "^" then up = c elseif c.label == "v" then down = c end
+    end
+    test.equal(up.enabled, false)
+    test.equal(down.hidden, false)
+    test.equal(f.parent.hooks[ui.Hook.ONSCROLLWHEEL](f.parent, 100), false)
+    test.equal(f.save.hidden, false)
+    test.equal(f.save.y >= 0 and f.save.y + f.save.height <= 120, true)
+    test.equal(down.enabled, false)
+    up.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(down.enabled, true)
+    f.parent.width, f.parent.height = 580, 360
+    f.parent.hooks[ui.Hook.ONRESIZE]()
+    test.equal(up.hidden, true)
+    test.equal(down.hidden, true)
+    test.equal(f.save.hidden, false)
+    test.equal(f.input.content, "Keep this edit")
+    test.equal(f.selector.selectedID, 17)
+    test.equal(f.saveCalls, 0)
 end)
 
 test.case("Editor info button reveals and hides scope notes without saving or changing edits", function()

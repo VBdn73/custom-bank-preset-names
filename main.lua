@@ -23,7 +23,8 @@ Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
 end)
 
 Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
-    editorRefreshCallbacks.content = nameEditor.build(event.component, presetNames, bankBindings)
+    editorRefreshCallbacks.content = nameEditor.build(event.component, presetNames, bankBindings,
+        nil, { scrollable = true })
 end)
 
 -- Reacquire components each tick: bank interfaces can close or rebuild at any time.
