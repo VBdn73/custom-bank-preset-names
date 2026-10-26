@@ -8,6 +8,11 @@ local positionKey = "presetEditor.position.v1"
 local lastX, lastY
 local savedPosition
 local destroyEditor
+local selectSlot
+
+function popup.select(slot)
+    if window and selectSlot and slot then selectSlot(slot) end
+end
 
 local function loadPosition()
     local ok, value = pcall(function() return PersistentDB:GetString(positionKey) end)
@@ -35,6 +40,7 @@ end
 loadPosition()
 
 function popup.close()
+    selectSlot = nil
     if destroyEditor then pcall(destroyEditor); destroyEditor = nil end
     rememberPosition()
     if lastX and lastY then
@@ -74,7 +80,7 @@ function popup.open(slot, names, bindings, prettyui)
     bankIsOpen = function()
         local current = ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
             binding.categoryID, binding.dynamicID)
-        return current == source and not current.isRestricted and current.visibleGlobal
+        return current and not current.isRestricted and current.visibleGlobal
     end
     local bodyHeight = layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
     -- PrettyUI chrome uses a 32px title and 8px bottom/side borders.
@@ -87,7 +93,7 @@ function popup.open(slot, names, bindings, prettyui)
             scrollable = false, onClose = popup.close,
         })
         local toggleInfo
-        refresh, toggleInfo, destroyEditor = nameEditor.build(window.content, names, bindings, slot, {
+        refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, {
             hideTitle = true, externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight,
         })

@@ -24,6 +24,10 @@ Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
     end)
 end)
 
+Event.MiniMenuEntrySelected.Subscribe("presetNames.selection", function(event)
+    editorPopup.select(presetMenu.selectedSlot(event.entry, bankBindings.labels))
+end)
+
 Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
     if destroySettingsView then pcall(destroySettingsView) end
     local refresh, _, destroy = nameEditor.build(event.component, presetNames, bankBindings,
@@ -90,6 +94,7 @@ function PluginShutdown()
     destroySettingsView = nil
     bankAppearance.restore(bankBindings.appearance)
     Event.MiniMenuReady.Unsubscribe("presetNames.menu")
+    Event.MiniMenuEntrySelected.Unsubscribe("presetNames.selection")
     editorPopup.close()
     Event.Logic.Unsubscribe("presetNames.labels")
     Event.Draw.Unsubscribe("presetNames.labels")

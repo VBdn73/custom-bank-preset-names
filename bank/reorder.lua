@@ -36,6 +36,9 @@ local function slotOf(component, count)
     if slot and slot >= 1 and slot <= count then return slot end
 end
 
+-- Shared by native menu selection so hit targets resolve identically.
+reorder.slotOf = slotOf
+
 function reorder.clear()
     for _, component in pairs(watched) do
         pcall(function() component:Unsubscribe(ui.Hook.ONDRAGCOMPLETE, hookID) end)

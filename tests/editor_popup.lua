@@ -9,6 +9,7 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     }
     local previousEditor = package.loaded["editor/view"]
     local built, windows, infoClicks, sprites = {}, {}, 0, {}
+    local selected = {}
     local root = { width = 900, height = 890 }
     local bank = { parent = root }
     local source = { parent = bank, visibleGlobal = true }
@@ -46,7 +47,8 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     package.loaded["editor/view"] = { build = function(parent, names, bindings, slot, options)
         built[#built + 1] = { parent = parent, slot = slot, options = options }
         return function() if parent.disposed then error("Disposed") end end,
-            function() infoClicks = infoClicks + 1 end
+            function() infoClicks = infoClicks + 1 end, nil,
+            function(slot) selected[#selected + 1] = slot end
     end }
     local popup = dofile("editor/popup.lua")
     package.loaded["editor/view"] = previousEditor
@@ -77,6 +79,12 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     info.callback()
     test.equal(infoClicks, 1)
     test.equal(first.destroyed, nil, "Help must not close the window")
+    source = { parent = bank, visibleGlobal = true }
+    popup.update()
+    test.equal(first.destroyed, nil, "Fresh native wrappers must not close the popup")
+    popup.select(3)
+    test.equal(selected[#selected], 3, "Native selection selects the preset to edit")
+    test.equal(#windows, 1, "Switch presets without rebuilding the window")
     info.isMouseOver = true
     popup.update()
     test.equal(info.sprite, 2)
@@ -91,11 +99,14 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(windows[2].destroyed, true)
     test.equal(stored["presetEditor.position.v1"], "100,120")
     popup.close()
+    local selections = #selected
+    popup.select(4)
+    test.equal(#selected, selections, "Selections after closing do not touch disposed controls")
     popup.open(3, {}, bindings, library)
     built[3].parent.disposed = true
     popup.update()
     test.equal(windows[3].destroyed, true)
-    for _, unavailable in ipairs({ "hidden", "restricted", "replaced", "missing" }) do
+    for _, unavailable in ipairs({ "hidden", "restricted", "missing" }) do
         source = { parent = bank, visibleGlobal = true }
         popup.open(1, {}, bindings, library)
         local opened = windows[#windows]

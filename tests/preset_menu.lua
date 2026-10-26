@@ -30,6 +30,34 @@ local function fixture(entries)
     return m
 end
 
+test.case("Native Select actions resolve presets without relying on UI click hooks", function()
+    for slot = 1, 18 do
+        local action = entry(slot)
+        action.verbText = "Select"
+        test.equal(menu.selectedSlot(action, bindings.labels), slot)
+        action.verbText = "Load"
+        test.equal(menu.selectedSlot(action, bindings.labels), nil)
+    end
+    local label = entry(8).componentData.component
+    label.isMouseOver = true
+    hoveredLabels[label.dynamicID] = label
+    local action = { verbText = "Select", componentData = { component = {
+        interfaceID = 517, staticID = 267, categoryID = 0, dynamicID = 99,
+        visibleGlobal = true,
+    } } }
+    test.equal(menu.selectedSlot(action, bindings.labels), 8, "Native hit targets use the hovered row")
+    hoveredLabels = {}
+    action.componentData.component.xyGlobal = { y = 100 }
+    action.componentData.component.height = 20
+    label.isMouseOver, label.xyGlobal, label.height = false, { y = 100 }, 20
+    hoveredLabels[label.dynamicID] = label
+    test.equal(menu.selectedSlot(action, bindings.labels), 8, "Resolve the hit target after the pointer leaves")
+    hoveredLabels = {}
+    action.componentData.component.interfaceID = 999
+    test.equal(menu.selectedSlot(action, bindings.labels), nil)
+    test.equal(menu.selectedSlot(nil, bindings.labels), nil)
+end)
+
 test.case("Preset menu adds one edit action and preserves native ordering and left click", function()
     local cancel, reset, load, select = {}, entry(18), entry(18), entry(18)
     cancel.actionType = MiniMenuActionType.CANCEL

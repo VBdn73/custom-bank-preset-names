@@ -4,6 +4,14 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
     local library = {}
     local built, destroyed = 0, 0
     local modules = {
+        ["bank/bindings"] = { labels = {} },
+        ["bank/menu"] = { selectedSlot = function(entry)
+            test.equal(entry.verbText, "Select")
+            return 3
+        end },
+        ["editor/popup"] = { select = function(slot)
+            test.equal(slot, 3, "Native selection is forwarded to the open popup")
+        end },
         ["editor/view"] = { build = function(_, _, _, _, options)
             test.equal(options.prettyui, library)
             built = built + 1
@@ -29,4 +37,5 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
     events.ContentLayerReady.callback({ component = {} })
     test.equal(built, 2)
     test.equal(destroyed, 1)
+    events.MiniMenuEntrySelected.callback({ entry = { verbText = "Select" } })
 end)

@@ -1,10 +1,10 @@
 local menu = {}
 
 -- Match identity, not displayed names (which can be duplicated or localised).
-function menu.add(miniMenu, bindings, openEditor)
+local function slotForEntries(entries, bindings)
     if #bindings == 0 then return end
     local slot
-    for _, entry in ipairs(miniMenu.entries) do
+    for _, entry in ipairs(entries) do
         local component = entry.componentData and entry.componentData.component
         if component and not component.isRestricted and component.visibleGlobal then
             for _, binding in ipairs(bindings) do
@@ -24,7 +24,7 @@ function menu.add(miniMenu, bindings, openEditor)
         -- not the text label. Resolve the hovered label instead of assuming
         -- the action component shares its dynamic ID.
         local bankAction = false
-        for _, entry in ipairs(miniMenu.entries) do
+        for _, entry in ipairs(entries) do
             local component = entry.componentData and entry.componentData.component
             if component and not component.isRestricted
                 and component.interfaceID == bindings[1].interfaceID then
@@ -43,6 +43,20 @@ function menu.add(miniMenu, bindings, openEditor)
             end
         end
     end
+    return slot
+end
+
+function menu.selectedSlot(entry, bindings)
+    if not entry or entry.verbText ~= "Select" then return end
+    local slot = slotForEntries({ entry }, bindings)
+    if slot then return slot end
+    -- Selection can arrive after the pointer has left the row.
+    return require("bank/reorder").slotOf(
+        entry.componentData and entry.componentData.component, #bindings)
+end
+
+function menu.add(miniMenu, bindings, openEditor)
+    local slot = slotForEntries(miniMenu.entries, bindings)
     if not slot then return end
 
     -- Capture the old count too: some clients expose a pre-Add snapshot.

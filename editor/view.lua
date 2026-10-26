@@ -292,14 +292,20 @@ function editor.build(parent, names, bindings, initialSlot, options)
         }).root
     end
 
+    local function selectSlot(slot)
+        if not slots.valid(slot, bindings.presetCount) or slot == selectedSlot then return end
+        selectedSlot = slot
+        presetSelector:SetEntrySelected(slot - 1, true, false)
+        refreshSelectedName()
+    end
+
     -- Wire user actions after the controls and their shared state exist.
     presetSelector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
         local selectedPreset = entryID + 1
         if event == ui.SelectionChangeEvent.SELECTED
             and selectedPreset >= 1 and selectedPreset <= bindings.presetCount
             and selectedPreset ~= selectedSlot then
-            selectedSlot = selectedPreset
-            refreshSelectedName()
+            selectSlot(selectedPreset)
         end
     end)
     local buttonsY = bindings.colours and layout.rows.colourButtons or layout.rows.buttons
@@ -470,7 +476,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end, toggleInfo, function()
         dismissPicker()
         if scrollView then scrollView:Destroy() end
-    end
+    end, selectSlot
 end
 
 return editor

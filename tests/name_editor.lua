@@ -142,7 +142,7 @@ local function createFixture(colours)
             options.prettyui = prettyui
         end
         local firstNewControl = #self.controls + 1
-        self.refresh, self.toggleInfo, self.destroy = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18, colours = colours }, initialSlot, options)
+        self.refresh, self.toggleInfo, self.destroy, self.selectSlot = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18, colours = colours }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" and control.entries[17] then self.selector = control
@@ -167,6 +167,23 @@ local function createFixture(colours)
     f:open()
     return f
 end
+
+test.case("Bank selection refreshes the existing editor and saves to the new slot", function()
+    local f = createFixture()
+    f.input.content = "Unfinished first preset"
+    f.selectSlot(18)
+    test.equal(f.selector.selectedID, 17)
+    test.equal(f.input.content, "Last preset")
+    f.input.content = "Edited last preset"
+    f.selectSlot(18)
+    f.refresh()
+    test.equal(f.input.content, "Edited last preset", "Repeated clicks retain the current draft")
+    f:clickSave()
+    test.equal(f.stored[18], "Edited last preset")
+    test.equal(f.stored[1], nil, "Switching does not save the previous draft")
+    f.selectSlot(0)
+    test.equal(f.selector.selectedID, 17, "Ignore invalid slots")
+end)
 
 test.case("Dropdown visibility checkbox is opt-in for settings and saves immediately", function()
     local f = createFixture()
