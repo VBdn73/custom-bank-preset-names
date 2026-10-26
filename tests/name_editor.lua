@@ -366,6 +366,55 @@ test.case("Open colour pickers close on slot changes, character changes, hide an
     test.equal(root.destroyed, true)
 end)
 
+test.case("Default colour swatches show clickthrough white diagonal crosses", function()
+    local f = createFixture({ get = function(_, kind)
+        return kind == "text" and "#123456" or ""
+    end })
+    local marks = {}
+    for _, control in ipairs(f.controls) do
+        if control.kind == "rectangle" and control.width == 1 and control.height == 1 then
+            marks[#marks + 1] = control
+            test.equal(control.clickthrough, true)
+            test.equal(control.colour[1], 1)
+            test.equal(control.colour[2], 1)
+            test.equal(control.colour[3], 1)
+        end
+    end
+    test.equal(#marks, 112)
+    for column = 1, 27 do
+        local previous, current = marks[column * 2 - 1], marks[column * 2 + 1]
+        test.equal(current.x - previous.x, 1, "Diagonal segments have no horizontal gaps")
+        test.equal(math.abs(current.y - previous.y) <= 1, true, "Diagonal remains connected")
+    end
+    f.refresh()
+    for index, mark in ipairs(marks) do
+        test.equal(mark.hidden, index > 56, "Only default colours show the cross")
+    end
+end)
+
+test.case("Colour labels and swatches share aligned rows and separate columns", function()
+    local f = createFixture({ get = function() return "" end })
+    local labels, swatches = {}, {}
+    for _, control in ipairs(f.controls) do
+        test.equal(control.content == "—", false, "Default swatches have no dash")
+        if control.content == "Background colour:" or control.content == "Text colour:" then
+            labels[#labels + 1] = control
+        elseif control.kind == "rectangle" and control.width == 32 then
+            swatches[#swatches + 1] = control
+        end
+    end
+    for _, size in ipairs({ { 580, 360 }, { 352, 258 }, { 200, 246 } }) do
+        f.parent.width, f.parent.height = size[1], size[2]
+        f.parent.hooks[ui.Hook.ONRESIZE]()
+        for index = 1, 2 do
+            test.equal(labels[index].y, swatches[index].y)
+            test.equal(labels[index].height, swatches[index].height)
+            test.equal(labels[index].x + labels[index].width + 6, swatches[index].x)
+        end
+        test.equal(swatches[1].x, swatches[2].x)
+    end
+end)
+
 test.case("Colour swatches retain their size and fit narrow scrolled panels", function()
     local f = createFixture({ get = function() return "#000000" end })
     f.parent.width, f.parent.height = 200, 180

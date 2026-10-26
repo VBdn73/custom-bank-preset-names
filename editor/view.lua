@@ -126,7 +126,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local infoVisible = false
     local colourControls = {}
-    local defaultLabels = {}
+    local defaultMarks = {}
+    local defaultMarkKinds = {}
     local colourLabels = {}
     local pendingColours = {}
     local closePicker
@@ -143,13 +144,14 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local value = pendingColours[kind]
             local hex = colourValue.normalize(value)
             control.colour = theme.colour(hex and colourValue.vector(hex) or theme.background)
-            defaultLabels[kind].hidden = hex ~= nil
+            for _, mark in ipairs(defaultMarks[kind]) do mark.hidden = hex ~= nil end
         end
     end
     if bindings.colours then
         for index, kind in ipairs({ "background", "text" }) do
             local y = layout.rows.colourLabel + (index - 1) * 32
             local label = createText(parent, kind == "background" and "Background colour:" or "Text colour:", smallFont)
+            label:SetSize(layout.swatchX - layout.padding - 6, 20)
             label.clickthrough = true
             colourLabels[kind] = label
             trackPosition(label, layout.padding, y)
@@ -158,18 +160,29 @@ function editor.build(parent, names, bindings, initialSlot, options)
             border.fill = true
             border.colour = theme.colour(theme.border)
             border.clickthrough = true
-            trackPosition(border, layout.swatchX - 1, y + 3)
+            trackPosition(border, layout.swatchX - 1, y - 1)
             local control = ui.Rectangle.new(parent)
             control:SetSize(32, 20)
             control.fill = true
             control.clickthrough = false
-            trackPosition(control, layout.swatchX, y + 4)
-            local defaultLabel = createText(parent, "—", smallFont)
-            defaultLabel:SetSize(32, 20)
-            defaultLabel.clickthrough = true
-            trackPosition(defaultLabel, layout.swatchX + 8, y + 2)
-            defaultLabels[kind] = defaultLabel
+            trackPosition(control, layout.swatchX, y)
             colourControls[kind] = control
+            defaultMarks[kind] = {}
+            -- Draw thin diagonals with native rectangles, without relying on
+            -- rotation support. Keep a small inset inside the swatch border.
+            for column = 0, 27 do
+                local offset = math.floor(column * 15 / 27 + 0.5)
+                for _, row in ipairs({ offset, 15 - offset }) do
+                    local mark = ui.Rectangle.new(parent)
+                    mark:SetSize(1, 1)
+                    mark.fill = true
+                    mark.colour = theme.colour({ 1, 1, 1, 1 })
+                    mark.clickthrough = true
+                    trackPosition(mark, layout.swatchX + 2 + column, y + 2 + row)
+                    defaultMarks[kind][#defaultMarks[kind] + 1] = mark
+                    defaultMarkKinds[mark] = kind
+                end
+            end
             control:Subscribe(ui.Hook.ONCLICK, function()
                 local toggleClosed = pickerKind == kind
                 dismissPicker()
@@ -377,11 +390,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             -- Native input text can escape ancestor clipping; suppress controls
             -- crossing the viewport boundary, as in the previous ribbon editor.
             if not (managedInput and control == nameInput) then
-                local defaultHidden = (colourControls.background and control == defaultLabels.background
-                    and colourValue.normalize(pendingColours.background) ~= nil)
-                    or (colourControls.text and control == defaultLabels.text
-                    and colourValue.normalize(pendingColours.text) ~= nil)
-                control.hidden = not not (defaultHidden or top < 0 or top + control.height > host.height)
+                local kind = defaultMarkKinds[control]
+                local customColour = kind and colourValue.normalize(pendingColours[kind]) ~= nil
+                control.hidden = not not (customColour or top < 0 or top + control.height > host.height)
             end
         end
     end
