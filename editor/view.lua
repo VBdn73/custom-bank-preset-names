@@ -107,13 +107,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     refreshPresetLabels()
     local smallFont = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
-    trackPosition(createText(parent, "Custom name (blank = predefined):", smallFont),
-        layout.padding, layout.rows.nameLabel)
 
     local managedInput = contentHost and contentHost:AddTextField({
         absolute = true, x = 0, y = 0, width = layout.controlWidth,
         height = layout.fieldHeight, maxLength = constants.maximumNameLength,
-        placeholder = "Use predefined name",
+        placeholder = "Uses predefined name",
         -- SimpleView is itself the scroll controller; Window wraps one.
         _scrollController = contentHost._scroll or contentHost,
     })
@@ -125,7 +123,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         nameInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE,
             constants.maximumNameLength)
     end
-    nameInput.emptyText = "Use predefined name"
+    nameInput.emptyText = "Uses predefined name"
 
     local statusLabel = createText(parent, "", smallFont)
     if bindings.colours then
@@ -393,7 +391,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function centreContent()
         dismissPicker()
         local hostHeight = options.formHeight or host.height
-        local minimumHeight = (bindings.colours and 246 or 194)
+        local minimumHeight = (bindings.colours and 234 or 184)
             - (options.hideTitle and layout.titleHeight or 0)
             + (options.settings and 40 or 0)
         local overflowing = scrollView ~= nil and host.height < minimumHeight
@@ -411,15 +409,19 @@ function editor.build(parent, names, bindings, initialSlot, options)
         -- Tight ribbon panels need smaller gaps, not smaller text or fields.
         -- Leave the established popup/settings spacing alone when it fits.
         local compactRows = {
-            [8] = 8, [48] = 36, [90] = 72, [122] = 94,
-            [166] = 130, [198] = 162, [238] = 188, [270] = 220,
+            [8] = 8, [48] = 36,
+            [layout.rows.input] = 72,
+            [layout.rows.colourLabel] = 108,
+            [layout.rows.colourInput] = 140,
+            [layout.rows.colourButtons] = 176,
+            [layout.rows.colourStatus] = 208,
         }
         if options.settings then
-            compactRows[298] = 248
-            compactRows[226] = 198
+            compactRows[266] = 236
+            compactRows[layout.rows.storageNote] = 186
         end
         if not bindings.colours then
-            compactRows[166], compactRows[198] = 134, 166
+            compactRows[layout.rows.buttons], compactRows[layout.rows.status] = 122, 154
         end
         local offsetX = math.max(0, math.floor((availableHostWidth - width) / 2))
         local offsetY = math.max(0, math.floor((hostHeight - height) / 2))

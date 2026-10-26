@@ -153,8 +153,8 @@ local function createFixture(colours)
             elseif control.content == "Custom bank preset names" then self.title = control
             elseif control.kind == "text" and control.height == 18
                 and control.y == math.max(0, math.floor((self.parent.height
-                     - (options and options.hideTitle and 194 or 226)) / 2))
-                    + 226 - (options and options.hideTitle and 32 or 0) then self.note = control
+                     - (options and options.hideTitle and 162 or 194)) / 2))
+                    + 194 - (options and options.hideTitle and 32 or 0) then self.note = control
             elseif control.kind == "text" and control.content == "" then self.status = control end
         end
     end
@@ -176,7 +176,7 @@ test.case("Read-only preset heading follows bank selection, save and reset", fun
     for index = first, #f.controls do
         local control = f.controls[index]
         test.equal(control.kind == "list", false, "Bank editor has no preset dropdown")
-        if control.content == "Preset 18 — Last preset" then heading = control end
+        if control.content == "Preset 18 - Last preset" then heading = control end
     end
     test.equal(heading ~= nil, true)
     test.equal(heading.clickthrough, true)
@@ -184,12 +184,12 @@ test.case("Read-only preset heading follows bank selection, save and reset", fun
     test.equal(heading.content, "Preset 2")
     f.input.content = "Bossing"
     f:clickSave()
-    test.equal(heading.content, "Preset 2 — Bossing")
+    test.equal(heading.content, "Preset 2 - Bossing")
     f:clickReset()
     test.equal(heading.content, "Preset 2")
     f.stored[2] = "Updated externally"
     f.refresh()
-    test.equal(heading.content, "Preset 2 — Updated externally")
+    test.equal(heading.content, "Preset 2 - Updated externally")
 end)
 
 test.case("Bank selection refreshes the existing editor and saves to the new slot", function()
@@ -446,7 +446,7 @@ test.case("Colour labels and swatches share aligned rows and separate columns", 
     local f = createFixture({ get = function() return "" end })
     local labels, swatches = {}, {}
     for _, control in ipairs(f.controls) do
-        test.equal(control.content == "—", false, "Default swatches have no dash")
+        test.equal(control.content == "-", false, "Default swatches have no dash")
         if control.content == "Background colour:" or control.content == "Text colour:" then
             labels[#labels + 1] = control
         elseif control.kind == "rectangle" and control.width == 32 then
@@ -593,13 +593,11 @@ test.case("Preset markers follow saved names, blank saves, resets and external e
     test.equal(f.selector.entries[1], "Preset 2")
 end)
 
-test.case("Custom name label and save status use the smaller font", function()
+test.case("Custom name label is omitted and save status uses the smaller font", function()
     local f = createFixture()
-    local label
     for _, control in ipairs(f.controls) do
-        if control.content == "Custom name (blank = predefined):" then label = control end
+        test.equal(control.content == "Custom name (blank = predefined):", false)
     end
-    test.equal(label.font, id.Font.MUSEO_SANS_11PT_REGULAR)
     f:clickSave()
     test.equal(f.status.content, "Name saved.")
     test.equal(f.status.colour[2] > f.status.colour[1], true, "Success is green")
@@ -645,14 +643,14 @@ end)
 
 test.case("Popup editor omits its duplicate title and fits beneath window chrome", function()
     local f = createFixture()
-    f.parent.width, f.parent.height = 352, 194
+    f.parent.width, f.parent.height = 352, 162
     local first = #f.controls + 1
     f:open(18, { hideTitle = true })
     for index = first, #f.controls do
         local c = f.controls[index]
         test.equal(c.content == "Custom bank preset names", false)
         if c.content ~= "" then
-            test.equal(c.y >= 0 and c.y + c.height <= 194, true, "Visible control fits popup content")
+            test.equal(c.y >= 0 and c.y + c.height <= 162, true, "Visible control fits popup content")
         end
     end
     test.equal(f.selector.y, 16)
@@ -666,14 +664,14 @@ test.case("Editor centres controls without resizing host layers and clamps small
     test.equal(f.host.width, 600)
     test.equal(f.host.height, 400)
     test.equal(f.title.x, 130)
-    test.equal(f.title.y, 75)
+    test.equal(f.title.y, 91)
     test.equal(f.title.parent, f.parent, "Controls attach directly to supplied layer")
     test.equal(f.title.parentX, nil)
     test.equal(f.title.selfX, nil)
     f.parent.width, f.parent.height = 640, 400
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 160)
-    test.equal(f.title.y, 95)
+    test.equal(f.title.y, 111)
     f.parent.width, f.parent.height = 300, 200
     f.parent.hooks[ui.Hook.ONRESIZE]()
     test.equal(f.title.x, 8)
@@ -776,7 +774,7 @@ end)
 
 test.case("Managed ribbon input submits once and uses PrettyUI clipping", function()
     local f = createFixture()
-    f.parent.width, f.parent.height = 200, 120
+    f.parent.width, f.parent.height = 200, 88
     f:open(18, { scrollable = true })
     test.equal(f.input.contentClipped, true)
     test.equal(f.input.hidden, nil, "PrettyUI clips input visuals rather than hiding the field")
