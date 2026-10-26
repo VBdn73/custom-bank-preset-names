@@ -131,9 +131,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local pendingColours = {}
     local closePicker
     local updatePicker
+    local pickerKind
     local function dismissPicker()
         if closePicker then closePicker(); closePicker = nil end
         updatePicker = nil
+        pickerKind = nil
     end
     local function refreshColours()
         if not bindings.colours then return end
@@ -169,7 +171,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             defaultLabels[kind] = defaultLabel
             colourControls[kind] = control
             control:Subscribe(ui.Hook.ONCLICK, function()
+                local toggleClosed = pickerKind == kind
                 dismissPicker()
+                if toggleClosed then return end
+                pickerKind = kind
                 local slot, context = selectedSlot, names.getContext()
                 closePicker, updatePicker = colourPicker.open(host, colourValue.normalize(pendingColours[kind]), function(value)
                     closePicker = nil
@@ -178,7 +183,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     pendingColours[kind] = value
                     statusLabel.content = ""
                     refreshColours()
-                end, control, contentHost)
+                end, control, contentHost, function()
+                    closePicker = nil
+                    updatePicker = nil
+                    pickerKind = nil
+                end)
             end)
         end
     end

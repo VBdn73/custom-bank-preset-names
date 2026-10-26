@@ -306,6 +306,38 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
     p.close() -- Idempotent cleanup after an action.
 end)
 
+test.case("Colour swatches toggle their picker and switch between colours", function()
+    local f = createFixture({ get = function() return "" end })
+    local swatches = {}
+    for _, control in ipairs(f.controls) do
+        if control.kind == "rectangle" and control.width == 32 then
+            swatches[#swatches + 1] = control
+        end
+    end
+    local function click(index)
+        local first = #f.controls + 1
+        swatches[index].hooks[ui.Hook.ONCLICK]()
+        return f.controls[first]
+    end
+    for index = 1, 2 do
+        local root = click(index)
+        test.equal(click(index), nil, "Reclick closes without opening another picker")
+        test.equal(root.destroyed, true)
+        root = click(index)
+        local other = click(3 - index)
+        test.equal(root.destroyed, true)
+        test.equal(other.destroyed, nil, "Other swatch opens its own picker")
+        click(3 - index)
+        root = click(index)
+        f.controls[#f.controls - 1].hooks[ui.Hook.ONBUTTONPRESSED]() -- Cancel
+        test.equal(root.destroyed, true)
+        root = click(index)
+        test.equal(root.kind, "layer", "Click after Cancel opens immediately")
+        click(index)
+    end
+    test.equal(f.saveCalls, 0)
+end)
+
 test.case("Open colour pickers close on slot changes, character changes, hide and disposal", function()
     local f = createFixture({ get = function() return "" end })
     local swatch

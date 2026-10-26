@@ -3,7 +3,7 @@ local theme = require("editor/theme")
 local picker = {}
 
 -- A separate overlay avoids clipping by the ribbon's scrolling content.
-function picker.open(host, initial, onApply, anchor, overlayOwner)
+function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
     local root = ui.Layer.new(parent)
@@ -14,6 +14,7 @@ function picker.open(host, initial, onApply, anchor, overlayOwner)
         closed = true
         if registeredOverlay then overlayOwner:_UnregisterOverlay(root) end
         root:Destroy()
+        if onClose then onClose() end
     end
     local function rect(x, y, w, h, colour, action)
         local box = ui.Rectangle.new(root)
