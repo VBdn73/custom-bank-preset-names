@@ -9,6 +9,8 @@ local editorPopup = require("editor/popup")
 local bankAppearance = require("bank/appearance")
 local presetColours = require("presets/colours")
 local bankReorder = require("bank/reorder")
+local bankDropdown = require("bank/dropdown")
+local settings = require("presets/settings")
 bankBindings.colours = presetColours
 
 -- Each open editor supplies a callback that follows character changes.
@@ -23,7 +25,7 @@ end)
 
 Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
     editorRefreshCallbacks.settings = nameEditor.build(event.component, presetNames, bankBindings,
-        nil, { hideTitle = true })
+        nil, { hideTitle = true, settings = settings, prettyui = prettyUILibrary })
 end)
 
 Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
@@ -49,6 +51,7 @@ end)
 -- Reacquire components each tick: bank interfaces can close or rebuild at any time.
 Event.Logic.Subscribe("presetNames.labels", function()
     bankReorder.update(bankBindings)
+    bankDropdown.update(settings.hidePredefinedDropdown())
     editorPopup.update()
     for layer, refresh in pairs(editorRefreshCallbacks) do
         -- A closed host may already have disposed its controls.
@@ -63,11 +66,13 @@ end)
 -- Apply again at the render boundary so the predefined text is not drawn for
 -- one frame before the next logic tick restores the custom name.
 Event.Draw.Subscribe("presetNames.labels", function()
+    bankDropdown.update(settings.hidePredefinedDropdown())
     bankAppearance.update(bankBindings.appearance, presetColours)
     bankLabels.update(bankBindings.labels, presetNames)
 end)
 
 function PluginShutdown()
+    bankDropdown.restore()
     bankReorder.clear()
     if destroyContentView then pcall(destroyContentView) end
     destroyContentView = nil

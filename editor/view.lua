@@ -44,6 +44,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentWidth = layout.width
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
+    if options.settings then contentHeight = contentHeight + 40 end
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = {
@@ -298,6 +299,24 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     refreshSelectedName()
 
+    -- This preference belongs only to the Plugin Hub settings layer.
+    local dropdownCheckbox
+    if options.settings then
+        local y = (bindings.colours and layout.rows.colourStatus or layout.rows.status) + 28
+        dropdownCheckbox = options.prettyui.CheckboxButton.new(parent, {
+            { text = "Hide predefined-name dropdown", value = "hideDropdown",
+                selected = options.settings.hidePredefinedDropdown() },
+        }, {
+            width = layout.controlWidth,
+            onChange = function(_, _, _, hidden)
+                if not options.settings.setHidePredefinedDropdown(hidden) then
+                    setStatus("Could not save dropdown preference.", false)
+                end
+            end,
+        })
+        trackPosition(dropdownCheckbox.root, layout.padding, y)
+    end
+
     for _, position in ipairs(controlPositions) do
         position.width, position.height = position.component.width, position.component.height
     end
@@ -335,6 +354,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and 246 or 194)
             - (options.hideTitle and layout.titleHeight or 0)
+            + (options.settings and 40 or 0)
         local overflowing = scrollView ~= nil and host.height < minimumHeight
         local compact = hostHeight < contentHeight
         local titleOffset = options.hideTitle and layout.titleHeight or 0
@@ -353,6 +373,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             [8] = 8, [48] = 36, [90] = 72, [122] = 94,
             [166] = 130, [198] = 150, [238] = 188, [270] = 220,
         }
+        if options.settings then
+            compactRows[298] = 248
+            compactRows[226] = 198
+        end
         if not bindings.colours then
             compactRows[166], compactRows[198] = 134, 166
         end
@@ -392,6 +416,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()
+        if dropdownCheckbox then
+            dropdownCheckbox:SetSelected("hideDropdown", options.settings.hidePredefinedDropdown(), false)
+        end
         updateClipping()
         if updateInfo then updateInfo() end
         if names.getContext() ~= displayedCharacterContext then

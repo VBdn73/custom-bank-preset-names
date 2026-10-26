@@ -11,6 +11,8 @@ plugin changes their appearance locally, not their server-side names or behaviou
 - Edit through the plugin's ribbon/settings panel or directly from the bank.
 - Save settings locally for each character; reset individual presets at any time.
 - Draggable bank editor with a position remembered between client sessions.
+- Optional settings-only checkbox to hide the bank's predefined-name dropdown
+  (visible by default).
 
 The plugin does not load presets, automate actions, reveal hidden information, or
 unlock unavailable slots. Existing bank actions are unchanged. Disabling it
@@ -48,6 +50,10 @@ Click **×** to close it; it also closes when the bank disappears.
   character's display name available to save.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
 - **Default** restores the game's colour; text colour affects only the name.
+- In the Plugin Hub settings menu, tick **Hide predefined-name dropdown** to
+  hide the game's name dropdown below the bank preset list. Untick to restore it.
+  This applies to every preset; it does not change the selected predefined name.
+  The preset list expands into the freed space while this option is enabled.
 
 ## Permissions
 
@@ -63,7 +69,8 @@ developer or external services. It does not take screenshots.
 Settings persist locally through the client's `PersistentDB` API. The character
 display name forms part of the storage keys, ignoring case and surrounding
 spaces. Names and colours are stored per character; editor position is shared
-across characters on this device. No gameplay history is stored.
+across characters on this device, as is the dropdown visibility preference.
+No gameplay history is stored.
 
 - Settings do not sync between devices; beta and live storage are separate.
 - After a character rename, re-enter or manually migrate your settings. Reusing
