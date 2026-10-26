@@ -62,6 +62,7 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(built[1].slot, 18)
     test.equal(built[1].options.contentHost, first)
     test.equal(built[1].options.hideTitle, true)
+    test.equal(built[1].options.readOnlyPreset, true)
     test.equal(built[1].options.externalInfoButton, true)
     test.equal(built[1].options.infoParent, first.root)
     local info = sprites[1]

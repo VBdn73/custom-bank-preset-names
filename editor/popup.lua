@@ -94,7 +94,7 @@ function popup.open(slot, names, bindings, prettyui)
         })
         local toggleInfo
         refresh, toggleInfo, destroyEditor, selectSlot = nameEditor.build(window.content, names, bindings, slot, {
-            hideTitle = true, externalInfoButton = true, infoParent = window.root,
+            hideTitle = true, readOnlyPreset = true, externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight,
         })
         -- The drag handle is a sibling above the window, so the header icon

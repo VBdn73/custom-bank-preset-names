@@ -168,6 +168,30 @@ local function createFixture(colours)
     return f
 end
 
+test.case("Read-only preset heading follows bank selection, save and reset", function()
+    local f = createFixture()
+    local first = #f.controls + 1
+    f:open(18, { hideTitle = true, readOnlyPreset = true })
+    local heading
+    for index = first, #f.controls do
+        local control = f.controls[index]
+        test.equal(control.kind == "list", false, "Bank editor has no preset dropdown")
+        if control.content == "Preset 18 — Last preset" then heading = control end
+    end
+    test.equal(heading ~= nil, true)
+    test.equal(heading.clickthrough, true)
+    f.selectSlot(2)
+    test.equal(heading.content, "Preset 2")
+    f.input.content = "Bossing"
+    f:clickSave()
+    test.equal(heading.content, "Preset 2 — Bossing")
+    f:clickReset()
+    test.equal(heading.content, "Preset 2")
+    f.stored[2] = "Updated externally"
+    f.refresh()
+    test.equal(heading.content, "Preset 2 — Updated externally")
+end)
+
 test.case("Bank selection refreshes the existing editor and saves to the new slot", function()
     local f = createFixture()
     f.input.content = "Unfinished first preset"

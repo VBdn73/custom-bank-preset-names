@@ -65,14 +65,26 @@ function editor.build(parent, names, bindings, initialSlot, options)
     if not options.hideTitle then
         trackPosition(createText(parent, constants.editorTitle), layout.padding, layout.rows.title)
     end
-    local presetSelector = ui.List.new(parent)
-    trackPosition(presetSelector, layout.padding, layout.rows.selector)
-    presetSelector:SetSize(layout.controlWidth, layout.fieldHeight)
-    presetSelector.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
-    presetSelector.dropdownMaxVisibleEntries = layout.dropdownVisibleEntries
-    presetSelector.entryHeight = layout.textHeight
+    local presetSelector, presetHeading
+    if options.readOnlyPreset then
+        presetHeading = createText(parent, "")
+        presetHeading.clickthrough = true
+        trackPosition(presetHeading, layout.padding, layout.rows.selector)
+    else
+        presetSelector = ui.List.new(parent)
+        trackPosition(presetSelector, layout.padding, layout.rows.selector)
+        presetSelector:SetSize(layout.controlWidth, layout.fieldHeight)
+        presetSelector.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
+        presetSelector.dropdownMaxVisibleEntries = layout.dropdownVisibleEntries
+        presetSelector.entryHeight = layout.textHeight
+    end
     local presetLabels = {}
     local function refreshPresetLabels()
+        if presetHeading then
+            local name = names.get(selectedSlot)
+            presetHeading.content = "Preset " .. selectedSlot .. (name and name ~= "" and " - " .. name or "")
+            return
+        end
         local labels, changed = {}, false
         for preset = 1, bindings.presetCount do
             local name = names.get(preset)
@@ -295,19 +307,19 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function selectSlot(slot)
         if not slots.valid(slot, bindings.presetCount) or slot == selectedSlot then return end
         selectedSlot = slot
-        presetSelector:SetEntrySelected(slot - 1, true, false)
+        if presetSelector then presetSelector:SetEntrySelected(slot - 1, true, false) end
         refreshSelectedName()
     end
 
     -- Wire user actions after the controls and their shared state exist.
-    presetSelector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
+    if presetSelector then presetSelector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
         local selectedPreset = entryID + 1
         if event == ui.SelectionChangeEvent.SELECTED
             and selectedPreset >= 1 and selectedPreset <= bindings.presetCount
             and selectedPreset ~= selectedSlot then
             selectSlot(selectedPreset)
         end
-    end)
+    end) end
     local buttonsY = bindings.colours and layout.rows.colourButtons or layout.rows.buttons
     trackPosition(actionButton("Save", saveInput), layout.padding, buttonsY)
     trackPosition(actionButton("Reset", function()
