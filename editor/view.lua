@@ -2,7 +2,7 @@ local constants = require("constants")
 local layout = require("editor/layout")
 local theme = require("editor/theme")
 local icons = require("editor/icon")
-local colourPicker = require("editor/colour_picker")
+local colourPicker = require("components/colour_picker/init")
 local colourValue = require("presets/colour_value")
 local editor = {}
 
@@ -189,18 +189,30 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 if toggleClosed then return end
                 pickerKind = kind
                 local slot, context = selectedSlot, names.getContext()
-                closePicker, updatePicker = colourPicker.open(host, colourValue.normalize(pendingColours[kind]), function(value)
+                closePicker, updatePicker = colourPicker.open(host, {
+                    title = "Choose " .. kind .. " colour",
+                    initial = colourValue.normalize(pendingColours[kind]),
+                    anchor = control,
+                    theme = theme,
+                    attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)
+                        contentHost:_RegisterOverlay(root, nil, updatePosition)
+                        contentHost:_SyncOverlays(false)
+                        return function() contentHost:_UnregisterOverlay(root) end
+                    end or nil,
+                    onApply = function(value)
                     closePicker = nil
                     updatePicker = nil
                     if selectedSlot ~= slot or names.getContext() ~= context then return end
                     pendingColours[kind] = value
                     statusLabel.content = ""
                     refreshColours()
-                end, control, contentHost, function()
+                    end,
+                    onClose = function()
                     closePicker = nil
                     updatePicker = nil
                     pickerKind = nil
-                end)
+                    end,
+                })
             end)
         end
     end

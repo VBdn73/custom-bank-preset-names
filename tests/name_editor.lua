@@ -266,13 +266,16 @@ end)
 test.case("Colour picker validates hex, previews colours, cancels and restores defaults", function()
     local f = createFixture()
     local applied = "unchanged"
-    local picker = require("editor/colour_picker")
-    local function open()
+    local picker = require("components/colour_picker/init")
+    local function open(title)
         local first = #f.controls + 1
-        local close = picker.open(f.parent, "#38A4FF", function(value) applied = value end)
+        local close = picker.open(f.parent, {
+            title = title, initial = "#38A4FF", onApply = function(value) applied = value end,
+        })
         local found = { close = close, root = f.controls[first] }
         for i = first, #f.controls do
             local control = f.controls[i]
+            if control.kind == "text" and control.y == 8 then found.title = control end
             if control.kind == "input" then found.input = control end
             if control.label then found[control.label] = control end
             if control.kind == "rectangle" and control.width == 44 then found.preview = control end
@@ -282,6 +285,7 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
         return found
     end
     local p = open()
+    test.equal(p.title.content, "Choose colour")
     p.hue.hooks[ui.Hook.ONCLICK]()
     p.shade.hooks[ui.Hook.ONCLICK]()
     test.equal(p.input.content, "#FF0000", "Hue and shade controls update the exact colour")
@@ -295,7 +299,8 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
     p.Apply.hooks[ui.Hook.ONBUTTONPRESSED]()
     test.equal(applied, "#12AB34")
     test.equal(p.root.destroyed, true)
-    p = open()
+    p = open("Choose background colour")
+    test.equal(p.title.content, "Choose background colour")
     p.Cancel.hooks[ui.Hook.ONBUTTONPRESSED]()
     test.equal(applied, "#12AB34")
     test.equal(p.root.destroyed, true)
@@ -317,6 +322,10 @@ test.case("Colour swatches toggle their picker and switch between colours", func
     local function click(index)
         local first = #f.controls + 1
         swatches[index].hooks[ui.Hook.ONCLICK]()
+        if f.controls[first] then
+            test.equal(f.controls[first + 3].content,
+                index == 1 and "Choose background colour" or "Choose text colour")
+        end
         return f.controls[first]
     end
     for index = 1, 2 do
@@ -436,7 +445,9 @@ test.case("Colour picker anchors beside its swatch, follows movement and clamps 
     f.host.xyGlobal = { x = 100, y = 200 }
     local anchor = { xyGlobal = { x = 300, y = 250 }, width = 32 }
     local first = #f.controls + 1
-    local close, update = require("editor/colour_picker").open(f.parent, "#FFFFFF", function() end, anchor)
+    local close, update = require("components/colour_picker/init").open(f.parent, {
+        initial = "#FFFFFF", onApply = function() end, anchor = anchor,
+    })
     local root = f.controls[first]
     test.equal(root.x, 240, "Picker opens just right of the swatch in the overlay's coordinates")
     test.equal(root.y, 50)
@@ -469,7 +480,14 @@ test.case("Colour picker joins the PrettyUI window overlay stack and unregisters
     end
     local anchor = { xyGlobal = { x = 50, y = 50 }, width = 32 }
     local first = #f.controls + 1
-    local close = require("editor/colour_picker").open(f.parent, "#FFFFFF", function() end, anchor, owner)
+    local close = require("components/colour_picker/init").open(f.parent, {
+        initial = "#FFFFFF", onApply = function() end, anchor = anchor,
+        attachOverlay = function(root, position)
+            owner:_RegisterOverlay(root, nil, position)
+            owner:_SyncOverlays(false)
+            return function() owner:_UnregisterOverlay(root) end
+        end,
+    })
     local root = f.controls[first]
     test.equal(type(owner.overlays[root]), "function")
     test.equal(owner.syncs, 1, "Synchronize the newly opened overlay immediately")

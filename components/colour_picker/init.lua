@@ -1,18 +1,31 @@
-local colourValue = require("presets/colour_value")
-local theme = require("editor/theme")
+local colourValue = require("components/colour_picker/value")
 local picker = {}
+local defaultTheme = {
+    border = { 0.58, 0.48, 0.28, 1 },
+    background = { 0.14, 0.13, 0.11, 1 },
+}
+local function colour(rgba)
+    return Vector4.new(rgba[1], rgba[2], rgba[3], rgba[4])
+end
 
 -- A separate overlay avoids clipping by the ribbon's scrolling content.
-function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
+-- Host integration is injected; this component knows nothing about the editor,
+-- persistence or PrettyUI. attachOverlay may return a cleanup function.
+function picker.open(host, options)
+    options = options or {}
+    local initial, onApply = options.initial, options.onApply
+    local anchor, onClose = options.anchor, options.onClose
+    local theme = options.theme or defaultTheme
+    assert(type(onApply) == "function", "Colour picker requires an onApply callback.")
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
     local root = ui.Layer.new(parent)
     local closed = false
-    local registeredOverlay = false
+    local detachOverlay
     local function close()
         if closed then return end
         closed = true
-        if registeredOverlay then overlayOwner:_UnregisterOverlay(root) end
+        if detachOverlay then detachOverlay() end
         root:Destroy()
         if onClose then onClose() end
     end
@@ -21,7 +34,7 @@ function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
         box:SetPos(x, y)
         box:SetSize(w, h)
         box.fill = true
-        box.colour = theme.colour(colour)
+        box.colour = Vector4.new(colour[1], colour[2], colour[3], colour[4])
         box.clickthrough = false
         if action then box:Subscribe(ui.Hook.ONCLICK, action) end
         return box
@@ -61,7 +74,7 @@ function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
     updatePosition()
     rect(0, 0, width, height, theme.border)
     rect(1, 1, width - 2, height - 2, theme.background)
-    text(12, 8, 264, "Choose colour")
+    text(12, 8, 264, options.title or "Choose colour")
     local selected = colourValue.normalize(initial) or "#FFFFFF"
     local h, s, v = colourValue.toHSV(selected)
     local cells = {}
@@ -75,9 +88,9 @@ function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
     local status = text(12, 258, 264, "Hex colour: #RRGGBB")
     local function refresh()
         for _, cell in ipairs(cells) do
-            cell.control.colour = theme.colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
+            cell.control.colour = colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
         end
-        preview.colour = theme.colour(colourValue.vector(selected))
+        preview.colour = colour(colourValue.vector(selected))
         input.content = selected
         status.content = "Hex colour: #RRGGBB"
     end
@@ -106,9 +119,9 @@ function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
         if not hex then status.content = "Enter six hex digits, e.g. #38A4FF"; return end
         selected = hex
         h, s, v = colourValue.toHSV(hex)
-        preview.colour = theme.colour(colourValue.vector(hex))
+        preview.colour = colour(colourValue.vector(hex))
         for _, cell in ipairs(cells) do
-            cell.control.colour = theme.colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
+            cell.control.colour = colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
         end
         status.content = "Hex colour: #RRGGBB"
     end)
@@ -128,13 +141,7 @@ function picker.open(host, initial, onApply, anchor, overlayOwner, onClose)
     end)
     button(102, "Cancel", close)
     button(192, "Default", function() close(); onApply("") end)
-    -- PrettyUI raises its window and registered overlays together on drag/focus.
-    -- Keep the picker above that window without parenting it to clipped content.
-    if overlayOwner and overlayOwner._RegisterOverlay then
-        overlayOwner:_RegisterOverlay(root, nil, updatePosition)
-        registeredOverlay = true
-        overlayOwner:_SyncOverlays(false)
-    end
+    if options.attachOverlay then detachOverlay = options.attachOverlay(root, updatePosition) end
     return close, updatePosition
 end
 return picker

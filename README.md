@@ -123,12 +123,40 @@ Mocked tests do not replace in-client visual and interaction checks.
 - `bank/`: preset bindings, local label/colour overrides, and the context menu.
 - `editor/`: shared editor, PrettyUI popup, layout, colours, and icons.
 - `presets/`: validation and per-character persistent settings.
+- `components/colour_picker/`: self-contained picker and colour conversions.
 - `tests/`: mocked regression suites; `plugin.json`: manifest and dependency.
 
 Use slash-separated imports such as `require("editor/view")`, without `.lua`.
 The entry point passes the `prettyui` dependency global to editor modules;
 do not use `require("prettyui")`. Preset slots are one-based; native dropdown
 entry IDs are zero-based. An empty saved name means “use the predefined name”.
+
+### Reusable colour picker
+
+The picker remains bundled in this plugin, but has no editor, storage or PrettyUI
+dependencies. Its public API is:
+
+```lua
+local picker = require("components/colour_picker/init")
+local close, updatePosition = picker.open(host, {
+    title = "Choose background colour", -- defaults to "Choose colour"
+    initial = "#38A4FF",
+    anchor = swatch, -- optional; defaults to host
+    onApply = function(hex) end, -- #RRGGBB, or "" for Default
+    onClose = function() end, -- optional; called before onApply
+})
+```
+
+Call `close()` when the host is disposed and `updatePosition()` when it moves.
+Both are safe after closing. Optional `theme` supplies `border` and `background`
+RGBA tables. Optional `attachOverlay(root, updatePosition)` integrates the host's
+overlay management and returns a cleanup function; the editor uses this to keep
+the picker above PrettyUI windows during dragging/focus changes.
+
+For later extraction, move `components/colour_picker/` into the new plugin and
+replace the picker import in `editor/view.lua` and the utility import in
+`presets/colour_value.lua` with dependency exports. The component itself uses
+only the client UI API and its own colour utilities; it never saves settings.
 
 `bank/bindings.lua` maps interface 517, static component 266, category 0, dynamic
 ID `(slot - 1) * 3 + 1`. Missing or restricted components are skipped. Game UI
