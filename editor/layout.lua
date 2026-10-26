@@ -10,6 +10,7 @@ local layout = {
     fieldHeight = 32,
     buttonHeight = 30,
     buttonGap = 20,
+    swatchX = 164,
     dropdownVisibleEntries = 8,
     rows = {
         title = 8,

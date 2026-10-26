@@ -16,6 +16,7 @@ bankBindings.colours = presetColours
 -- Each open editor supplies a callback that follows character changes.
 local editorRefreshCallbacks = {}
 local destroyContentView
+local destroySettingsView
 
 Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
     presetMenu.add(event.miniMenu, bankBindings.labels, function(slot)
@@ -24,8 +25,10 @@ Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
 end)
 
 Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
-    editorRefreshCallbacks.settings = nameEditor.build(event.component, presetNames, bankBindings,
+    if destroySettingsView then pcall(destroySettingsView) end
+    local refresh, _, destroy = nameEditor.build(event.component, presetNames, bankBindings,
         nil, { hideTitle = true, settings = settings, prettyui = prettyUILibrary })
+    editorRefreshCallbacks.settings, destroySettingsView = refresh, destroy
 end)
 
 Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
@@ -57,6 +60,13 @@ Event.Logic.Subscribe("presetNames.labels", function()
         -- A closed host may already have disposed its controls.
         if not pcall(refresh) then
             editorRefreshCallbacks[layer] = nil
+            if layer == "settings" and destroySettingsView then
+                pcall(destroySettingsView)
+                destroySettingsView = nil
+            elseif layer == "content" and destroyContentView then
+                pcall(destroyContentView)
+                destroyContentView = nil
+            end
         end
     end
     bankLabels.update(bankBindings.labels, presetNames)
@@ -76,6 +86,8 @@ function PluginShutdown()
     bankReorder.clear()
     if destroyContentView then pcall(destroyContentView) end
     destroyContentView = nil
+    if destroySettingsView then pcall(destroySettingsView) end
+    destroySettingsView = nil
     bankAppearance.restore(bankBindings.appearance)
     Event.MiniMenuReady.Unsubscribe("presetNames.menu")
     editorPopup.close()

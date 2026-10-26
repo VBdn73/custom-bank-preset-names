@@ -3,8 +3,8 @@ local test = require("tests.test_helper")
 test.case("Native drops swap all customisations and ignore invalid destinations", function()
     local oldNames, oldColours = package.loaded["presets/names"], package.loaded["presets/colours"]
     local oldSwap = package.loaded["presets/swap"]
-    local data = { [1] = { name = "First", background = "green", text = "" },
-        [5] = { name = "Fifth", background = "", text = "blue" } }
+    local data = { [1] = { name = "First", background = "#008000", text = "" },
+        [5] = { name = "Fifth", background = "", text = "#38A4FF" } }
     local context = "character"
     local names = { getContext = function() return context end,
         get = function(slot) return data[slot].name end,
@@ -41,9 +41,9 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     rows[1].dynamicID, rows[5].dynamicID = 0, 4
     test.equal(rows[1].callback(rows[1], rows[5]), true)
     test.equal(data[5].name, "First")
-    test.equal(data[5].background, "green")
+    test.equal(data[5].background, "#008000")
     test.equal(data[1].name, "Fifth")
-    test.equal(data[1].text, "blue")
+    test.equal(data[1].text, "#38A4FF")
     test.equal(data[1].background, "")
     rows[1].callback(rows[1], nil)
     rows[1].callback(rows[1], rows[1])

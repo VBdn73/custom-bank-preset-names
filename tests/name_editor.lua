@@ -195,8 +195,6 @@ end)
 test.case("Bottom buttons save and reset names and staged colours for the selected slot", function()
     local values, calls = {}, 0
     local colours = {
-        palette = { { name = "Default", value = "" }, { name = "Red", value = "red" },
-            { name = "Green", value = "green" }, { name = "Blue", value = "blue" } },
         get = function(slot, kind) return values[slot .. kind] or "" end,
         save = function(slot, kind, value)
             calls = calls + 1
@@ -207,54 +205,200 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     local f = createFixture(colours)
     local controls = {}
     for _, control in ipairs(f.controls) do
-        if control.kind == "list" and not control.entries[17] then controls[#controls + 1] = control end
+        if control.kind == "rectangle" and control.width == 32 then controls[#controls + 1] = control end
+    end
+    local function choose(index, hex)
+        controls[index].hooks[ui.Hook.ONCLICK]()
+        local input, apply
+        for _, control in ipairs(f.controls) do
+            if not control.destroyed and control.kind == "input" and control.limit == 7 then input = control end
+            if control.label == "Apply" then apply = control end
+        end
+        input.content = hex
+        input.hooks[ui.Hook.ONCONTENTCHANGED]()
+        apply.hooks[ui.Hook.ONBUTTONPRESSED]()
     end
     test.equal(#controls, 2)
     test.equal(f.save.y > controls[1].y + controls[1].height, true)
-    test.equal(f.save.y - (controls[1].y + controls[1].height), 8,
-        "Buttons sit close beneath the colour dropdowns")
+    test.equal(controls[2].y - controls[1].y, 32, "Colour rows are stacked")
     test.equal(f.reset.y, f.save.y)
     test.equal(f.status.y >= f.save.y + f.save.height, true,
         "Save and failure messages sit below the buttons")
     test.equal(calls, 0)
     f:select(17)
-    controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 2, ui.SelectionChangeEvent.SELECTED)
-    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 1, ui.SelectionChangeEvent.SELECTED)
+    choose(1, "#008000")
+    choose(2, "#FF0000")
     f.refresh()
-    test.equal(controls[1].selectedID, 2, "Ticks preserve unsaved colours")
+    test.equal(controls[1].colour[2], 128 / 255, "Ticks preserve unsaved colours")
     test.equal(calls, 0)
     test.equal(f.saveCalls, 0)
     f.input.content = "Coloured preset"
     f:clickSave()
-    test.equal(values["18background"], "green")
-    test.equal(values["18text"], "red")
+    test.equal(values["18background"], "#008000")
+    test.equal(values["18text"], "#FF0000")
     test.equal(f.stored[18], "Coloured preset")
     f:clickReset()
     test.equal(values["18background"], "")
     test.equal(values["18text"], "")
     test.equal(f.stored[18], "")
-    test.equal(controls[1].selectedID, 0)
-    test.equal(controls[2].selectedID, 0)
+    test.equal(controls[1].colour[1], require("editor/theme").background[1])
     test.equal(f.selector.entries[17], "Preset 18")
-    controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 1, ui.SelectionChangeEvent.SELECTED)
+    choose(1, "#FF0000")
     f:clickSave()
     test.equal(f.selector.entries[17], "Preset 18 *", "Background alone marks the preset")
     f:clickReset()
-    controls[1].hooks[ui.Hook.ONSELECTIONCHANGED](controls[1], 0, ui.SelectionChangeEvent.SELECTED)
     test.equal(values["18background"], "")
     f.context = "second"
-    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
+    choose(2, "#0080FF")
     f:clickSave()
     test.equal(calls, 8, "Character change blocks all stale writes")
     f.refresh()
-    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
+    choose(2, "#0080FF")
     f:select(0)
     f:select(17)
-    test.equal(controls[2].selectedID, 0, "Switching slots discards unsaved colours")
-    controls[2].hooks[ui.Hook.ONSELECTIONCHANGED](controls[2], 3, ui.SelectionChangeEvent.SELECTED)
+    test.equal(controls[2].colour[1], require("editor/theme").background[1], "Switching slots discards unsaved colours")
+    choose(2, "#0080FF")
     f:clickSave()
     test.equal(calls, 10)
     test.equal(f.selector.entries[17], "Preset 18 *", "Text colour alone marks the preset")
+end)
+
+test.case("Colour picker validates hex, previews colours, cancels and restores defaults", function()
+    local f = createFixture()
+    local applied = "unchanged"
+    local picker = require("editor/colour_picker")
+    local function open()
+        local first = #f.controls + 1
+        local close = picker.open(f.parent, "#38A4FF", function(value) applied = value end)
+        local found = { close = close, root = f.controls[first] }
+        for i = first, #f.controls do
+            local control = f.controls[i]
+            if control.kind == "input" then found.input = control end
+            if control.label then found[control.label] = control end
+            if control.kind == "rectangle" and control.width == 44 then found.preview = control end
+            if control.kind == "rectangle" and control.x == 12 and control.y == 200 then found.hue = control end
+            if control.kind == "rectangle" and control.x == 265 and control.y == 36 then found.shade = control end
+        end
+        return found
+    end
+    local p = open()
+    p.hue.hooks[ui.Hook.ONCLICK]()
+    p.shade.hooks[ui.Hook.ONCLICK]()
+    test.equal(p.input.content, "#FF0000", "Hue and shade controls update the exact colour")
+    p.input.content = "#INVALID"
+    p.Apply.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(applied, "unchanged")
+    test.equal(p.root.destroyed, nil)
+    p.input.content = "#12ab34"
+    p.input.hooks[ui.Hook.ONCONTENTCHANGED]()
+    test.equal(p.preview.colour[2], 171 / 255)
+    p.Apply.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(applied, "#12AB34")
+    test.equal(p.root.destroyed, true)
+    p = open()
+    p.Cancel.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(applied, "#12AB34")
+    test.equal(p.root.destroyed, true)
+    p = open()
+    p.Default.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(applied, "")
+    test.equal(p.root.destroyed, true)
+    p.close() -- Idempotent cleanup after an action.
+end)
+
+test.case("Open colour pickers close on slot changes, character changes, hide and disposal", function()
+    local f = createFixture({ get = function() return "" end })
+    local swatch
+    for _, control in ipairs(f.controls) do
+        if control.kind == "rectangle" and control.width == 32 then swatch = control; break end
+    end
+    local function open()
+        local first = #f.controls + 1
+        swatch.hooks[ui.Hook.ONCLICK]()
+        return f.controls[first]
+    end
+    local root = open()
+    f:select(17)
+    test.equal(root.destroyed, true)
+    root = open()
+    f.context = "other"
+    f.refresh()
+    test.equal(root.destroyed, true)
+    root = open()
+    f.parent.visibleGlobal = false
+    f.refresh()
+    test.equal(root.destroyed, true)
+    f.parent.visibleGlobal = true
+    root = open()
+    f.destroy()
+    test.equal(root.destroyed, true)
+end)
+
+test.case("Colour swatches retain their size and fit narrow scrolled panels", function()
+    local f = createFixture({ get = function() return "#000000" end })
+    f.parent.width, f.parent.height = 200, 180
+    f:open(nil, { scrollable = true })
+    local swatches = 0
+    for _, control in ipairs(f.controls) do
+        if control.parent == f.scrollView.content and control.kind == "rectangle" and control.width == 32 then
+            swatches = swatches + 1
+            test.equal(control.x + control.width <= f.scrollView.contentWidth, true)
+            test.equal(control.height, 20)
+        end
+    end
+    test.equal(swatches, 2)
+    f.destroy()
+end)
+
+test.case("Colour picker anchors beside its swatch, follows movement and clamps to the screen", function()
+    local f = createFixture()
+    f.host.xyGlobal = { x = 100, y = 200 }
+    local anchor = { xyGlobal = { x = 300, y = 250 }, width = 32 }
+    local first = #f.controls + 1
+    local close, update = require("editor/colour_picker").open(f.parent, "#FFFFFF", function() end, anchor)
+    local root = f.controls[first]
+    test.equal(root.x, 240, "Picker opens just right of the swatch in the overlay's coordinates")
+    test.equal(root.y, 50)
+    anchor.xyGlobal = { x = 600, y = 390 }
+    update()
+    test.equal(root.x, 204, "Picker flips left when the right side does not fit")
+    test.equal(root.y, 74, "Picker stays above the bottom screen edge")
+    anchor.xyGlobal = { x = 80, y = 180 }
+    update()
+    test.equal(root.x >= 0, true)
+    test.equal(root.y, 0)
+    close()
+    update() -- A disposed picker must not be repositioned.
+end)
+
+test.case("Colour picker joins the PrettyUI window overlay stack and unregisters on close", function()
+    local f = createFixture()
+    local owner = { overlays = {}, syncs = 0 }
+    function owner:_RegisterOverlay(root, _, position)
+        self.overlays[root] = position
+    end
+    function owner:_UnregisterOverlay(root)
+        test.equal(root.destroyed, nil, "Unregister before disposing the native layer")
+        self.overlays[root] = nil
+    end
+    function owner:_SyncOverlays(hidden)
+        test.equal(hidden, false)
+        self.syncs = self.syncs + 1
+        for _, position in pairs(self.overlays) do position() end
+    end
+    local anchor = { xyGlobal = { x = 50, y = 50 }, width = 32 }
+    local first = #f.controls + 1
+    local close = require("editor/colour_picker").open(f.parent, "#FFFFFF", function() end, anchor, owner)
+    local root = f.controls[first]
+    test.equal(type(owner.overlays[root]), "function")
+    test.equal(owner.syncs, 1, "Synchronize the newly opened overlay immediately")
+    anchor.xyGlobal.x = 100
+    owner:_SyncOverlays(false) -- Same synchronization used when PrettyUI moves/focuses its window.
+    test.equal(root.x, 140)
+    close()
+    test.equal(owner.overlays[root], nil)
+    test.equal(root.destroyed, true)
+    close()
 end)
 
 test.case("Settings info uses the same native icon states as the popup", function()
@@ -412,7 +556,6 @@ end)
 
 test.case("Resizable ribbon fits narrow panels and restores the wide layout without losing edits", function()
     local colours = {
-        palette = { { name = "Default", value = "" } },
         get = function() return "" end,
         save = function() return true end,
     }
@@ -465,7 +608,6 @@ end)
 
 test.case("Small ribbon panels scroll to Save and reset their offset when enlarged", function()
     local f = createFixture({
-        palette = { { name = "Default", value = "" } },
         get = function() return "" end, save = function() return true end,
     })
     f.parent.width, f.parent.height = 200, 120

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Replaced predefined-colour dropdowns with stacked background/text colour swatches.
+- Added a colour picker with a hue strip, shade area, hex input, preview, and Apply/Cancel/Default actions.
+- Colour pickers open beside the clicked swatch and follow the editor when moved, flipping left and clamping at screen edges.
+- Registered bank colour pickers as PrettyUI window overlays so dragging the editor does not cover the picker.
+- Custom colours use the existing Save/Reset workflow and per-character storage.
+- Removed the old predefined palette and named-colour lookup; older named selections now display as Default.
+
 ## 0.4.0 - 2026-10-25
 
 - Custom names, background colours, and text colours now follow presets when swapping them by drag and drop in the bank.

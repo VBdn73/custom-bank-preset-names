@@ -1,0 +1,139 @@
+local colourValue = require("presets/colour_value")
+local theme = require("editor/theme")
+local picker = {}
+
+-- A separate overlay avoids clipping by the ribbon's scrolling content.
+function picker.open(host, initial, onApply, anchor, overlayOwner)
+    local parent = host
+    while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
+    local root = ui.Layer.new(parent)
+    local closed = false
+    local registeredOverlay = false
+    local function close()
+        if closed then return end
+        closed = true
+        if registeredOverlay then overlayOwner:_UnregisterOverlay(root) end
+        root:Destroy()
+    end
+    local function rect(x, y, w, h, colour, action)
+        local box = ui.Rectangle.new(root)
+        box:SetPos(x, y)
+        box:SetSize(w, h)
+        box.fill = true
+        box.colour = theme.colour(colour)
+        box.clickthrough = false
+        if action then box:Subscribe(ui.Hook.ONCLICK, action) end
+        return box
+    end
+    local function text(x, y, w, content)
+        local label = ui.Text.new(root)
+        label:SetPos(x, y)
+        label:SetSize(w, 24)
+        label.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
+        label.content = content
+        label.clickthrough = true
+        return label
+    end
+    local width, height = 288, 326
+    root:SetSize(width, height)
+    local function globalPosition(component)
+        local position = component.xyGlobal
+        if position then return position.x, position.y end
+        -- Also supports simple local-coordinate hosts used in tests.
+        local x, y = component.x or 0, component.y or 0
+        if component.parent then
+            local px, py = globalPosition(component.parent)
+            x, y = x + px, y + py
+        end
+        return x, y
+    end
+    local function updatePosition()
+        if closed then return end
+        local target = anchor or host
+        local ax, ay = globalPosition(target)
+        local px, py = globalPosition(parent)
+        local x, y = ax - px + target.width + 8, ay - py
+        if x + width > parent.width then x = ax - px - width - 8 end
+        root:SetPos(math.max(0, math.min(x, parent.width - width)),
+            math.max(0, math.min(y, parent.height - height)))
+    end
+    updatePosition()
+    rect(0, 0, width, height, theme.border)
+    rect(1, 1, width - 2, height - 2, theme.background)
+    text(12, 8, 264, "Choose colour")
+    local selected = colourValue.normalize(initial) or "#FFFFFF"
+    local h, s, v = colourValue.toHSV(selected)
+    local cells = {}
+    local preview = rect(232, 226, 44, 28, colourValue.vector(selected))
+    local input = ui.InputField.new(root)
+    input:SetPos(12, 226)
+    input:SetSize(208, 28)
+    input.stylesheetID = id.StyleSheet.INPUT_DEFAULT
+    input:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 7)
+    input.content = selected
+    local status = text(12, 258, 264, "Hex colour: #RRGGBB")
+    local function refresh()
+        for _, cell in ipairs(cells) do
+            cell.control.colour = theme.colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
+        end
+        preview.colour = theme.colour(colourValue.vector(selected))
+        input.content = selected
+        status.content = "Hex colour: #RRGGBB"
+    end
+    for row = 0, 11 do
+        for column = 0, 23 do
+            local cs, cv = column / 23, 1 - row / 11
+            local control = rect(12 + column * 11, 36 + row * 13, 11, 13,
+                colourValue.vector(colourValue.fromHSV(h, cs, cv)), function()
+                    s, v = cs, cv
+                    selected = colourValue.fromHSV(h, s, v)
+                    refresh()
+                end)
+            cells[#cells + 1] = { control = control, s = cs, v = cv }
+        end
+    end
+    for index = 0, 23 do
+        local hue = index / 24
+        rect(12 + index * 11, 200, 11, 18, colourValue.vector(colourValue.fromHSV(hue, 1, 1)), function()
+            h = hue
+            selected = colourValue.fromHSV(h, s, v)
+            refresh()
+        end)
+    end
+    input:Subscribe(ui.Hook.ONCONTENTCHANGED, function()
+        local hex = colourValue.normalize(input.content)
+        if not hex then status.content = "Enter six hex digits, e.g. #38A4FF"; return end
+        selected = hex
+        h, s, v = colourValue.toHSV(hex)
+        preview.colour = theme.colour(colourValue.vector(hex))
+        for _, cell in ipairs(cells) do
+            cell.control.colour = theme.colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
+        end
+        status.content = "Hex colour: #RRGGBB"
+    end)
+    local function button(x, label, callback)
+        local control = ui.Button.new(root)
+        control:SetPos(x, 288)
+        control:SetSize(84, 28)
+        control.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+        control.label = label
+        control:Subscribe(ui.Hook.ONBUTTONPRESSED, callback)
+    end
+    button(12, "Apply", function()
+        local hex = colourValue.normalize(input.content)
+        if not hex then status.content = "Enter six hex digits, e.g. #38A4FF"; return end
+        close()
+        onApply(hex)
+    end)
+    button(102, "Cancel", close)
+    button(192, "Default", function() close(); onApply("") end)
+    -- PrettyUI raises its window and registered overlays together on drag/focus.
+    -- Keep the picker above that window without parenting it to clipped content.
+    if overlayOwner and overlayOwner._RegisterOverlay then
+        overlayOwner:_RegisterOverlay(root, nil, updatePosition)
+        registeredOverlay = true
+        overlayOwner:_SyncOverlays(false)
+    end
+    return close, updatePosition
+end
+return picker

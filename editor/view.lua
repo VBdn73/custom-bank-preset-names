@@ -2,6 +2,8 @@ local constants = require("constants")
 local layout = require("editor/layout")
 local theme = require("editor/theme")
 local icons = require("editor/icon")
+local colourPicker = require("editor/colour_picker")
+local colourValue = require("presets/colour_value")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -124,38 +126,59 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local infoVisible = false
     local colourControls = {}
+    local defaultLabels = {}
+    local colourLabels = {}
     local pendingColours = {}
+    local closePicker
+    local updatePicker
+    local function dismissPicker()
+        if closePicker then closePicker(); closePicker = nil end
+        updatePicker = nil
+    end
     local function refreshColours()
         if not bindings.colours then return end
         for kind, control in pairs(colourControls) do
             local value = pendingColours[kind]
-            for index, item in ipairs(bindings.colours.palette) do
-                if item.value == value then control:SetEntrySelected(index - 1, true, false) end
-            end
+            local hex = colourValue.normalize(value)
+            control.colour = theme.colour(hex and colourValue.vector(hex) or theme.background)
+            defaultLabels[kind].hidden = hex ~= nil
         end
     end
     if bindings.colours then
         for index, kind in ipairs({ "background", "text" }) do
-            local x = layout.padding + (index - 1) * (layout.buttonWidth + layout.buttonGap)
-            trackPosition(createText(parent, kind == "background" and "Background" or "Text colour", smallFont),
-                 x, layout.rows.colourLabel)
-            local control = ui.List.new(parent)
-            control:SetSize(layout.buttonWidth, layout.fieldHeight)
-            control.stylesheetID = id.StyleSheet.DROPDOWN_DEFAULT
-            control.dropdownMaxVisibleEntries = layout.dropdownVisibleEntries
-            control.entryHeight = layout.textHeight
-            trackPosition(control, x, layout.rows.colourInput)
+            local y = layout.rows.colourLabel + (index - 1) * 32
+            local label = createText(parent, kind == "background" and "Background colour:" or "Text colour:", smallFont)
+            label.clickthrough = true
+            colourLabels[kind] = label
+            trackPosition(label, layout.padding, y)
+            local border = ui.Rectangle.new(parent)
+            border:SetSize(34, 22)
+            border.fill = true
+            border.colour = theme.colour(theme.border)
+            border.clickthrough = true
+            trackPosition(border, layout.swatchX - 1, y + 3)
+            local control = ui.Rectangle.new(parent)
+            control:SetSize(32, 20)
+            control.fill = true
+            control.clickthrough = false
+            trackPosition(control, layout.swatchX, y + 4)
+            local defaultLabel = createText(parent, "—", smallFont)
+            defaultLabel:SetSize(32, 20)
+            defaultLabel.clickthrough = true
+            trackPosition(defaultLabel, layout.swatchX + 8, y + 2)
+            defaultLabels[kind] = defaultLabel
             colourControls[kind] = control
-            for paletteIndex, item in ipairs(bindings.colours.palette) do
-                control:Add(item.name, paletteIndex - 1)
-            end
-            control:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
-                if event ~= ui.SelectionChangeEvent.SELECTED then return end
-                local item = bindings.colours.palette[entryID + 1]
-                if not item then return end
-                pendingColours[kind] = item.value
-                statusLabel.content = ""
-                refreshColours()
+            control:Subscribe(ui.Hook.ONCLICK, function()
+                dismissPicker()
+                local slot, context = selectedSlot, names.getContext()
+                closePicker, updatePicker = colourPicker.open(host, colourValue.normalize(pendingColours[kind]), function(value)
+                    closePicker = nil
+                    updatePicker = nil
+                    if selectedSlot ~= slot or names.getContext() ~= context then return end
+                    pendingColours[kind] = value
+                    statusLabel.content = ""
+                    refreshColours()
+                end, control, contentHost)
             end)
         end
     end
@@ -210,6 +233,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     local displayedCharacterContext = names.getContext()
     local function refreshSelectedName()
+        dismissPicker()
         displayedCharacterContext = names.getContext()
         if bindings.colours then
             for kind in pairs(colourControls) do
@@ -223,6 +247,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
 
     local function saveValue(value, reset)
+        dismissPicker()
         -- Do not save an old character's unfinished edit under a new character.
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
@@ -325,9 +350,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         for _, position in ipairs(controlPositions) do
             -- Lists own their wheel events for navigating their entries.
             if position.component ~= presetSelector
-                and not (managedInput and position.component == nameInput)
-                and position.component ~= colourControls.background
-                and position.component ~= colourControls.text then
+                and not (managedInput and position.component == nameInput) then
                 position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", function(_, delta)
                     if not scrollView.scrollbarVisible then return true end
                     scrollView:ScrollBy(delta * layout.fieldHeight)
@@ -345,12 +368,17 @@ function editor.build(parent, names, bindings, initialSlot, options)
             -- Native input text can escape ancestor clipping; suppress controls
             -- crossing the viewport boundary, as in the previous ribbon editor.
             if not (managedInput and control == nameInput) then
-                control.hidden = top < 0 or top + control.height > host.height
+                local defaultHidden = (colourControls.background and control == defaultLabels.background
+                    and colourValue.normalize(pendingColours.background) ~= nil)
+                    or (colourControls.text and control == defaultLabels.text
+                    and colourValue.normalize(pendingColours.text) ~= nil)
+                control.hidden = not not (defaultHidden or top < 0 or top + control.height > host.height)
             end
         end
     end
 
     local function centreContent()
+        dismissPicker()
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and 246 or 194)
             - (options.hideTitle and layout.titleHeight or 0)
@@ -371,7 +399,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         -- Leave the established popup/settings spacing alone when it fits.
         local compactRows = {
             [8] = 8, [48] = 36, [90] = 72, [122] = 94,
-            [166] = 130, [198] = 150, [238] = 188, [270] = 220,
+            [166] = 130, [198] = 162, [238] = 188, [270] = 220,
         }
         if options.settings then
             compactRows[298] = 248
@@ -391,6 +419,21 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local isColumn = position.width == layout.buttonWidth
                 or (bindings.colours and position.y + titleOffset == layout.rows.colourLabel)
             local availableWidth = isColumn and buttonWidth or controlWidth
+            local isSwatch = position.x >= layout.swatchX - 1 and position.width <= 34
+            local isColourLabel = control == colourLabels.background or control == colourLabels.text
+            local swatchX = math.max(layout.padding, math.min(layout.swatchX, width - layout.padding - 34))
+            if isSwatch then
+                availableWidth = position.width
+                x = swatchX + position.x - layout.swatchX
+            elseif isColourLabel then
+                availableWidth = math.max(1, swatchX - layout.padding - 6)
+            end
+            if isSwatch or isColourLabel then
+                local row = position.y + titleOffset >= layout.rows.colourInput and layout.rows.colourInput
+                    or layout.rows.colourLabel
+                y = (compact and compactRows[row] or row) - titleOffset
+                    + position.y + titleOffset - row
+            end
             if control.content == constants.editorTitle or control.content == "Preset customisation" then
                 control.content = width < layout.width and "Preset customisation" or constants.editorTitle
                 availableWidth = math.max(1, controlWidth - layout.popupCloseSize - 4)
@@ -416,6 +459,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()
+        if host.visibleGlobal == false then dismissPicker() end
+        if updatePicker then updatePicker() end
         if dropdownCheckbox then
             dropdownCheckbox:SetSelected("hideDropdown", options.settings.hidePredefinedDropdown(), false)
         end
@@ -426,7 +471,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         refreshPresetLabels()
         refreshColours()
-    end, toggleInfo, scrollView and function() scrollView:Destroy() end or nil
+        updateClipping()
+    end, toggleInfo, function()
+        dismissPicker()
+        if scrollView then scrollView:Destroy() end
+    end
 end
 
 return editor

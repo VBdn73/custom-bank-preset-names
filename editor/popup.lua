@@ -7,6 +7,7 @@ local window, refresh, bankIsOpen, updateInfo, infoButton
 local positionKey = "presetEditor.position.v1"
 local lastX, lastY
 local savedPosition
+local destroyEditor
 
 local function loadPosition()
     local ok, value = pcall(function() return PersistentDB:GetString(positionKey) end)
@@ -34,6 +35,7 @@ end
 loadPosition()
 
 function popup.close()
+    if destroyEditor then pcall(destroyEditor); destroyEditor = nil end
     rememberPosition()
     if lastX and lastY then
         local value = lastX .. "," .. lastY
@@ -85,7 +87,7 @@ function popup.open(slot, names, bindings, prettyui)
             scrollable = false, onClose = popup.close,
         })
         local toggleInfo
-        refresh, toggleInfo = nameEditor.build(window.content, names, bindings, slot, {
+        refresh, toggleInfo, destroyEditor = nameEditor.build(window.content, names, bindings, slot, {
             hideTitle = true, externalInfoButton = true, infoParent = window.root,
             contentHost = window, formHeight = bodyHeight,
         })

@@ -6,7 +6,7 @@ plugin changes their appearance locally, not their server-side names or behaviou
 ## Features
 
 - Custom names for all 18 mapped preset slots, up to 40 Unicode characters each.
-- Independent background and name-text colours: 13 colours plus Default.
+- Independent custom background and name-text colours, selected with clickable swatches.
 - Dragging one bank preset onto another swaps their saved names and colours too.
 - Edit through the plugin's ribbon/settings panel or directly from the bank.
 - Save settings locally for each character; reset individual presets at any time.
@@ -32,8 +32,12 @@ enable commands do not download dependencies automatically.
 ## How to use
 
 1. Enable the plugin and open its ribbon entry or Settings icon in the Plugin Hub.
-2. Select a preset, enter a name, and choose **Background** and **Text colour**.
-3. Click **Save** or press Enter to save the name and both colours.
+2. Select a preset and enter a name. Click the rectangle beside **Background colour**
+   or **Text colour** to open the colour picker.
+3. Choose a hue from the strip, then a shade from the colour area, or enter an
+   exact `#RRGGBB` hex colour. **Apply** updates the swatch; **Cancel** discards the
+   picker edit. Click **Save** in the editor (or press Enter in the name field)
+   to save the name and both colours and apply them to the bank.
 4. Click **Reset** to restore the predefined name and default colours. Saving a
    blank name restores only the name, keeping your chosen colours.
 
@@ -49,7 +53,10 @@ Click **×** to close it; it also closes when the bank disappears.
 - Changing presets discards unsaved edits. You must be logged in with your
   character's display name available to save.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
-- **Default** restores the game's colour; text colour affects only the name.
+- **Default** in the picker stages the game's colour for that field; click **Save**
+  to apply it. A dash in the swatch means Default. Text colour affects only the name.
+- Colours are fully opaque and stored as `#RRGGBB`. Older named-colour settings
+  are treated as Default; choose a new colour with the picker to customise them again.
 - In the Plugin Hub settings menu, tick **Hide predefined-name dropdown** to
   hide the game's name dropdown below the bank preset list. Untick to restore it.
   This applies to every preset; it does not change the selected predefined name.
