@@ -36,6 +36,7 @@ local layout = {
     popupTitleY = 7,
     popupTitleHeight = 26,
     popupCloseSize = 22,
+    popupEditorGapReduction = 12,
 }
 
 layout.controlWidth = layout.width - layout.padding * 2

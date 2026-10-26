@@ -22,6 +22,21 @@ function appearance.update(bindings, colours)
         end
     end
 end
+-- The editor previews defaults without removing the saved bank customisation.
+function appearance.original(bindings, slot, kind)
+    for index, binding in ipairs(bindings or {}) do
+        if binding.slot == slot and binding.colourKind == kind then
+            local state = states[index]
+            local component = resolve(binding)
+            if component and not component.isRestricted
+                and component.type == ui.ComponentType[binding.kind] then
+                if state and state.component == component then return state.original end
+                return component.rgba
+            end
+        end
+    end
+end
+
 function appearance.restore(bindings)
     for index, binding in ipairs(bindings) do
         local state, component = states[index], resolve(binding)

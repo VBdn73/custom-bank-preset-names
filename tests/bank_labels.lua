@@ -52,6 +52,8 @@ test.case("Labels apply custom names and reset to predefined text", function()
     f:update()
     test.equal(f.label.content, "Bossing")
     f:update() -- Repeated updates must not mistake our own text for original text.
+    test.equal(f.bank.original(f.bindings, 1), "Combat", "Blank draft previews the predefined name")
+    test.equal(f.label.content, "Bossing", "Preview lookup leaves the bank unchanged")
     f.customName = nil
     f:update()
     test.equal(f.label.content, "Combat")

@@ -7,6 +7,7 @@ changes their appearance locally, not their server-side names or behaviour.
 
 - Custom names for all 18 mapped preset slots, up to 40 Unicode characters each.
 - Background and text colours via swatches, a colour picker, or hex input.
+- Editable name field previews staged background and text colours before saving.
 - Dragging one bank preset onto another swaps their saved names and colours too.
 - Edit through the plugin's ribbon/settings panel or directly from the bank.
 - Save settings locally for each character; reset individual presets at any time.
@@ -33,7 +34,8 @@ enable commands do not download dependencies automatically.
 3. Choose a hue and shade or enter `#RRGGBB`. **Apply** stages the colour;
    **Cancel** discards it. Click the same swatch again to close the picker.
 4. Click **Save** (or press Enter in the name field) to save the name and colours.
-   **Reset** restores all defaults; saving a blank name keeps your chosen colours.
+   **Reset** previews all defaults; click **Save** to commit the reset.
+   Saving a blank name keeps your chosen colours.
 
 In the bank, right-click a preset name and choose **Customize preset**. The editor
 shows a read-only preset heading; select another preset in the bank to switch
@@ -44,7 +46,7 @@ and kept within UI bounds. **×** or closing the bank closes the editor.
 - Click **i** to show or hide help notes, which start hidden.
 - Scroll the ribbon form when controls do not fit; resizing keeps unfinished edits.
 - Switching presets discards unsaved edits. Saving requires your logged-in
-  character's display name.
+  character's display name. Closing the editor also discards unsaved edits.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
 - **Default** stages the game's colour; click **Save** to apply it. A crossed
   swatch means Default. Text colour affects only the name.

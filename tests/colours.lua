@@ -91,6 +91,9 @@ test.case("Appearance applies, resets, reacquires, and safely restores colours",
     appearance.update(bindings, colours)
     appearance.update(bindings, colours)
     test.equal(component.rgba, value)
+    test.equal(appearance.original(bindings, 1, "background"), 0x222222FF,
+        "Default preview reads the original, not the saved customisation")
+    test.equal(component.rgba, value, "Reading defaults does not alter the bank")
     value = nil
     appearance.update(bindings, colours)
     test.equal(component.rgba, 0x222222FF)
@@ -104,6 +107,7 @@ test.case("Appearance applies, resets, reacquires, and safely restores colours",
     appearance.restore(bindings)
     test.equal(component.rgba, 0x111111FF)
     component.isRestricted = true
+    test.equal(appearance.original(bindings, 1, "background"), nil)
     appearance.update(bindings, colours)
     test.equal(component.rgba, 0x111111FF)
 end)

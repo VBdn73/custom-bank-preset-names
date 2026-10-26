@@ -5,8 +5,12 @@ local function createFixture(colours)
     local f = { controls = {}, stored = { [18] = "Last preset" }, context = "first",
         saveCalls = 0, saveMode = "success" }
     local function createControl(kind, parent)
-        local control = { kind = kind, parent = parent, entries = {}, hooks = {} }
+        local control = { kind = kind, parent = parent, entries = {}, hooks = {},
+            text = {}, containerSprite = {} }
         setmetatable(control, { __newindex = function(target, key, value)
+            if kind == "text" and key == "shadowRGBA" then
+                error("Native Text does not expose a writable shadowRGBA property")
+            end
             if key == "hidden" then
                 test.equal(type(value), "boolean", "Native visibility requires a boolean")
             end
@@ -45,9 +49,19 @@ local function createFixture(colours)
             ONMOUSEOVER = 9, ONMOUSELEAVE = 10 },
         SelectionChangeEvent = { SELECTED = 1, DESELECTED = 0 },
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
+        AlignMode = { CENTRE = 1 },
+        Margin = { new = function(left, top, right, bottom)
+            return { left = left, top = top, right = right, bottom = bottom }
+        end },
         InputFieldActionResult = { SUBMIT = 1 },
     }
     Vector4 = { new = function(...) return { ... } end }
+    config = { Font = { FromID = function()
+        return { baseline = 18, maxAscent = 14, maxDescent = 4, GetStringWidth = function(_, content)
+            local _, count = content:gsub("[^\128-\191]", "")
+            return count * 8
+        end }
+    end } }
     -- Mock the public PrettyUI interface, not its scrollbar implementation.
     prettyui = { CheckboxButton = { new = function(parent, choices, options)
         local root = createControl("checkbox", parent)
@@ -83,6 +97,7 @@ local function createFixture(colours)
             root.limit = options.maxLength
             local field = { root = root }
             root:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+                if field.onChange then field.onChange(field, reason, root.content) end
                 if reason == ui.InputFieldActionResult.SUBMIT and field.onSubmit then field.onSubmit() end
             end)
             root:Subscribe(ui.Hook.ONSCROLLWHEEL, function(_, delta)
@@ -142,7 +157,8 @@ local function createFixture(colours)
             options.prettyui = prettyui
         end
         local firstNewControl = #self.controls + 1
-        self.refresh, self.toggleInfo, self.destroy, self.selectSlot = dofile("editor/view.lua").build(self.parent, self.names, { presetCount = 18, colours = colours }, initialSlot, options)
+        self.refresh, self.toggleInfo, self.destroy, self.selectSlot = dofile("editor/view.lua").build(self.parent, self.names,
+            self.bindings or { presetCount = 18, colours = colours }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" and control.entries[17] then self.selector = control
@@ -186,10 +202,28 @@ test.case("Read-only preset heading follows bank selection, save and reset", fun
     f:clickSave()
     test.equal(heading.content, "Preset 2 - Bossing")
     f:clickReset()
+    test.equal(heading.content, "Preset 2 - Bossing", "Reset only stages a draft")
+    f:clickSave()
     test.equal(heading.content, "Preset 2")
     f.stored[2] = "Updated externally"
     f.refresh()
     test.equal(heading.content, "Preset 2 - Updated externally")
+end)
+
+test.case("Bank editor tightens the heading gap and fits its shortened body", function()
+    local f = createFixture({ get = function() return "" end })
+    local layout = require("editor/layout")
+    local height = layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction
+    f.parent.height = height
+    f:open(18, { hideTitle = true, readOnlyPreset = true, formHeight = height })
+    local heading
+    for _, control in ipairs(f.controls) do
+        if control.content == "Preset 18 - Last preset" then heading = control end
+    end
+    test.equal(f.input.y - (heading.y + heading.height),
+        layout.rows.input - layout.rows.selector - layout.textHeight - layout.popupEditorGapReduction)
+    test.equal(f.save.y, layout.rows.colourButtons - layout.titleHeight - layout.popupEditorGapReduction)
+    test.equal(f.status.y + f.status.height <= height, true, "Retain space for save and validation messages")
 end)
 
 test.case("Bank selection refreshes the existing editor and saves to the new slot", function()
@@ -270,6 +304,18 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     choose(1, "#008000")
     choose(2, "#FF0000")
     f.refresh()
+    test.equal(f.input.containerSprite.alpha, 0)
+    test.equal(f.input.text.alignHorizontal, ui.AlignMode.CENTRE,
+        "Editable preview centres the name like the bank preset")
+    test.equal(f.input.text.rgba, 0, "Native glyphs stay hidden behind the unified preview")
+    local background, preview
+    for _, control in ipairs(f.controls) do
+        if control.kind == "rectangle" and control.rgba == 0x008000FF then background = control end
+        if control.kind == "text" and control.content == "Last preset" then preview = control end
+    end
+    test.equal(background ~= nil, true, "Background previews the staged colour")
+    test.equal(background.width, f.input.width - 2)
+    test.equal(preview.rgba, 0xFF0000FF)
     test.equal(controls[1].colour[2], 128 / 255, "Ticks preserve unsaved colours")
     test.equal(calls, 0)
     test.equal(f.saveCalls, 0)
@@ -279,6 +325,13 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     test.equal(values["18text"], "#FF0000")
     test.equal(f.stored[18], "Coloured preset")
     f:clickReset()
+    test.equal(values["18background"], "#008000", "Reset does not write saved colours")
+    test.equal(f.stored[18], "Coloured preset", "Reset does not write the saved name")
+    test.equal(f.input.content, "")
+    test.equal(f.input.text.rgba, 0)
+    test.equal(preview.rgba, 0xB8AD9DFF)
+    test.equal(background.rgba, 0x292520FF)
+    f:clickSave()
     test.equal(values["18background"], "")
     test.equal(values["18text"], "")
     test.equal(f.stored[18], "")
@@ -288,6 +341,7 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     f:clickSave()
     test.equal(f.selector.entries[17], "Preset 18 *", "Background alone marks the preset")
     f:clickReset()
+    f:clickSave()
     test.equal(values["18background"], "")
     f.context = "second"
     choose(2, "#0080FF")
@@ -302,6 +356,103 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     f:clickSave()
     test.equal(calls, 10)
     test.equal(f.selector.entries[17], "Preset 18 *", "Text colour alone marks the preset")
+end)
+
+test.case("Preview matches the bank label font and shadow without changing its colour", function()
+    local colours = { get = function(_, kind) return kind == "text" and "#FF8000" or "" end }
+    local f = createFixture(colours)
+    local label = { type = 1, content = "Preset", font = 42,
+        shadowRGBA = 0x202020FF, isShadowed = false, rgba = 0xFF8000FF }
+    ui.ComponentType = { LABEL = 1 }
+    ui.Interfaces = { GetComponent = function() return label end }
+    f.bindings = { presetCount = 18, colours = colours,
+        labels = { { slot = 18, interfaceID = 517, staticID = 266 } } }
+    f:open(18, { scrollable = true })
+    test.equal(f.input.text.font, label.font)
+    test.equal(f.input.text.shadowRGBA, label.shadowRGBA)
+    test.equal(f.input.text.isShadowed, false)
+    test.equal(f.input.text.rgba, 0)
+    test.equal(f.input.emptyTextRGBA, label.rgba)
+    local fallback
+    for _, control in ipairs(f.controls) do
+        if control.kind == "text" and control.content == "Last preset" then fallback = control end
+    end
+    test.equal(fallback ~= nil, true)
+    test.equal(fallback.rgba, label.rgba, "Default name uses a normal label, not dimmed native placeholder text")
+    test.equal(fallback.font, label.font)
+    test.equal(fallback.clickthrough, true)
+    test.equal(f.input.emptyText, "")
+    f.input.content = ""
+    f.refresh()
+    test.equal(fallback.hidden, false)
+    f.input.content = "Custom name"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input, 0)
+    test.equal(fallback.hidden, false, "Custom names use the same preview renderer")
+    test.equal(fallback.content, "Custom name")
+    test.equal(fallback.alignVertical, ui.AlignMode.CENTRE)
+    test.equal(fallback.y, f.input.y)
+    test.equal(fallback.height, f.input.height)
+    f.input.content = ""
+    f.refresh()
+    f.scrollView.input._unclippedAppearance = {}
+    f.input.text.isShadowed = false
+    label.isShadowed = true
+    f.refresh()
+    test.equal(f.input.text.isShadowed, false, "Clipped shadow remains hidden")
+    test.equal(f.scrollView.input._unclippedAppearance.isShadowed, false)
+    test.equal(fallback.isShadowed, true)
+    f.parent.height = 50
+    f.parent.hooks[ui.Hook.ONRESIZE]()
+    f.refresh()
+    test.equal(fallback.hidden, true, "Default preview stays clipped in small ribbon panels")
+end)
+
+test.case("Entered preview names centre using measured margins and retain long-name scrolling", function()
+    local f = createFixture({ get = function() return "" end })
+    for _, managed in ipairs({ false, true }) do
+        if managed then f:open(18, { scrollable = true }) end
+        f.input.content = "Ranger Randy"
+        f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input, 0)
+        test.equal(f.input.contentMargin.left, math.floor((f.input.width - 12 * 8 - 2) / 2))
+        test.equal(f.input.contentMargin.right, 8)
+        test.equal(f.input.contentMargin.top, math.floor((f.input.height - 14 - 4) / 2) + 14 - 18,
+            "Entered names centre visible glyph bounds rather than line spacing")
+        test.equal(f.saveCalls, 0)
+        f.input.content = "é"
+        f.refresh()
+        test.equal(f.input.contentMargin.left, math.floor((f.input.width - 8 - 2) / 2))
+        f.parent.width = 180
+        f.parent.hooks[ui.Hook.ONRESIZE]()
+        test.equal(f.input.contentMargin.left, math.floor((f.input.width - 8 - 2) / 2))
+        f.input.content = string.rep("W", 40)
+        f.refresh()
+        test.equal(f.input.contentMargin.left, 8, "Long names retain the normal input area")
+        f:clickReset()
+        f.refresh()
+        test.equal(f.input.contentMargin.left, 8, "Empty input restores symmetric placeholder margins")
+        f.parent.width = 580
+        f.parent.hooks[ui.Hook.ONRESIZE]()
+    end
+end)
+
+test.case("Managed preview updates clipped restore colours without making text visible", function()
+    local f = createFixture({ get = function(_, kind)
+        return kind == "text" and "#FF8000" or "#008000"
+    end })
+    f:open(18, { scrollable = true })
+    local managed = f.scrollView.input
+    managed._unclippedAppearance = { textRGBA = f.input.text.rgba }
+    f.input.text.rgba, f.input.emptyTextRGBA, f.input.caretRGBA = 0, 0, 0
+    f.refresh()
+    test.equal(f.input.text.rgba, 0)
+    test.equal(f.input.emptyTextRGBA, 0)
+    test.equal(f.input.caretRGBA, 0)
+    test.equal(managed._unclippedAppearance.textRGBA, 0)
+    f:clickReset()
+    test.equal(f.input.text.rgba, 0)
+    test.equal(managed._unclippedAppearance.textRGBA, 0)
+    f.destroy()
+    test.equal(f.saveCalls, 0, "Closing discards the draft reset")
 end)
 
 test.case("Colour picker validates hex, previews colours, cancels and restores defaults", function()
@@ -577,6 +728,7 @@ test.case("Preset markers follow saved names, blank saves, resets and external e
     f:clickSave()
     test.equal(f.selector.entries[0], "Preset 1 *")
     f:clickReset()
+    f:clickSave()
     test.equal(f.selector.entries[0], "Preset 1")
     f:select(17)
     f.input.content = ""
@@ -836,6 +988,8 @@ test.case("Selecting the last entry saves and resets slot 18, not slot 17", func
     test.equal(f.stored[17], nil)
     test.equal(f.stored[1], nil)
     f:clickReset()
+    test.equal(f.stored[18], "Edited last preset")
+    f:clickSave()
     test.equal(f.stored[18], "")
     test.equal(f.input.content, "")
 end)
@@ -869,7 +1023,7 @@ test.case("Enter submits input but ordinary content-change events do not save", 
     test.equal(f.status.content, "Name saved.")
 end)
 
-test.case("Rejected saves and resets preserve edits and show the validation message", function()
+test.case("Rejected saves preserve edits; reset stages defaults without storage", function()
     local f = createFixture()
     f.saveMode = "rejected"
     f.input.content = "Keep this edit"
@@ -877,7 +1031,9 @@ test.case("Rejected saves and resets preserve edits and show the validation mess
     test.equal(f.status.content, "Simulated validation failure")
     test.equal(f.status.colour[1] > f.status.colour[2], true, "Failure is red")
     f:clickReset()
-    test.equal(f.input.content, "Keep this edit")
+    test.equal(f.input.content, "")
+    test.equal(f.saveCalls, 1)
+    test.equal(f.status.content, "Defaults staged. Click Save to apply.")
     test.equal(f.stored[1], nil)
 end)
 

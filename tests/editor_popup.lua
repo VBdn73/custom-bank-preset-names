@@ -121,7 +121,8 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     source = { parent = bank, visibleGlobal = true }
     popup.open(1, {}, { labels = bindings.labels, colours = {} }, library)
     local layout = require("editor/layout")
-    test.equal(built[#built].options.formHeight, layout.compactBodyHeight + layout.colourHeight)
+    test.equal(built[#built].options.formHeight,
+        layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
     popup.close()
     local count = #windows

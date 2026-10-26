@@ -55,6 +55,31 @@ function bankLabels.update(bindings, names)
     end
 end
 
+function bankLabels.visual(bindings, slot)
+    for _, binding in ipairs(bindings or {}) do
+        if binding.slot == slot then
+            local component = resolveComponent(binding)
+            if isEditableLabel(component) then
+                return { font = component.font, shadowRGBA = component.shadowRGBA,
+                    isShadowed = component.isShadowed }
+            end
+        end
+    end
+end
+
+function bankLabels.original(bindings, slot)
+    for index, binding in ipairs(bindings or {}) do
+        if binding.slot == slot then
+            local state = labelStates[index]
+            local component = resolveComponent(binding)
+            if isEditableLabel(component) then
+                if state and state.component == component then return state.originalText end
+                return component.content
+            end
+        end
+    end
+end
+
 function bankLabels.restore(bindings)
     for index, binding in ipairs(bindings) do
         local state = labelStates[index]

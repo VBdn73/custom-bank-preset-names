@@ -6,6 +6,8 @@ local colourPicker = require("components/colour_picker/init")
 local colourValue = require("presets/colour_value")
 local slots = require("presets/slots")
 local info = require("editor/info")
+local bankAppearance = require("bank/appearance")
+local bankLabels = require("bank/labels")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -49,6 +51,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
     if options.settings then contentHeight = contentHeight + 40 end
+    local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
+    contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
     local function trackPosition(component, x, y)
         controlPositions[#controlPositions + 1] = {
@@ -108,6 +112,20 @@ function editor.build(parent, names, bindings, initialSlot, options)
     refreshPresetLabels()
     local smallFont = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
 
+    local previewBorder, previewBackground
+    if bindings.colours then
+        previewBorder = ui.Rectangle.new(parent)
+        previewBorder.fill = true
+        previewBorder.colour = theme.colour(theme.border)
+        previewBorder.clickthrough = true
+        previewBorder:SetSize(layout.controlWidth, layout.fieldHeight)
+        trackPosition(previewBorder, layout.padding, layout.rows.input)
+        previewBackground = ui.Rectangle.new(parent)
+        previewBackground.fill = true
+        previewBackground.clickthrough = true
+        previewBackground:SetSize(layout.controlWidth, layout.fieldHeight)
+        trackPosition(previewBackground, layout.padding, layout.rows.input)
+    end
     local managedInput = contentHost and contentHost:AddTextField({
         absolute = true, x = 0, y = 0, width = layout.controlWidth,
         height = layout.fieldHeight, maxLength = constants.maximumNameLength,
@@ -124,6 +142,60 @@ function editor.build(parent, names, bindings, initialSlot, options)
             constants.maximumNameLength)
     end
     nameInput.emptyText = "Uses predefined name"
+    if previewBackground then
+        nameInput.containerSprite.alpha = 0
+        nameInput.text.font = id.Font.MUSEO_SANS_15PT_REGULAR
+        nameInput.text.alignHorizontal = ui.AlignMode.CENTRE
+        nameInput.text.isShadowed = true
+    end
+    local defaultNamePreview
+    if previewBackground then
+        -- Render default and custom names through the same bank-style label.
+        -- The native input still owns editing, caret and selection.
+        defaultNamePreview = ui.Text.new(parent)
+        defaultNamePreview:SetSize(layout.controlWidth, layout.fieldHeight)
+        defaultNamePreview.alignHorizontal = ui.AlignMode.CENTRE
+        defaultNamePreview.alignVertical = ui.AlignMode.CENTRE
+        defaultNamePreview.clickthrough = true
+        defaultNamePreview.maxLines = 1
+        trackPosition(defaultNamePreview, layout.padding, layout.rows.input)
+        nameInput.emptyText = ""
+    end
+    local alignmentContent, alignmentWidth, alignmentHeight, alignmentFont
+    local nativeTextVisible = false
+    local function refreshInputAlignment()
+        if not previewBackground then return end
+        local content, width, height = nameInput.content or "", nameInput.width, nameInput.height
+        local fontID = nameInput.text.font
+        local font = config.Font.FromID(fontID)
+        local textWidth = content ~= "" and font:GetStringWidth(content, true) or 0
+        nativeTextVisible = textWidth > math.max(1, width - 16)
+        defaultNamePreview.hidden = nativeTextVisible
+        defaultNamePreview.content = content ~= "" and content
+            or bankLabels.original(bindings.labels, selectedSlot) or "Uses predefined name"
+        local clipped = managedInput and managedInput._unclippedAppearance
+        local rgba = nativeTextVisible and (defaultNamePreview.rgba or 0) or 0
+        if clipped then clipped.textRGBA = rgba
+        else
+            nameInput.text.rgba = rgba
+            if not nativeTextVisible then nameInput.text.isShadowed = false end
+        end
+        if content == alignmentContent and width == alignmentWidth
+            and height == alignmentHeight and fontID == alignmentFont then return end
+        alignmentContent, alignmentWidth, alignmentHeight, alignmentFont = content, width, height, fontID
+        -- Native fields honour text alignment only for their placeholder.
+        -- Move the editable origin, retaining native caret and selection.
+        local left = 8
+        if content ~= "" then
+            left = math.min(255, math.max(8, math.floor((width - textWidth - 2) / 2)))
+        end
+        -- Centre the visible glyph bounds, not the font's line spacing.
+        -- Native inputs place the baseline at top + font.baseline.
+        local centredBaseline = math.floor((height - font.maxAscent - font.maxDescent) / 2)
+            + font.maxAscent
+        local top = math.min(255, math.max(0, centredBaseline - font.baseline))
+        nameInput.contentMargin = ui.Margin.new(left, top, 8, 0)
+    end
 
     local statusLabel = createText(parent, "", smallFont)
     if bindings.colours then
@@ -150,6 +222,38 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local function refreshColours()
         if not bindings.colours then return end
+        local visual = bankLabels.visual(bindings.labels, selectedSlot)
+        local clipped = managedInput and managedInput._unclippedAppearance
+        if visual then
+            if visual.font ~= nil then nameInput.text.font = visual.font end
+            if visual.shadowRGBA ~= nil then nameInput.text.shadowRGBA = visual.shadowRGBA end
+            if visual.isShadowed ~= nil then
+                if clipped then clipped.isShadowed = visual.isShadowed
+                else nameInput.text.isShadowed = visual.isShadowed end
+            end
+        end
+        defaultNamePreview.font = nameInput.text.font
+        defaultNamePreview.isShadowed = not visual or visual.isShadowed ~= false
+        refreshInputAlignment()
+        local background = colourValue.rgba(pendingColours.background)
+            or bankAppearance.original(bindings.appearance, selectedSlot, "background")
+            or 0x292520FF
+        local text = colourValue.rgba(pendingColours.text)
+            or bankAppearance.original(bindings.appearance, selectedSlot, "text")
+            or 0xB8AD9DFF
+        previewBackground.rgba = background
+        defaultNamePreview.rgba = text
+        -- PrettyUI temporarily makes native text transparent when clipped.
+        -- Update its restore state instead of leaking text outside the viewport.
+        if clipped then
+            clipped.textRGBA, clipped.emptyTextRGBA, clipped.caretRGBA = nativeTextVisible and text or 0, text, text
+            clipped.isShadowed = nativeTextVisible and defaultNamePreview.isShadowed or false
+        else
+            nameInput.text.rgba = nativeTextVisible and text or 0
+            nameInput.text.isShadowed = nativeTextVisible and defaultNamePreview.isShadowed or false
+            nameInput.emptyTextRGBA = text
+            nameInput.caretRGBA = text
+        end
         for kind, control in pairs(colourControls) do
             local value = pendingColours[kind]
             local hex = colourValue.normalize(value)
@@ -250,10 +354,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
         refreshColours()
         refreshPresetLabels()
         nameInput.content = names.get(selectedSlot) or ""
+        refreshInputAlignment()
         statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
     end
 
-    local function saveValue(value, reset)
+    local function saveValue(value)
         dismissPicker()
         -- Do not save an old character's unfinished edit under a new character.
         if names.getContext() ~= displayedCharacterContext then
@@ -273,17 +378,13 @@ function editor.build(parent, names, bindings, initialSlot, options)
         if saveSucceeded and bindings.colours then
             for _, kind in ipairs({ "background", "text" }) do
                 local ok, saved, colourMessage = pcall(bindings.colours.save,
-                    selectedSlot, kind, reset and "" or pendingColours[kind])
+                    selectedSlot, kind, pendingColours[kind])
                 if not ok or not saved then
                     setStatus(ok and colourMessage or "Colour save error. See the client console.", false)
                     return false
                 end
             end
-            if reset then
-                pendingColours.background, pendingColours.text = "", ""
-                refreshColours()
-            end
-            message = reset and "Name and colours reset." or "Name and colours saved."
+            message = "Name and colours saved."
         end
         setStatus(message, saveSucceeded)
         if saveSucceeded then refreshPresetLabels() end
@@ -321,15 +422,23 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local buttonsY = bindings.colours and layout.rows.colourButtons or layout.rows.buttons
     trackPosition(actionButton("Save", saveInput), layout.padding, buttonsY)
     trackPosition(actionButton("Reset", function()
-        local saveSucceeded = saveValue("", true)
-        if saveSucceeded then
-            nameInput.content = ""
+        dismissPicker()
+        if names.getContext() ~= displayedCharacterContext then
+            refreshSelectedName()
+            setStatus("Character changed. Enter the name again.", false)
+            return
         end
+        nameInput.content = ""
+        pendingColours.background, pendingColours.text = "", ""
+        refreshColours()
+        setStatus("Defaults staged. Click Save to apply.", true)
     end), layout.resetX, buttonsY)
     if managedInput then
         managedInput.onSubmit = saveInput
+        managedInput.onChange = refreshInputAlignment
     else
         nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+            refreshInputAlignment()
             if reason == ui.InputFieldActionResult.SUBMIT then
                 saveInput()
             end
@@ -383,7 +492,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if not (managedInput and control == nameInput) then
                 local kind = defaultMarkKinds[control]
                 local customColour = kind and colourValue.normalize(pendingColours[kind]) ~= nil
-                control.hidden = not not (customColour or top < 0 or top + control.height > host.height)
+                local nonemptyPreview = control == defaultNamePreview and nativeTextVisible
+                control.hidden = not not (customColour or nonemptyPreview
+                    or top < 0 or top + control.height > host.height)
             end
         end
     end
@@ -394,6 +505,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local minimumHeight = (bindings.colours and 234 or 184)
             - (options.hideTitle and layout.titleHeight or 0)
             + (options.settings and 40 or 0)
+            - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight
         local compact = hostHeight < contentHeight
         local titleOffset = options.hideTitle and layout.titleHeight or 0
@@ -449,6 +561,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 y = (compact and compactRows[row] or row) - titleOffset
                     + position.y + titleOffset - row
             end
+            if position.y + titleOffset >= layout.rows.input then
+                y = y - headingGapReduction
+            end
             if control.content == constants.editorTitle or control.content == "Preset customisation" then
                 control.content = width < layout.width and "Preset customisation" or constants.editorTitle
                 availableWidth = math.max(1, controlWidth - layout.popupCloseSize - 4)
@@ -456,6 +571,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             control:SetSize(availableWidth, compact and position.height == layout.textHeight
                 and layout.noteHeight or position.height)
             control:SetPos(offsetX + x, offsetY + y)
+            if control == previewBackground then
+                control:SetSize(math.max(1, availableWidth - 2), math.max(1, position.height - 2))
+                control:SetPos(offsetX + x + 1, offsetY + y + 1)
+            end
         end
         if infoButton then
             infoButton.hidden = overflowing
@@ -463,6 +582,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 layout.padding)
         end
         positionInfo()
+        refreshInputAlignment()
         updateClipping()
         if managedInput then
             -- Refresh after repositioning too, not only when the user scrolls.
