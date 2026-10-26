@@ -4,6 +4,8 @@ local theme = require("editor/theme")
 local icons = require("editor/icon")
 local colourPicker = require("components/colour_picker/init")
 local colourValue = require("presets/colour_value")
+local slots = require("presets/slots")
+local info = require("editor/info")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -57,8 +59,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
     -- Build the controls in display order, using offsets within the editor.
     local selectedSlot = initialSlot or 1
-    if type(selectedSlot) ~= "number" or selectedSlot % 1 ~= 0
-        or selectedSlot < 1 or selectedSlot > bindings.presetCount then
+    if not slots.valid(selectedSlot, bindings.presetCount) then
         selectedSlot = 1
     end
     if not options.hideTitle then
@@ -124,7 +125,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
         statusLabel.content = message
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
-    local infoVisible = false
     local colourControls = {}
     local defaultMarks = {}
     local defaultMarkKinds = {}
@@ -216,46 +216,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end)
         end
     end
-    local infoControls = {}
-    local function positionInfo()
-        local host = options.infoParent or host
-        local width = math.min(layout.controlWidth, math.max(1, host.width - layout.padding * 2))
-        local x = math.max(0, host.width - layout.padding - width)
-        local y = options.infoParent and layout.popupHeaderHeight or layout.padding + layout.popupCloseSize + 4
-        for _, entry in ipairs(infoControls) do
-            entry.control:SetSize(entry.x == 0 and width or math.max(1, width - layout.padding * 2),
-                entry.control.height)
-            entry.control:SetPos(x + entry.x, y + entry.y)
-        end
-    end
-    local function toggleInfo()
-        infoVisible = not infoVisible
-        if not infoVisible then
-            for _, entry in ipairs(infoControls) do entry.control:Destroy() end
-            infoControls = {}
-            return
-        end
-        local host = options.infoParent or host
-        local height = layout.padding * 2 + layout.noteSpacing * 3
-        for _, fill in ipairs({ true, false }) do
-            local box = ui.Rectangle.new(host)
-            box:SetSize(layout.controlWidth, height)
-            box.fill = fill
-            box.colour = theme.colour(fill and theme.background or theme.border)
-            box.clickthrough = false
-            infoControls[#infoControls + 1] = { control = box, x = 0, y = 0 }
-        end
-        for index, text in ipairs({ "Stored on this device, per character name.",
-            "Changes names and colours only.", "Does not load presets or unlock slots." }) do
-            local note = createText(host, text, smallFont)
-            note:SetSize(layout.controlWidth - layout.padding * 2, layout.noteHeight)
-            note.clickthrough = true
-            infoControls[#infoControls + 1] = {
-                control = note, x = layout.padding, y = layout.padding + (index - 1) * layout.noteSpacing,
-            }
-        end
-        positionInfo()
-    end
+    local toggleInfo, positionInfo = info.new(options.infoParent or host, {
+        header = options.infoParent ~= nil,
+    })
 
     -- Popup chrome supplies its own button; native settings chrome is owned by
     -- the client, so keep the embedded button in our content's top-right corner.

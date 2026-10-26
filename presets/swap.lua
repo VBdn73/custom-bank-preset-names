@@ -1,10 +1,11 @@
 local names = require("presets/names")
 local colours = require("presets/colours")
+local slots = require("presets/slots")
 local swap = {}
 
 function swap.apply(first, second)
     for _, slot in ipairs({ first, second }) do
-        if type(slot) ~= "number" or slot % 1 ~= 0 or slot < 1 or slot > 18 then
+        if not slots.valid(slot) then
             return false, "Invalid preset slot."
         end
     end

@@ -1,5 +1,7 @@
 local names = require("presets/names")
 local colourValue = require("presets/colour_value")
+local slots = require("presets/slots")
+local storage = require("storage")
 local colours = {}
 local cache, context = {}, nil
 local function key(slot, kind)
@@ -10,7 +12,7 @@ local function key(slot, kind)
     return "presetColour.v1.displayName." .. context .. "." .. slot .. "." .. kind
 end
 local function valid(slot, kind)
-    return type(slot) == "number" and slot % 1 == 0 and slot >= 1 and slot <= 18
+    return slots.valid(slot)
         and (kind == "background" or kind == "text")
 end
 function colours.get(slot, kind)
@@ -33,8 +35,7 @@ function colours.save(slot, kind, value)
     end
     local storageKey = key(slot, kind)
     if not storageKey then return false, "Log in before choosing colours." end
-    local result = PersistentDB:SetString(storageKey, value)
-    if result == false or PersistentDB:GetString(storageKey) ~= value then
+    if not storage.writeVerified(storageKey, value) then
         return false, "Colour storage verification failed."
     end
     cache[storageKey] = value

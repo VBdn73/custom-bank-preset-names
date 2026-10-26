@@ -1,5 +1,5 @@
 -- Bank preset rows contain three dynamic labels: number, name, and extra text.
-local presetCount = 18
+local presetCount = require("presets/slots").count
 local labelsPerPreset = 3
 local nameLabelOffset = 1
 local labels = {}

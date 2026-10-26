@@ -1,6 +1,7 @@
 local names = {}
 local textValidation = require("presets/text_validation")
 local constants = require("constants")
+local storage = require("storage")
 local storageKeyPrefix = "presetName.v3.displayName."
 -- nil means not loaded; an empty string means no custom name for this slot.
 local cachedNames = {}
@@ -78,11 +79,9 @@ function names.save(slot, value)
     end
     -- Store an empty string for reset, so a missing key is not a deletion error.
     local key = storageKey(context, slot)
-    local writeResult = PersistentDB:SetString(key, normalizedName)
     -- Verify the stored value directly, rather than trusting the setter alone.
     -- This also distinguishes a storage failure from a bank-label display issue.
-    local storedName = PersistentDB:GetString(key)
-    if writeResult == false or storedName ~= normalizedName then
+    if not storage.writeVerified(key, normalizedName) then
         return false, "Storage verification failed. See the client console."
     end
     cachedNames[slot] = normalizedName
