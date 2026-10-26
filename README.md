@@ -1,66 +1,57 @@
 # Custom bank preset names
 
-Give your RuneScape bank presets recognisable names and colours. This Lua 5.4
-plugin changes their appearance locally, not their server-side names or behaviour.
+Give your RuneScape bank presets custom names and colours. This Lua 5.4 plugin
+changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
 
 - Custom names for all 18 mapped preset slots, up to 40 Unicode characters each.
-- Independent custom background and name-text colours, selected with clickable swatches.
+- Background and text colours via swatches, a colour picker, or hex input.
 - Dragging one bank preset onto another swaps their saved names and colours too.
 - Edit through the plugin's ribbon/settings panel or directly from the bank.
 - Save settings locally for each character; reset individual presets at any time.
-- Draggable bank editor with a position remembered between client sessions.
-- Optional settings-only checkbox to hide the bank's predefined-name dropdown
-  (visible by default).
+- Draggable bank editor that remembers its position and follows preset selection.
+- Option to hide the bank's predefined-name dropdown (visible by default).
 
-The plugin does not load presets, automate actions, reveal hidden information, or
-unlock unavailable slots. Existing bank actions are unchanged. Disabling it
-restores original labels and colours where the bank components remain available.
+No preset loading, automation, hidden information, or slot unlocking. Bank actions
+are unchanged. Disabling restores original labels and colours where available.
 
 See [changelog.md](changelog.md) for release changes.
 
 ## Availability and requirements
 
-This repository contains the development version. Distribution requires Jagex
-moderation approval; this repository does not imply approval. Local testing uses
-the RuneScape plugin development beta.
+This is a development version for the RuneScape plugin beta. Distribution requires
+Jagex moderation approval; this repository does not imply approval.
 
 **Dependency:** PrettyUI (mod.io ID `6398181`) must be installed. Development
 enable commands do not download dependencies automatically.
 
 ## How to use
 
-1. Enable the plugin and open its ribbon entry or Settings icon in the Plugin Hub.
-2. Select a preset and enter a name. Click the rectangle beside **Background colour**
-   or **Text colour** to open the colour picker.
-3. Choose a hue from the strip, then a shade from the colour area, or enter an
-   exact `#RRGGBB` hex colour. **Apply** updates the swatch; **Cancel** discards the
-   picker edit. Click **Save** in the editor (or press Enter in the name field)
-   to save the name and both colours and apply them to the bank.
-4. Click **Reset** to restore the predefined name and default colours. Saving a
-   blank name restores only the name, keeping your chosen colours.
+1. Open the plugin's ribbon entry or Plugin Hub Settings icon.
+2. Select a preset, enter a name, and click a background/text swatch to choose colours.
+3. Choose a hue and shade or enter `#RRGGBB`. **Apply** stages the colour;
+   **Cancel** discards it. Click the same swatch again to close the picker.
+4. Click **Save** (or press Enter in the name field) to save the name and colours.
+   **Reset** restores all defaults; saving a blank name keeps your chosen colours.
 
-Alternatively, right-click a preset name in the bank and choose **Customize
-preset**. The editor opens for that slot. Drag its title bar to move it; its
-position is saved on close, shared across characters, and kept within UI bounds.
-Click **×** to close it; it also closes when the bank disappears.
+In the bank, right-click a preset name and choose **Customize preset**. The editor
+shows a read-only preset heading; select another preset in the bank to switch
+without closing it. Drag the title bar to move it. Its position is saved on close
+and kept within UI bounds. **×** or closing the bank closes the editor.
 
 - An asterisk (`*`) in the preset selector marks a saved custom name or colour.
 - Click **i** to show or hide help notes, which start hidden.
-- Scroll the ribbon form or use its scrollbar when controls do not fit. Scrolling
-  over a dropdown operates that dropdown. Resizing preserves unfinished edits.
-- Changing presets discards unsaved edits. You must be logged in with your
-  character's display name available to save.
+- Scroll the ribbon form when controls do not fit; resizing keeps unfinished edits.
+- Switching presets discards unsaved edits. Saving requires your logged-in
+  character's display name.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
-- **Default** in the picker stages the game's colour for that field; click **Save**
-  to apply it. A dash in the swatch means Default. Text colour affects only the name.
-- Colours are fully opaque and stored as `#RRGGBB`. Older named-colour settings
-  are treated as Default; choose a new colour with the picker to customise them again.
-- In the Plugin Hub settings menu, tick **Hide predefined-name dropdown** to
-  hide the game's name dropdown below the bank preset list. Untick to restore it.
-  This applies to every preset; it does not change the selected predefined name.
-  The preset list expands into the freed space while this option is enabled.
+- **Default** stages the game's colour; click **Save** to apply it. A crossed
+  swatch means Default. Text colour affects only the name.
+- Colours are opaque `#RRGGBB` values. Older named colours use Default until replaced.
+- In Plugin Hub settings, **Hide predefined-name dropdown** hides the game's
+  dropdown and expands the preset list. It applies to all presets without changing
+  their predefined names; untick to restore the dropdown.
 
 ## Permissions
 
@@ -69,15 +60,14 @@ network requests.
 
 ## Data protection - Case 1 (local only)
 
-The plugin uses your character's display name, entered preset names, chosen
-colours, and editor position. Nothing is transmitted outside the plugin to the
-developer or external services. It does not take screenshots.
+The plugin stores your character's display name, preset names, colours, editor
+position, and dropdown preference locally. Nothing is sent to the developer or
+external services. No screenshots or gameplay history are collected.
 
 Settings persist locally through the client's `PersistentDB` API. The character
 display name forms part of the storage keys, ignoring case and surrounding
 spaces. Names and colours are stored per character; editor position is shared
 across characters on this device, as is the dropdown visibility preference.
-No gameplay history is stored.
 
 - Settings do not sync between devices; beta and live storage are separate.
 - After a character rename, re-enter or manually migrate your settings. Reusing
@@ -121,7 +111,7 @@ Mocked tests do not replace in-client visual and interaction checks.
 
 - `main.lua`: lifecycle, editor entry points, and label refresh/restoration.
 - `bank/`: preset bindings, local label/colour overrides, and the context menu.
-- `editor/`: shared editor, PrettyUI popup, layout, colours, and icons.
+- `editor/`: shared editor, PrettyUI popup, layout, help, theme, and icons.
 - `presets/`: validation and per-character persistent settings.
 - `components/colour_picker/`: self-contained picker and colour conversions.
 - `tests/`: mocked regression suites; `plugin.json`: manifest and dependency.

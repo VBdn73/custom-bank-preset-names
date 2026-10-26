@@ -1,13 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-10-26
 
-- Replaced predefined-colour dropdowns with stacked background/text colour swatches.
-- Added a colour picker with a hue strip, shade area, hex input, preview, and Apply/Cancel/Default actions.
-- Colour pickers open beside the clicked swatch and follow the editor when moved, flipping left and clamping at screen edges.
-- Registered bank colour pickers as PrettyUI window overlays so dragging the editor does not cover the picker.
-- Custom colours use the existing Save/Reset workflow and per-character storage.
-- Removed the old predefined palette and named-colour lookup; older named selections now display as Default.
+- Replaced colour dropdowns with background/text swatches and a picker with hue, shade, hex input, preview, and Apply/Cancel/Default controls.
+- Click a swatch again to close its picker. Crossed swatches indicate Default.
+- Pickers follow the editor, stay within screen bounds, and remain above PrettyUI windows.
+- Custom colours use the existing per-character Save/Reset workflow.
+- Added a settings option to hide the bank's predefined-name dropdown and expand the preset list into its space.
+- Selecting another bank preset now updates the open editor without closing it.
+- Replaced the bank editor's preset dropdown with a read-only preset heading; the ribbon/settings selector remains available.
+- Fixed layout and alignment in the side plugin menu.
+- Extracted reusable colour-picker and help components, centralised slot/colour helpers, and expanded regression tests.
 
 ## 0.4.0 - 2026-10-25
 
