@@ -53,7 +53,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentWidth = layout.width
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
-    if options.settings then contentHeight = contentHeight + 94 end
+    if options.settings then contentHeight = contentHeight + layout.settingsHeight end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
     contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
@@ -484,7 +484,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     -- This preference belongs only to the Plugin Hub settings layer.
     local dropdownCheckbox
     if options.settings then
-        local y = (bindings.colours and layout.rows.colourStatus or layout.rows.status) + 28
+        local y = (bindings.colours and layout.rows.colourStatus or layout.rows.status) + layout.preferenceGap
         dropdownCheckbox = options.prettyui.CheckboxButton.new(parent, {
             { text = "Hide predefined-name dropdown", value = "hideDropdown",
                 selected = options.settings.hidePredefinedDropdown() },
@@ -500,10 +500,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local bankHelp = createText(parent,
             "The easiest way to customise presets is in the bank: right-click a preset and choose Customize preset.",
             smallFont)
-        bankHelp:SetSize(layout.controlWidth, 54)
+        bankHelp:SetSize(layout.controlWidth, layout.bankHelpHeight)
         bankHelp.maxLines = 3
         bankHelp.clickthrough = true
-        trackPosition(bankHelp, layout.padding, y + 32)
+        trackPosition(bankHelp, layout.padding, y + layout.bankHelpGap)
     end
 
     for _, position in ipairs(controlPositions) do
@@ -544,9 +544,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function centreContent()
         dismissPicker()
         local hostHeight = options.formHeight or host.height
-        local minimumHeight = (bindings.colours and 234 or 184)
+        local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
             - (options.hideTitle and layout.titleHeight or 0)
-            + (options.settings and 94 or 0)
+            + (options.settings and layout.settingsHeight or 0)
             - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight
         local compact = hostHeight < contentHeight
@@ -563,20 +563,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
         -- Tight ribbon panels need smaller gaps, not smaller text or fields.
         -- Leave the established popup/settings spacing alone when it fits.
         local compactRows = {
-            [8] = 8, [48] = 36,
-            [layout.rows.input] = 72,
-            [layout.rows.colourLabel] = 108,
-            [layout.rows.colourInput] = 140,
-            [layout.rows.colourButtons] = 176,
-            [layout.rows.colourStatus] = 208,
+            [layout.rows.title] = layout.compactRows.title,
+            [layout.rows.selector] = layout.compactRows.selector,
+            [layout.rows.input] = layout.compactRows.input,
+            [layout.rows.colourLabel] = layout.compactRows.colourLabel,
+            [layout.rows.colourInput] = layout.compactRows.colourInput,
+            [layout.rows.colourButtons] = layout.compactRows.colourButtons,
+            [layout.rows.colourStatus] = layout.compactRows.colourStatus,
         }
         if options.settings then
-            compactRows[266] = 236
-            compactRows[298] = 268
-            compactRows[layout.rows.storageNote] = 186
+            compactRows[layout.rows.dropdownPreference] = layout.compactRows.dropdownPreference
+            compactRows[layout.rows.bankHelp] = layout.compactRows.bankHelp
+            compactRows[layout.rows.storageNote] = layout.compactRows.storageNote
         end
         if not bindings.colours then
-            compactRows[layout.rows.buttons], compactRows[layout.rows.status] = 122, 154
+            compactRows[layout.rows.buttons] = layout.compactRows.buttons
+            compactRows[layout.rows.status] = layout.compactRows.status
         end
         local offsetX = math.max(0, math.floor((availableHostWidth - width) / 2))
         local offsetY = math.max(0, math.floor((hostHeight - height) / 2))

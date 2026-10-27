@@ -1,4 +1,5 @@
 local menu = {}
+local customizePresetText = "Customize preset"
 
 -- Match identity, not displayed names (which can be duplicated or localised).
 local function slotForEntries(entries, bindings)
@@ -68,13 +69,14 @@ function menu.add(miniMenu, bindings, openEditor)
             break
         end
     end
-    miniMenu:Add("Customize preset", openEditor, slot)
+    miniMenu:Add(customizePresetText, openEditor, slot)
     -- Read fresh entries rather than assuming Add inserted at index 1. Move
     -- only our action through the low-priority end, preserving native order.
     local entries = miniMenu.entries
     local editIndex, currentCancel, resetIndex
     for index, entry in ipairs(entries) do
-        if entry.overrideText == "Customize preset" or entry.verbText == "Customize preset" or entry.label == "Customize preset" then
+        if entry.overrideText == customizePresetText or entry.verbText == customizePresetText
+            or entry.label == customizePresetText then
             editIndex = index
         end
         if entry.actionType == MiniMenuActionType.CANCEL or entry.verbText == "Cancel" then

@@ -3,6 +3,12 @@ local layout = {
     width = 336,
     height = 262,
     compactHeight = 194,
+    minimumHeight = 184,
+    minimumColourHeight = 234,
+    settingsHeight = 94,
+    preferenceGap = 28,
+    bankHelpGap = 32,
+    bankHelpHeight = 54,
     titleHeight = 32,
     padding = 8,
     textHeight = 28,
@@ -24,6 +30,20 @@ local layout = {
         status = 166,
         storageNote = 194,
         scopeNotes = 214,
+    },
+    compactRows = {
+        title = 8,
+        selector = 36,
+        input = 72,
+        colourLabel = 108,
+        colourInput = 140,
+        colourButtons = 176,
+        colourStatus = 208,
+        dropdownPreference = 236,
+        bankHelp = 268,
+        storageNote = 186,
+        buttons = 122,
+        status = 154,
     },
     noteSpacing = 20,
     popupPadding = 8,
@@ -48,5 +68,7 @@ layout.popupWidth = layout.width + layout.popupPadding * 2
 layout.popupHeight = layout.popupHeaderHeight + layout.bodyHeight + layout.popupBottomPadding
 layout.compactPopupHeight = layout.popupHeaderHeight + layout.compactBodyHeight + layout.popupBottomPadding
 layout.colourHeight = 64
+layout.rows.dropdownPreference = layout.rows.colourStatus + layout.preferenceGap
+layout.rows.bankHelp = layout.rows.dropdownPreference + layout.bankHelpGap
 
 return layout
