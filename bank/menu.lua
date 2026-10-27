@@ -1,4 +1,6 @@
 local menu = {}
+local bankIds = require("bank/ids")
+local slots = require("presets/slots")
 local customizePresetText = "Customize preset"
 
 -- Match identity, not displayed names (which can be duplicated or localised).
@@ -19,6 +21,17 @@ local function slotForEntries(entries, bindings)
             end
         end
         if slot then break end
+    end
+    if not slot then
+        for _, entry in ipairs(entries) do
+            local component = entry.componentData and entry.componentData.component
+            -- The standalone BoB hit target is confirmed by diagnostics.
+            if bindings[slots.bob] and component
+                and component.staticID == bankIds.presetHitTarget and component.dynamicID == bankIds.bobHitTarget then
+                slot = require("bank/reorder").slotOf(component, #bindings)
+            end
+            if slot then break end
+        end
     end
     if not slot then
         -- The bank's native actions can originate from the row's hit target,

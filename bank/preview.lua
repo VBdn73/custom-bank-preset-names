@@ -2,6 +2,7 @@
 local bankIds = require("bank/ids")
 local preview = {}
 local presetCount = require("presets/slots").count
+local bob = require("presets/slots").bob
 local fallbackSprites = {
     "RS3_ICON_BANK_PRESET_BACKPACK",
     "RS3_ICON_BANK_PRESET_WORN_EQUIPMENT",
@@ -9,6 +10,7 @@ local fallbackSprites = {
 }
 
 function preview.number(slot)
+    if slot == bob then return end -- BoB uses a sprite, not a numbered label.
     if not ui.Interfaces then return end
     local component = ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetLabel,
         bankIds.category, (slot - 1) * bankIds.labelsPerPreset + bankIds.numberLabelOffset)
@@ -16,8 +18,10 @@ function preview.number(slot)
 end
 
 function preview.icon(slot, index)
+    if slot == bob and index ~= 3 then return end
     if not ui.Interfaces then return end
-    local number = preview.number(slot)
+    local number = slot == bob and ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetLabel,
+        bankIds.category, bankIds.bobName) or preview.number(slot)
     -- Resolve by row position as dynamic sprite numbering can differ from
     -- the bank's background and label numbering.
     for dynamicID = 0, presetCount * bankIds.labelsPerPreset do
@@ -37,6 +41,7 @@ end
 -- Settings and ribbon previews also work while the native bank is closed.
 -- Generic icons do not claim to represent unavailable preset toggle states.
 function preview.decoration(slot, index)
+    if slot == bob and index ~= 3 then return end
     local source = preview.icon(slot, index)
     if source then return source end
     if preview.number(slot) then return end

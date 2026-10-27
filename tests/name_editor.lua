@@ -188,6 +188,30 @@ local function createFixture(colours)
     return f
 end
 
+test.case("BoB appears by name and saves independently from preset 18", function()
+    local f = createFixture()
+    f.bindings = dofile("bank/bindings.lua")
+    f:open(19)
+    test.equal(f.selector.entries[18], "Beast of Burden")
+    test.equal(f.selector.selectedID, 18)
+    f.input.content = "Pack yak"
+    f:clickSave()
+    test.equal(f.stored[19], "Pack yak")
+    test.equal(f.stored[18], "Last preset")
+    test.equal(f.selector.entries[18], "Beast of Burden *")
+    local first = #f.controls + 1
+    f:open(19, { hideTitle = true, readOnlyPreset = true })
+    local heading
+    for index = first, #f.controls do
+        if f.controls[index].content == "Beast of Burden - Pack yak" then heading = f.controls[index] end
+    end
+    test.equal(heading ~= nil, true)
+    f:clickReset()
+    f:clickSave()
+    test.equal(heading.content, "Beast of Burden")
+    test.equal(f.stored[18], "Last preset")
+end)
+
 test.case("Read-only preset heading follows bank selection, save and reset", function()
     local f = createFixture()
     local first = #f.controls + 1

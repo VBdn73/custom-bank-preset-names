@@ -16,7 +16,7 @@ function customisations.new(names, colours)
             assert(context, "Log in before saving customisations.")
             -- Validate every destination before reading snapshots or writing anything.
             for _, change in ipairs(changes) do
-                assert(slots.valid(change.slot), "Invalid preset slot.")
+                assert(slots.customisable(change.slot), "Invalid preset slot.")
                 local value, message = names.normalize(change.name)
                 assert(value, message)
                 writes[#writes + 1] = { slot = change.slot, kind = "name", value = value,

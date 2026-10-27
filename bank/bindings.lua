@@ -21,8 +21,17 @@ for slot = 1, presetCount do
     }
 end
 
+local bob = require("presets/slots").bob
+labels[bob] = { slot = bob, interfaceID = bankIds.interface,
+    staticID = bankIds.presetLabel, categoryID = bankIds.category, dynamicID = bankIds.bobName }
+appearance[#appearance + 1] = { slot = bob, staticID = bankIds.presetBackground,
+    dynamicID = bankIds.bobBackground, kind = "RECTANGLE", colourKind = "background" }
+appearance[#appearance + 1] = { slot = bob, staticID = bankIds.presetLabel,
+    dynamicID = bankIds.bobName, kind = "LABEL", colourKind = "text" }
+
 return {
     presetCount = presetCount,
+    entryCount = #labels,
     labels = labels,
     appearance = appearance,
 }

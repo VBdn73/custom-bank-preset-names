@@ -21,4 +21,8 @@ return {
     labelsPerPreset = 3,
     numberLabelOffset = 0,
     nameLabelOffset = 1,
+
+    bobName = 55,
+    bobBackground = 19,
+    bobHitTarget = 19,
 }

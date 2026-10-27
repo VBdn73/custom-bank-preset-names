@@ -5,10 +5,11 @@ changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
 
-- Custom names for all 18 mapped preset slots, up to 40 Unicode characters each.
+- Custom names for all 18 numbered presets and the Beast of Burden row, up to 40 Unicode characters each.
 - Background and text colours via swatches, a colour picker, or hex input.
 - Editable name field previews staged background and text colours before saving.
 - Dragging one bank preset onto another swaps their saved names and colours too.
+- Beast of Burden has its own saved name and colours and is excluded from numbered-preset swaps.
 - Edit names and colours only from inside the bank UI.
 - Save settings locally for each character; reset individual presets at any time.
 - Editor saves and customisation swaps validate names and colours together. On storage
@@ -156,9 +157,14 @@ replace the picker import in `editor/view.lua` and the utility import in
 only the client UI API and its own colour utilities; it never saves settings.
 
 `bank/bindings.lua` maps interface 517, static component 266, category 0, dynamic
-ID `(slot - 1) * 3 + 1`. Missing or restricted components are skipped. Game UI
-updates may require new mappings; use `pan Component` in the beta console to
-inspect them. Bind only unrestricted labels belonging to individual slots.
+ID `(slot - 1) * 3 + 1` for the 18 numbered presets. Live diagnostics confirmed
+the Beast of Burden name at dynamic 55, background at static 265/dynamic 19,
+and hit target at static 267/dynamic 19 (all category 0). Its internal saved
+entry is 19, but this does not make it a numbered or swappable preset.
+Missing or restricted components are skipped. Game UI updates may require new
+mappings. `pan Component` exports static definitions, not live dynamic rows;
+use the separate `bank-interface-diagnostics` plugin to inspect live components.
+Bind only unrestricted labels belonging to individual entries.
 
 Before submission, personally review and understand the code, test it, and follow
 Jagex's [plugin guidelines](https://developer.runescape.com/rs/submission/guidelines.html)

@@ -206,11 +206,12 @@ test.case("Static bindings use the two-ID component lookup", function()
     f:update()
 end)
 
-test.case("All 18 dynamic bindings resolve, reset, and restore independently", function()
+test.case("All numbered and BoB bindings resolve, reset, and restore independently", function()
     local f = createFixture()
     local bindings = dofile("bank/bindings.lua")
     test.equal(bindings.presetCount, 18)
-    test.equal(#bindings.labels, 18)
+    test.equal(#bindings.labels, 19)
+    test.equal(bindings.entryCount, 19)
     local labels, customNames = {}, {}
     for slot, binding in ipairs(bindings.labels) do
         test.equal(binding.slot, slot)
@@ -233,6 +234,10 @@ test.case("All 18 dynamic bindings resolve, reset, and restore independently", f
     f.bank.update(bindings.labels, names)
     test.equal(labels[52].content, "Predefined 18")
     test.equal(labels[49].content, "Custom 17")
+    test.equal(labels[55].content, "Custom 19")
+    customNames[19] = nil
+    f.bank.update(bindings.labels, names)
+    test.equal(labels[55].content, "Predefined 19")
     f.bank.restore(bindings.labels)
     for slot, binding in ipairs(bindings.labels) do
         test.equal(labels[binding.dynamicID].content, "Predefined " .. slot)

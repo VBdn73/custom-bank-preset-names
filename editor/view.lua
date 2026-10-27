@@ -64,8 +64,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
 
     -- Build the controls in display order, using offsets within the editor.
+    local entryCount = bindings.entryCount or bindings.presetCount
     local selectedSlot = initialSlot or 1
-    if not slots.valid(selectedSlot, bindings.presetCount) then
+    if not slots.valid(selectedSlot, entryCount) then
         selectedSlot = 1
     end
     if not options.hideTitle then
@@ -88,23 +89,23 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function refreshPresetLabels()
         if presetHeading then
             local name = names.get(selectedSlot)
-            presetHeading.content = "Preset " .. selectedSlot .. (name and name ~= "" and " - " .. name or "")
+            presetHeading.content = slots.title(selectedSlot) .. (name and name ~= "" and " - " .. name or "")
             return
         end
         local labels, changed = {}, false
-        for preset = 1, bindings.presetCount do
+        for preset = 1, entryCount do
             local name = names.get(preset)
             local customized = name and name ~= ""
             if bindings.colours then
                 customized = customized or bindings.colours.get(preset, "background") ~= ""
                     or bindings.colours.get(preset, "text") ~= ""
             end
-            labels[preset] = "Preset " .. preset .. (customized and " *" or "")
+            labels[preset] = slots.title(preset) .. (customized and " *" or "")
             changed = changed or labels[preset] ~= presetLabels[preset]
         end
         if not changed then return end
         presetSelector:Clear()
-        for preset = 1, bindings.presetCount do
+        for preset = 1, entryCount do
             -- Native list IDs are zero-based; storage slots are one-based.
             presetSelector:Add(labels[preset], preset - 1)
         end
@@ -183,7 +184,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function refreshDecorations()
         if not previewNumber then return end
         local number = bankPreview.number(selectedSlot)
-        previewNumber.content = tostring(selectedSlot)
+        previewNumber.content = selectedSlot == slots.bob and "" or tostring(selectedSlot)
         previewNumber.rgba = number and number.rgba or 0xFFCB75FF
         if number then
             previewNumber.font = number.font
@@ -437,7 +438,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
 
     local function selectSlot(slot)
-        if not slots.valid(slot, bindings.presetCount) or slot == selectedSlot then return end
+        if not slots.valid(slot, entryCount) or slot == selectedSlot then return end
         selectedSlot = slot
         if presetSelector then presetSelector:SetEntrySelected(slot - 1, true, false) end
         refreshSelectedName()
@@ -447,7 +448,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     if presetSelector then presetSelector:Subscribe(ui.Hook.ONSELECTIONCHANGED, function(_, entryID, event)
         local selectedPreset = entryID + 1
         if event == ui.SelectionChangeEvent.SELECTED
-            and selectedPreset >= 1 and selectedPreset <= bindings.presetCount
+            and selectedPreset >= 1 and selectedPreset <= entryCount
             and selectedPreset ~= selectedSlot then
             selectSlot(selectedPreset)
         end

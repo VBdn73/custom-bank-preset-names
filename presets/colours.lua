@@ -12,7 +12,7 @@ local function key(slot, kind)
     return "presetColour.v1.displayName." .. context .. "." .. slot .. "." .. kind
 end
 local function valid(slot, kind)
-    return slots.valid(slot)
+    return slots.customisable(slot)
         and (kind == "background" or kind == "text")
 end
 function colours.get(slot, kind)
