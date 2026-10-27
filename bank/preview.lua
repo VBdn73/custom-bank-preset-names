@@ -1,4 +1,5 @@
 -- Read native row decorations without changing the bank's components.
+local bankIds = require("bank/ids")
 local preview = {}
 local presetCount = require("presets/slots").count
 local fallbackSprites = {
@@ -9,7 +10,8 @@ local fallbackSprites = {
 
 function preview.number(slot)
     if not ui.Interfaces then return end
-    local component = ui.Interfaces:GetComponent(517, 266, 0, (slot - 1) * 3)
+    local component = ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetLabel,
+        bankIds.category, (slot - 1) * bankIds.labelsPerPreset + bankIds.numberLabelOffset)
     if component and not component.isRestricted then return component end
 end
 
@@ -18,8 +20,9 @@ function preview.icon(slot, index)
     local number = preview.number(slot)
     -- Resolve by row position as dynamic sprite numbering can differ from
     -- the bank's background and label numbering.
-    for dynamicID = 0, presetCount * 3 do
-        local component = ui.Interfaces:GetComponent(517, 267 + index, 0, dynamicID)
+    for dynamicID = 0, presetCount * bankIds.labelsPerPreset do
+        local component = ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetIcons[index],
+            bankIds.category, dynamicID)
         if component and not component.isRestricted and component.sprite ~= nil then
             local position = component.xyGlobal
             local row = number and number.xyGlobal

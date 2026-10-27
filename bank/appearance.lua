@@ -1,7 +1,8 @@
+local bankIds = require("bank/ids")
 local appearance = {}
 local states = {}
 local function resolve(binding)
-    return ui.Interfaces:GetComponent(517, binding.staticID, 0, binding.dynamicID)
+    return ui.Interfaces:GetComponent(bankIds.interface, binding.staticID, bankIds.category, binding.dynamicID)
 end
 function appearance.update(bindings, colours)
     for index, binding in ipairs(bindings) do

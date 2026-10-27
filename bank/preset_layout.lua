@@ -1,14 +1,15 @@
 -- Reuse the hidden name row's space without changing the bank's outer bounds.
+local bankIds = require("bank/ids")
 local layout = {}
 local states = {}
 local rules = {
-    [262] = { height = 1 }, -- PRESET_LIST_BG
-    [263] = { height = 1 }, -- PRESET_LIST (scroll viewport)
-    [275] = { height = 1 }, -- PRESET_LIST_SCROLLBAR
-    -- Keep PRESET_SETTINGS (291) itself unchanged: its native children use
+    [bankIds.presetListBackground] = { height = 1 },
+    [bankIds.presetList] = { height = 1 }, -- Scroll viewport
+    [bankIds.presetListScrollbar] = { height = 1 },
+    -- Keep the preset settings parent itself unchanged: its native children use
     -- fixed offsets and are clipped to it, rather than following its bottom.
-    [292] = { height = -1, y = 1 }, -- PRESET_SETTINGS_BG: visual border only
-    [293] = { height = 0, y = 1 }, -- INVENTORY_TICKBOXES: use the hidden name row
+    [bankIds.presetSettingsBackground] = { height = -1, y = 1 }, -- Visual border only
+    [bankIds.inventoryTickboxes] = { height = 0, y = 1 }, -- Use the hidden name row
 }
 local sizeFields = { "width", "height", "widthParentPc", "heightParentPc" }
 local positionFields = { "x", "y", "xParentPc", "yParentPc", "xSelfPc", "ySelfPc" }
@@ -22,7 +23,7 @@ local function equal(a, b, fields)
 end
 
 local function resolve(staticID)
-    local component = ui.Interfaces:GetComponent(517, staticID)
+    local component = ui.Interfaces:GetComponent(bankIds.interface, staticID)
     return component and not component.isRestricted and component or nil
 end
 

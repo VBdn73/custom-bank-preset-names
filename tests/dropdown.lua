@@ -3,6 +3,7 @@ local test = require("tests.test_helper")
 local function fixture()
     local component = { hidden = false }
     local environment = setmetatable({ require = function(path)
+        if path == "bank/ids" then return require(path) end
         test.equal(path, "bank/preset_layout")
         return { update = function() end, restore = function() end }
     end, ui = { Interfaces = {

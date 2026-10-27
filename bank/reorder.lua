@@ -1,3 +1,4 @@
+local bankIds = require("bank/ids")
 local swap = require("presets/swap")
 local names = require("presets/names")
 local bankLabels = require("bank/labels")
@@ -12,20 +13,21 @@ end
 
 local function slotOf(component, count)
     if not component or component.isRestricted or not component.visibleGlobal
-        or component.interfaceID ~= 517 or component.categoryID ~= 0 then return nil end
+        or component.interfaceID ~= bankIds.interface or component.categoryID ~= bankIds.category then return nil end
     local slot
-    if component.staticID == 265 then
+    if component.staticID == bankIds.presetBackground then
         slot = component.dynamicID
-    elseif component.staticID == 266 then
-        slot = math.floor(component.dynamicID / 3) + 1
-    elseif component.staticID == 267 then
+    elseif component.staticID == bankIds.presetLabel then
+        slot = math.floor(component.dynamicID / bankIds.labelsPerPreset) + 1
+    elseif component.staticID == bankIds.presetHitTarget then
         -- Hit-target IDs are not assumed to use the background's numbering.
         -- Resolve their row by its on-screen position against the known labels.
         local position = component.xyGlobal
         if position and component.height then
             local centre = position.y + component.height / 2
             for candidate = 1, count do
-                local label = ui.Interfaces:GetComponent(517, 266, 0, (candidate - 1) * 3 + 1)
+                local label = ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetLabel,
+                    bankIds.category, (candidate - 1) * bankIds.labelsPerPreset + bankIds.nameLabelOffset)
                 if label and not label.isRestricted and label.visibleGlobal and label.xyGlobal
                     and centre >= label.xyGlobal.y and centre < label.xyGlobal.y + label.height then
                     return candidate
@@ -51,7 +53,7 @@ function reorder.update(bindings)
     local context = names.getContext()
     local function watch(component)
         if component and not component.isRestricted and component.visibleGlobal
-            and component.interfaceID == 517 then
+            and component.interfaceID == bankIds.interface then
             -- Client lookups can return fresh Lua wrappers for the same native
             -- component. Table keys use wrapper identity, not native identity.
             local key = componentKey(component)
@@ -82,13 +84,14 @@ function reorder.update(bindings)
         end
     end
     for slot = 1, bindings.presetCount do
-        watch(ui.Interfaces:GetComponent(517, 265, 0, slot))
-        for offset = 0, 2 do
-            watch(ui.Interfaces:GetComponent(517, 266, 0, (slot - 1) * 3 + offset))
+        watch(ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetBackground, bankIds.category, slot))
+        for offset = bankIds.numberLabelOffset, bankIds.labelsPerPreset - 1 do
+            watch(ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetLabel,
+                bankIds.category, (slot - 1) * bankIds.labelsPerPreset + offset))
         end
     end
     for dynamicID = 0, bindings.presetCount do
-        watch(ui.Interfaces:GetComponent(517, 267, 0, dynamicID))
+        watch(ui.Interfaces:GetComponent(bankIds.interface, bankIds.presetHitTarget, bankIds.category, dynamicID))
     end
     for key, component in pairs(watched) do
         if not active[key] or not context then

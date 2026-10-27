@@ -1,10 +1,11 @@
+local bankIds = require("bank/ids")
 local dropdown = {}
 local presetLayout = require("bank/preset_layout")
 local state
 
 local function resolve()
     -- BANK__PRESET_DROPDOWN; hide the parent, including its build/click children.
-    return ui.Interfaces:GetComponent(517, 300)
+    return ui.Interfaces:GetComponent(bankIds.interface, bankIds.predefinedNameDropdown)
 end
 
 function dropdown.restore()
