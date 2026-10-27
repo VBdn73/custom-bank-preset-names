@@ -50,6 +50,10 @@ function picker.open(host, options)
     end
     local width, height = 288, 326
     root:SetSize(width, height)
+    root.clickthrough = false
+    -- Empty popup space must consume clicks rather than forwarding them to
+    -- the game world. Child controls retain their own pointer handlers.
+    root:Subscribe(ui.Hook.ONCLICK, function() return true end)
     local function globalPosition(component)
         local position = component.xyGlobal
         if position then return position.x, position.y end
@@ -72,8 +76,9 @@ function picker.open(host, options)
             math.max(0, math.min(y, parent.height - height)))
     end
     updatePosition()
-    rect(0, 0, width, height, theme.border)
-    rect(1, 1, width - 2, height - 2, theme.background)
+    local function consumeClick() return true end
+    rect(0, 0, width, height, theme.border, consumeClick)
+    rect(1, 1, width - 2, height - 2, theme.background, consumeClick)
     text(12, 8, 264, options.title or "Choose colour")
     local selected = colourValue.normalize(initial) or "#FFFFFF"
     local h, s, v = colourValue.toHSV(selected)

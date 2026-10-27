@@ -507,6 +507,13 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
     end
     local p = open()
     test.equal(p.title.content, "Choose colour")
+    test.equal(p.root.clickthrough, false, "Picker blocks clicks into the game")
+    test.equal(p.root.hooks[ui.Hook.ONCLICK](), true, "Empty popup space consumes clicks")
+    for _, control in ipairs(f.controls) do
+        if control.parent == p.root and control.kind == "rectangle" and control.x <= 1 then
+            test.equal(control.hooks[ui.Hook.ONCLICK](), true, "Popup background consumes clicks")
+        end
+    end
     p.hue.hooks[ui.Hook.ONCLICK](p.hue, 0, 0)
     p.shade.hooks[ui.Hook.ONCLICK](p.shade, 263, 0)
     test.equal(p.input.content, "#FF0000", "Hue and shade controls update the exact colour")
