@@ -3,7 +3,6 @@ local prettyUILibrary = prettyui
 local bankBindings = require("bank/bindings")
 local presetNames = require("presets/names")
 local bankLabels = require("bank/labels")
-local nameEditor = require("editor/view")
 local presetMenu = require("bank/menu")
 local editorPopup = require("editor/popup")
 local bankAppearance = require("bank/appearance")
@@ -31,8 +30,7 @@ end)
 
 Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
     if destroySettingsView then pcall(destroySettingsView) end
-    local refresh, _, destroy = nameEditor.build(event.component, presetNames, bankBindings,
-        nil, { hideTitle = true, settings = settings, prettyui = prettyUILibrary })
+    local refresh, _, destroy = preferences.build(event.component, settings, prettyUILibrary)
     editorRefreshCallbacks.settings, destroySettingsView = refresh, destroy
 end)
 

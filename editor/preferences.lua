@@ -1,4 +1,4 @@
--- The small ribbon panel only exposes the bank display preference.
+-- Settings and ribbon panels only expose the bank display preference.
 local preferences = {}
 
 function preferences.build(parent, settings, prettyui)
@@ -25,14 +25,19 @@ function preferences.build(parent, settings, prettyui)
     checkbox.root:SetSize(math.max(1, parent.width - 16), 54)
     local note = ui.Text.new(parent)
     note.font = id.Font.MUSEO_SANS_11PT_REGULAR
-    note.content = "To customise presets, right-click a preset in the bank and choose Customize preset."
+    note.content = "Presets can only be customised in the bank UI: right-click a preset and choose Customize preset."
     note.maxLines = 5
     note.clickthrough = true
     local function resize()
+        local width = math.max(1, parent.width - 16)
+        -- Reserve room for wrapped checkbox text, not an always-three-line row.
+        local rowHeight = width >= 300 and 20 or (width >= 200 and 36 or 54)
+        item.label:SetSize(-22, rowHeight, 1.0)
+        item.row:SetSize(0, rowHeight, 1.0)
         checkbox.root:SetPos(8, 8)
-        checkbox.root:SetSize(math.max(1, parent.width - 16), checkbox.root.height)
-        note:SetPos(8, 8 + checkbox.root.height + 12)
-        note:SetSize(math.max(1, parent.width - 16), 64)
+        checkbox.root:SetSize(width, rowHeight)
+        note:SetPos(8, 8 + rowHeight + 8)
+        note:SetSize(width, 64)
     end
     resize()
     parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.preferences", resize)

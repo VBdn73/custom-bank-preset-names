@@ -1,9 +1,10 @@
 local test = require("tests.test_helper")
 local preferences = require("editor/preferences")
 
-test.case("Ribbon shows only the dropdown preference and keeps it synchronized", function()
+test.case("Preferences show only the dropdown option and bank-only editing guidance", function()
     local previousUI, previousID = ui, id
-    local note = { SetPos = function() end, SetSize = function() end }
+    local note = { SetPos = function(self, x, y) self.x, self.y = x, y end,
+        SetSize = function() end }
     ui = { Hook = { ONRESIZE = "resize" }, AlignMode = { TOPLEFT = "topLeft" },
         Text = { new = function() return note end } }
     id = { Font = { MUSEO_SANS_11PT_REGULAR = 11 } }
@@ -36,9 +37,11 @@ test.case("Ribbon shows only the dropdown preference and keeps it synchronized",
             end }
         end } })
         test.equal(count, 1)
-        test.equal(note.content, "To customise presets, right-click a preset in the bank and choose Customize preset.")
+        test.equal(note.content, "Presets can only be customised in the bank UI: right-click a preset and choose Customize preset.")
         test.equal(note.font, 11)
         test.equal(root.width, 254)
+        test.equal(root.height, 36)
+        test.equal(note.y, 52, "Wrapped checkbox has a small gap before guidance")
         change(nil, nil, nil, true)
         test.equal(hidden, true)
         refresh()
@@ -49,6 +52,11 @@ test.case("Ribbon shows only the dropdown preference and keeps it synchronized",
         parent.width = 200
         parent.resize()
         test.equal(root.width, 184)
+        test.equal(root.height, 54)
+        parent.width = 700
+        parent.resize()
+        test.equal(root.height, 20)
+        test.equal(note.y, 36, "Wide settings do not reserve unused checkbox lines")
         canSave = false
         change(nil, nil, nil, true)
         test.equal(selected, false, "Failed saves restore the stored preference")

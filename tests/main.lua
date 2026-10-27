@@ -12,10 +12,8 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
         ["editor/popup"] = { select = function(slot)
             test.equal(slot, 3, "Native selection is forwarded to the open popup")
         end },
-        ["editor/view"] = { build = function(_, _, _, _, options)
-            test.equal(options.prettyui, library)
-            built = built + 1
-            return function() end, nil, function() destroyed = destroyed + 1 end
+        ["editor/view"] = { build = function()
+            error("Preset editing must only be opened from the bank UI")
         end },
         ["editor/preferences"] = { build = function(_, _, prettyui)
             test.equal(prettyui, library)
@@ -43,6 +41,9 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
     test.equal(built, 2)
     test.equal(destroyed, 1)
     events.SettingsLayerReady.callback({ component = {} })
-    test.equal(built, 3, "Main settings still builds the full editor")
+    test.equal(built, 3, "Main settings builds preferences, not the preset editor")
+    events.SettingsLayerReady.callback({ component = {} })
+    test.equal(built, 4)
+    test.equal(destroyed, 2, "Reopening settings disposes its previous view")
     events.MiniMenuEntrySelected.callback({ entry = { verbText = "Select" } })
 end)

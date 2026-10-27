@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Removed preset customisation controls from Plugin Hub settings. Names and colours can now only be edited in the bank UI via **Customize preset**.
+- Settings and ribbon panels retain the dropdown visibility preference and explain where to edit presets.
+
 ## 0.5.0 - 2026-10-26
 
 - Replaced colour dropdowns with background/text swatches and a picker with hue, shade, hex input, preview, and Apply/Cancel/Default controls.

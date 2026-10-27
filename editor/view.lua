@@ -53,7 +53,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentWidth = layout.width
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
-    if options.settings then contentHeight = contentHeight + layout.settingsHeight end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
     contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
@@ -480,31 +479,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     refreshSelectedName()
 
-    -- This preference belongs only to the Plugin Hub settings layer.
-    local dropdownCheckbox
-    if options.settings then
-        local y = (bindings.colours and layout.rows.colourStatus or layout.rows.status) + layout.preferenceGap
-        dropdownCheckbox = options.prettyui.CheckboxButton.new(parent, {
-            { text = "Hide predefined-name dropdown", value = "hideDropdown",
-                selected = options.settings.hidePredefinedDropdown() },
-        }, {
-            width = layout.controlWidth,
-            onChange = function(_, _, _, hidden)
-                if not options.settings.setHidePredefinedDropdown(hidden) then
-                    setStatus("Could not save dropdown preference.", false)
-                end
-            end,
-        })
-        trackPosition(dropdownCheckbox.root, layout.padding, y)
-        local bankHelp = createText(parent,
-            "The easiest way to customise presets is in the bank: right-click a preset and choose Customize preset.",
-            smallFont)
-        bankHelp:SetSize(layout.controlWidth, layout.bankHelpHeight)
-        bankHelp.maxLines = 3
-        bankHelp.clickthrough = true
-        trackPosition(bankHelp, layout.padding, y + layout.bankHelpGap)
-    end
-
     for _, position in ipairs(controlPositions) do
         position.width, position.height = position.component.width, position.component.height
     end
@@ -544,7 +518,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
             - (options.hideTitle and layout.titleHeight or 0)
-            + (options.settings and layout.settingsHeight or 0)
             - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight
         local compact = hostHeight < contentHeight
@@ -582,11 +555,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
             [layout.rows.colourButtons] = layout.compactRows.colourButtons,
             [layout.rows.colourStatus] = layout.compactRows.colourStatus,
         }
-        if options.settings then
-            compactRows[layout.rows.dropdownPreference] = layout.compactRows.dropdownPreference
-            compactRows[layout.rows.bankHelp] = layout.compactRows.bankHelp
-            compactRows[layout.rows.storageNote] = layout.compactRows.storageNote
-        end
         if not bindings.colours then
             compactRows[layout.rows.buttons] = layout.compactRows.buttons
             compactRows[layout.rows.status] = layout.compactRows.status
@@ -678,9 +646,6 @@ function editor.build(parent, names, bindings, initialSlot, options)
     return function()
         if host.visibleGlobal == false then dismissPicker() end
         if updatePicker then updatePicker() end
-        if dropdownCheckbox then
-            dropdownCheckbox:SetSelected("hideDropdown", options.settings.hidePredefinedDropdown(), false)
-        end
         updateClipping()
         if updateInfo then updateInfo() end
         for _, updateReset in ipairs(updateColourResetIcons) do updateReset() end

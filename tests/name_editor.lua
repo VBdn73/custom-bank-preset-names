@@ -74,18 +74,7 @@ local function createFixture(colours)
         end }
     end } }
     -- Mock the public PrettyUI interface, not its scrollbar implementation.
-    prettyui = { CheckboxButton = { new = function(parent, choices, options)
-        local root = createControl("checkbox", parent)
-        root:SetSize(options.width, 22)
-        local checkbox = { root = root, selected = choices[1].selected }
-        function checkbox:SetSelected(value, selected, notify)
-            test.equal(value, "hideDropdown")
-            self.selected = selected
-            if notify ~= false then options.onChange(self, {}, value, selected) end
-        end
-        f.checkbox = checkbox
-        return checkbox
-    end }, SimpleView = { new = function(parent, options)
+    prettyui = { SimpleView = { new = function(parent, options)
         local view = { content = createControl("layer", parent), scrollY = 0,
             width = options.width, height = options.height, contentHeight = 0 }
         function view:ScrollBy(delta)
@@ -168,7 +157,7 @@ local function createFixture(colours)
     f.parent = createControl("parent", f.host)
     f.parent.width, f.parent.height = 580, 360
     function f:open(initialSlot, options)
-        if options and (options.scrollable or options.settings) and options.prettyui == nil then
+        if options and options.scrollable and options.prettyui == nil then
             options.prettyui = prettyui
         end
         local firstNewControl = #self.controls + 1
@@ -256,30 +245,6 @@ test.case("Bank selection refreshes the existing editor and saves to the new slo
     test.equal(f.stored[1], nil, "Switching does not save the previous draft")
     f.selectSlot(0)
     test.equal(f.selector.selectedID, 17, "Ignore invalid slots")
-end)
-
-test.case("Dropdown visibility checkbox is opt-in for settings and saves immediately", function()
-    local f = createFixture()
-    test.equal(f.checkbox, nil, "Ribbon and popup builds do not expose this setting")
-    local hidden = false
-    f:open(nil, { hideTitle = true, settings = {
-        hidePredefinedDropdown = function() return hidden end,
-        setHidePredefinedDropdown = function(value) hidden = value; return true end,
-    } })
-    local control = f.checkbox
-    test.equal(control.selected, false)
-    control:SetSelected("hideDropdown", true)
-    f.refresh()
-    test.equal(hidden, true)
-    test.equal(control.selected, true)
-    test.equal(f.saveCalls, 0, "Preference does not save or change a preset name")
-    control:SetSelected("hideDropdown", false)
-    f.refresh()
-    test.equal(hidden, false)
-    test.equal(control.selected, false)
-    f.parent.height = 230
-    f.parent.hooks[ui.Hook.ONRESIZE]()
-    test.equal(control.root.y + control.root.height <= 230, true)
 end)
 
 test.case("Bottom buttons save and reset names and staged colours for the selected slot", function()

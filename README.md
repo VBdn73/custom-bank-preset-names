@@ -9,7 +9,7 @@ changes their appearance locally, not their server-side names or behaviour.
 - Background and text colours via swatches, a colour picker, or hex input.
 - Editable name field previews staged background and text colours before saving.
 - Dragging one bank preset onto another swaps their saved names and colours too.
-- Edit through the main Plugin Hub settings or directly from the bank.
+- Edit names and colours only from inside the bank UI.
 - Save settings locally for each character; reset individual presets at any time.
 - Editor saves and customisation swaps validate names and colours together. On storage
   failure, the plugin attempts to restore previous customisations (best-effort, not
@@ -33,8 +33,8 @@ enable commands do not download dependencies automatically.
 
 ## How to use
 
-1. Open the plugin's Plugin Hub Settings icon.
-2. Select a preset, enter a name, and click a background/text swatch to choose colours.
+1. In the bank UI, right-click a preset name and choose **Customize preset**.
+2. Enter a name and click a background/text swatch to choose colours.
 3. Click or drag across the smooth colour canvas, or enter `#RRGGBB`. Hue runs
    left to right, with white at the top and black at the bottom. Changes
    immediately update the preview. Click **×** or the same swatch again to close
@@ -43,21 +43,19 @@ enable commands do not download dependencies automatically.
    **Reset** previews all defaults; click **Save** to commit the reset.
    Saving a blank name keeps your chosen colours.
 
-In the bank, right-click a preset name and choose **Customize preset**. The editor
-shows a read-only preset heading; select another preset in the bank to switch
+The editor shows a read-only preset heading; select another preset in the bank to switch
 without closing it. Drag the title bar to move it. Its position is saved on close
 and kept within UI bounds. **×** or closing the bank closes the editor.
 
-- An asterisk (`*`) in the preset selector marks a saved custom name or colour.
 - Click **i** to show or hide help notes, which start hidden.
-- The ribbon panel only shows **Hide predefined-name dropdown**; preset editing
-  stays in the main Plugin Hub settings and bank UI.
+- Plugin Hub settings and the ribbon panel only show **Hide predefined-name dropdown**
+  and guidance for opening the editor. Preset names and colours can only be edited in the bank UI.
 - Switching presets discards unsaved edits. Saving requires your logged-in
   character's display name. Closing the editor also discards unsaved edits.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
 - The **↺** icon beside each colour swatch restores that colour's default; click **Save** to apply it. A crossed
   swatch means Default. Text colour affects only the name.
-- Colours are opaque `#RRGGBB` values. Older named colours use Default until replaced.
+- Colours are opaque `#RRGGBB` values.
 - In Plugin Hub settings, **Hide predefined-name dropdown** hides the game's
   dropdown and expands the preset list. It applies to all presets without changing
   their predefined names; untick to restore the dropdown.
