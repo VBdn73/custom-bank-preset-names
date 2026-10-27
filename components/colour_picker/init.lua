@@ -86,6 +86,11 @@ function picker.open(host, options)
     input:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 7)
     input.content = selected
     local status = text(12, 258, 264, "Hex colour: #RRGGBB")
+    local shadeMarker, hueMarker
+    local function positionMarkers()
+        if shadeMarker then shadeMarker:SetPos(12 + s * 263 - 3, 36 + (1 - v) * 155 - 3) end
+        if hueMarker then hueMarker:SetPos(12 + h * 263 - 1, 199) end
+    end
     local function refresh()
         for _, cell in ipairs(cells) do
             cell.control.colour = colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
@@ -93,27 +98,51 @@ function picker.open(host, options)
         preview.colour = colour(colourValue.vector(selected))
         input.content = selected
         status.content = "Hex colour: #RRGGBB"
+        positionMarkers()
     end
     for row = 0, 11 do
         for column = 0, 23 do
             local cs, cv = column / 23, 1 - row / 11
             local control = rect(12 + column * 11, 36 + row * 13, 11, 13,
-                colourValue.vector(colourValue.fromHSV(h, cs, cv)), function()
-                    s, v = cs, cv
-                    selected = colourValue.fromHSV(h, s, v)
-                    refresh()
-                end)
+                colourValue.vector(colourValue.fromHSV(h, cs, cv)))
             cells[#cells + 1] = { control = control, s = cs, v = cv }
+            control.clickthrough = true
         end
     end
     for index = 0, 23 do
         local hue = index / 24
-        rect(12 + index * 11, 200, 11, 18, colourValue.vector(colourValue.fromHSV(hue, 1, 1)), function()
-            h = hue
+        local control = rect(12 + index * 11, 200, 11, 18, colourValue.vector(colourValue.fromHSV(hue, 1, 1)))
+        control.clickthrough = true
+    end
+    -- One hit target per gradient, rather than one per painted cell. Pointer
+    -- hook coordinates are component-local interface units (also at UI scale).
+    local function dragArea(x, y, w, height, update)
+        local area = ui.Layer.new(root)
+        area:SetPos(x, y)
+        area:SetSize(w, height)
+        area.clickthrough = false
+        local function select(_, mx, my)
+            if closed or type(mx) ~= "number" or type(my) ~= "number" then return false end
+            update(math.max(0, math.min(1, mx / (w - 1))),
+                math.max(0, math.min(1, my / (height - 1))))
             selected = colourValue.fromHSV(h, s, v)
             refresh()
-        end)
+            return true
+        end
+        area:Subscribe(ui.Hook.ONCLICK, select)
+        area:Subscribe(ui.Hook.ONHOLD, select)
+        area:Subscribe(ui.Hook.ONRELEASE, select)
+        return area
     end
+    dragArea(12, 36, 264, 156, function(x, y) s, v = x, 1 - y end)
+    dragArea(12, 200, 264, 18, function(x) h = x end)
+    shadeMarker = rect(0, 0, 7, 7, { 1, 1, 1, 1 })
+    shadeMarker.fill = false
+    shadeMarker.clickthrough = true
+    hueMarker = rect(0, 199, 3, 20, { 1, 1, 1, 1 })
+    hueMarker.fill = false
+    hueMarker.clickthrough = true
+    positionMarkers()
     input:Subscribe(ui.Hook.ONCONTENTCHANGED, function()
         local hex = colourValue.normalize(input.content)
         if not hex then status.content = "Enter six hex digits, e.g. #38A4FF"; return end
@@ -124,6 +153,7 @@ function picker.open(host, options)
             cell.control.colour = colour(colourValue.vector(colourValue.fromHSV(h, cell.s, cell.v)))
         end
         status.content = "Hex colour: #RRGGBB"
+        positionMarkers()
     end)
     local function button(x, label, callback)
         local control = ui.Button.new(root)

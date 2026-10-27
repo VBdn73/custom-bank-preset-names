@@ -31,7 +31,7 @@ enable commands do not download dependencies automatically.
 
 1. Open the plugin's Plugin Hub Settings icon.
 2. Select a preset, enter a name, and click a background/text swatch to choose colours.
-3. Choose a hue and shade or enter `#RRGGBB`. **Apply** stages the colour;
+3. Click or drag across the hue strip and shade area, or enter `#RRGGBB`. **Apply** stages the colour;
    **Cancel** discards it. Click the same swatch again to close the picker.
 4. Click **Save** (or press Enter in the name field) to save the name and colours.
    **Reset** previews all defaults; click **Save** to commit the reset.

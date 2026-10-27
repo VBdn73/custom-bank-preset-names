@@ -500,16 +500,23 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
             if control.kind == "input" then found.input = control end
             if control.label then found[control.label] = control end
             if control.kind == "rectangle" and control.width == 44 then found.preview = control end
-            if control.kind == "rectangle" and control.x == 12 and control.y == 200 then found.hue = control end
-            if control.kind == "rectangle" and control.x == 265 and control.y == 36 then found.shade = control end
+            if control.kind == "layer" and control.x == 12 and control.y == 200 then found.hue = control end
+            if control.kind == "layer" and control.x == 12 and control.y == 36 then found.shade = control end
         end
         return found
     end
     local p = open()
     test.equal(p.title.content, "Choose colour")
-    p.hue.hooks[ui.Hook.ONCLICK]()
-    p.shade.hooks[ui.Hook.ONCLICK]()
+    p.hue.hooks[ui.Hook.ONCLICK](p.hue, 0, 0)
+    p.shade.hooks[ui.Hook.ONCLICK](p.shade, 263, 0)
     test.equal(p.input.content, "#FF0000", "Hue and shade controls update the exact colour")
+    p.shade.hooks[ui.Hook.ONHOLD](p.shade, 131.5, 77.5)
+    test.equal(p.input.content, "#804040", "Dragging selects between painted cells")
+    p.shade.hooks[ui.Hook.ONHOLD](p.shade, -20, -20)
+    test.equal(p.input.content, "#FFFFFF", "Dragging clamps to the field edges")
+    p.shade.hooks[ui.Hook.ONRELEASE](p.shade, 263, 0)
+    p.hue.hooks[ui.Hook.ONHOLD](p.hue, 131.5, 0)
+    test.equal(p.input.content, "#00FFFF", "Hue strip supports continuous dragging too")
     p.input.content = "#INVALID"
     p.Apply.hooks[ui.Hook.ONBUTTONPRESSED]()
     test.equal(applied, "unchanged")
