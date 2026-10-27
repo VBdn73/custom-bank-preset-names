@@ -100,8 +100,7 @@ function popup.open(slot, names, bindings, prettyui)
         })
         -- The drag handle is a sibling above the window, so the header icon
         -- must also be an overlay rather than a child underneath that handle.
-        infoButton, updateInfo = icons.new(parent, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
-            id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, toggleInfo)
+        infoButton, updateInfo = icons.info(parent, toggleInfo)
         window.titleText:SetSize(-80, 28, 1, 0)
         window:_RegisterOverlay(infoButton, nil, function()
             infoButton:SetPos(window.root.x + window.root.width - 28 - 4 - layout.popupCloseSize,

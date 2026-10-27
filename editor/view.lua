@@ -389,8 +389,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     -- the client, so keep the embedded button in our content's top-right corner.
     local infoButton, updateInfo
     if not options.externalInfoButton then
-        infoButton, updateInfo = icons.new(host, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
-            id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, toggleInfo)
+        infoButton, updateInfo = icons.info(host, toggleInfo)
     end
 
     local displayedCharacterContext = names.getContext()

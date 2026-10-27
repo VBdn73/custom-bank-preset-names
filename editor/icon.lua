@@ -14,4 +14,9 @@ function icon.new(parent, idle, hover, pressed, action)
     end
 end
 
+function icon.info(parent, action)
+    return icon.new(parent, id.Sprite.RS3_BUTTON_INFO_PARENT_0,
+        id.Sprite.RS3_BUTTON_INFO_PARENT_1, id.Sprite.RS3_BUTTON_INFO_PARENT_2, action)
+end
+
 return icon

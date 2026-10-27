@@ -78,9 +78,17 @@ function customisations.new(names, colours)
         local ok, changes = pcall(function()
             assert(names.getContext(), "Log in before swapping customisations.")
             local result = {}
-            for _, pair in ipairs({ { first, second }, { second, first } }) do
-                result[#result + 1] = { slot = pair[1], name = names.get(pair[2]) or "",
-                    background = colours.get(pair[2], "background"), text = colours.get(pair[2], "text") }
+            local transfers = {
+                { destinationSlot = first, sourceSlot = second },
+                { destinationSlot = second, sourceSlot = first },
+            }
+            for _, transfer in ipairs(transfers) do
+                result[#result + 1] = {
+                    slot = transfer.destinationSlot,
+                    name = names.get(transfer.sourceSlot) or "",
+                    background = colours.get(transfer.sourceSlot, "background"),
+                    text = colours.get(transfer.sourceSlot, "text"),
+                }
             end
             return result
         end)
