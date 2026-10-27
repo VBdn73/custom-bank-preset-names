@@ -1,9 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 - 2026-10-27
 
-- Removed preset customisation controls from Plugin Hub settings. Names and colours can now only be edited in the bank UI via **Customize preset**.
-- Settings and ribbon panels retain the dropdown visibility preference and explain where to edit presets.
+- Preset names and colours are now edited only in the bank via **Customize preset**.
+- Simplified settings and ribbon panels to dropdown visibility and editor guidance.
+- Added a preset preview with staged names, colours, and bank icons.
+- Replaced the colour picker with a smooth canvas and instant previews.
+- Made the picker draggable and prevented clicks passing through it.
+- Replaced picker buttons with reset icons beside each colour swatch.
+- Added best-effort recovery for failed customisation saves and swaps.
+- Refactored editor layout, shared controls, and bank IDs.
 
 ## 0.5.0 - 2026-10-26
 
