@@ -8,6 +8,7 @@ local slots = require("presets/slots")
 local info = require("editor/info")
 local bankAppearance = require("bank/appearance")
 local bankLabels = require("bank/labels")
+local bankPreview = require("bank/preview")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -161,6 +162,42 @@ function editor.build(parent, names, bindings, initialSlot, options)
         trackPosition(defaultNamePreview, layout.padding, layout.rows.input)
         nameInput.emptyText = ""
     end
+    local previewNumber, previewIcons = nil, {}
+    if previewBackground then
+        previewNumber = ui.Text.new(parent)
+        previewNumber:SetSize(28, layout.fieldHeight)
+        previewNumber.font = id.Font.MUSEO_SANS_15PT_REGULAR
+        previewNumber.alignVertical = ui.AlignMode.CENTRE
+        previewNumber.isShadowed = true
+        previewNumber.clickthrough = true
+        trackPosition(previewNumber, layout.padding, layout.rows.input)
+        for index = 1, 3 do
+            local sprite = ui.Sprite.new(parent)
+            sprite:SetSize(20, 20)
+            sprite.clickthrough = true
+            trackPosition(sprite, layout.padding, layout.rows.input)
+            previewIcons[index] = sprite
+        end
+    end
+    local function refreshDecorations()
+        if not previewNumber then return end
+        local number = bankPreview.number(selectedSlot)
+        previewNumber.content = tostring(selectedSlot)
+        previewNumber.rgba = number and number.rgba or 0xFFCB75FF
+        if number then
+            previewNumber.font = number.font
+            previewNumber.isShadowed = number.isShadowed
+        end
+        for index, sprite in ipairs(previewIcons) do
+            local source = bankPreview.decoration(selectedSlot, index)
+            local resource = source and source.sprite
+            sprite.alpha = resource ~= nil and source.alpha or 0
+            if resource ~= nil then
+                sprite.sprite = resource
+                sprite.rgba = source.rgba
+            end
+        end
+    end
     local alignmentContent, alignmentWidth, alignmentHeight, alignmentFont
     local nativeTextVisible = false
     local function refreshInputAlignment()
@@ -222,6 +259,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local function refreshColours()
         if not bindings.colours then return end
+        refreshDecorations()
         local visual = bankLabels.visual(bindings.labels, selectedSlot)
         local clipped = managedInput and managedInput._unclippedAppearance
         if visual then
@@ -571,6 +609,21 @@ function editor.build(parent, names, bindings, initialSlot, options)
             control:SetSize(availableWidth, compact and position.height == layout.textHeight
                 and layout.noteHeight or position.height)
             control:SetPos(offsetX + x, offsetY + y)
+            if previewNumber and (control == nameInput or control == defaultNamePreview) then
+                control:SetSize(math.max(1, controlWidth - 96), position.height)
+                control:SetPos(offsetX + layout.padding + 28, offsetY + y)
+            elseif control == previewNumber then
+                control:SetSize(24, layout.fieldHeight)
+                control:SetPos(offsetX + layout.padding + 5, offsetY + y)
+            else
+                for index, sprite in ipairs(previewIcons) do
+                    if control == sprite then
+                        sprite:SetSize(20, 20)
+                        sprite:SetPos(offsetX + layout.padding + controlWidth - 64 + (index - 1) * 20,
+                            offsetY + y + (layout.fieldHeight - 20) / 2)
+                    end
+                end
+            end
             if control == previewBackground then
                 control:SetSize(math.max(1, availableWidth - 2), math.max(1, position.height - 2))
                 control:SetPos(offsetX + x + 1, offsetY + y + 1)

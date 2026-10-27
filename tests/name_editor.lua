@@ -314,7 +314,7 @@ test.case("Bottom buttons save and reset names and staged colours for the select
         if control.kind == "text" and control.content == "Last preset" then preview = control end
     end
     test.equal(background ~= nil, true, "Background previews the staged colour")
-    test.equal(background.width, f.input.width - 2)
+    test.equal(background.width, f.input.width + 96 - 2)
     test.equal(preview.rgba, 0xFF0000FF)
     test.equal(controls[1].colour[2], 128 / 255, "Ticks preserve unsaved colours")
     test.equal(calls, 0)
@@ -405,6 +405,35 @@ test.case("Preview matches the bank label font and shadow without changing its c
     f.parent.hooks[ui.Hook.ONRESIZE]()
     f.refresh()
     test.equal(fallback.hidden, true, "Default preview stays clipped in small ribbon panels")
+end)
+
+test.case("Switching to a preset with missing icon sprites hides stale preview icons", function()
+    local f = createFixture({ get = function() return "" end })
+    local resource = 777
+    ui.Interfaces = { GetComponent = function(_, _, staticID)
+        if staticID >= 268 and staticID <= 270 then
+            return { sprite = resource, alpha = 1, rgba = 0xFFFFFFFF }
+        end
+    end }
+    f:open(18)
+    local icons = {}
+    for _, control in ipairs(f.controls) do
+        if control.sprite == 777 then icons[#icons + 1] = control end
+    end
+    test.equal(#icons, 3)
+    resource = nil
+    f:select(0)
+    f.refresh()
+    for _, icon in ipairs(icons) do
+        test.equal(icon.alpha, 0)
+        test.equal(icon.sprite, 777, "Missing native resources are never assigned to the sprite")
+    end
+    resource = 778
+    f.refresh()
+    for _, icon in ipairs(icons) do
+        test.equal(icon.alpha, 1)
+        test.equal(icon.sprite, 778)
+    end
 end)
 
 test.case("Entered preview names centre using measured margins and retain long-name scrolling", function()
@@ -865,7 +894,7 @@ test.case("Resizable ribbon fits narrow panels and restores the wide layout with
         test.equal(f.input.content, "Unsaved edit")
         test.equal(f.selector.selectedID, 17)
     end
-    test.equal(f.input.width, 320)
+    test.equal(f.input.width, 224)
     test.equal(f.title.content, "Custom bank preset names")
     test.equal(f.saveCalls, 0)
 end)
