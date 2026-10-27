@@ -51,7 +51,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentWidth = layout.width
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
-    if options.settings then contentHeight = contentHeight + 40 end
+    if options.settings then contentHeight = contentHeight + 94 end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
     contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
@@ -500,6 +500,13 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end,
         })
         trackPosition(dropdownCheckbox.root, layout.padding, y)
+        local bankHelp = createText(parent,
+            "The easiest way to customise presets is in the bank: right-click a preset and choose Customize preset.",
+            smallFont)
+        bankHelp:SetSize(layout.controlWidth, 54)
+        bankHelp.maxLines = 3
+        bankHelp.clickthrough = true
+        trackPosition(bankHelp, layout.padding, y + 32)
     end
 
     for _, position in ipairs(controlPositions) do
@@ -542,7 +549,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and 234 or 184)
             - (options.hideTitle and layout.titleHeight or 0)
-            + (options.settings and 40 or 0)
+            + (options.settings and 94 or 0)
             - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight
         local compact = hostHeight < contentHeight
@@ -568,6 +575,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         }
         if options.settings then
             compactRows[266] = 236
+            compactRows[298] = 268
             compactRows[layout.rows.storageNote] = 186
         end
         if not bindings.colours then

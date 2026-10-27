@@ -11,6 +11,7 @@ local presetColours = require("presets/colours")
 local bankReorder = require("bank/reorder")
 local bankDropdown = require("bank/dropdown")
 local settings = require("presets/settings")
+local preferences = require("editor/preferences")
 bankBindings.colours = presetColours
 
 -- Each open editor supplies a callback that follows character changes.
@@ -38,13 +39,12 @@ end)
 Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
     if destroyContentView then pcall(destroyContentView) end
     editorRefreshCallbacks.content, destroyContentView = nil, nil
-    local ok, refresh, _, destroy = pcall(nameEditor.build, event.component, presetNames, bankBindings,
-        nil, { scrollable = true, prettyui = prettyUILibrary })
+    local ok, refresh, _, destroy = pcall(preferences.build, event.component, settings, prettyUILibrary)
     if ok then
         editorRefreshCallbacks.content, destroyContentView = refresh, destroy
     else
-        print("[Preset names] Ribbon editor error: " .. tostring(refresh))
-        for index, text in ipairs({ "Could not open preset editor.",
+        print("[Preset names] Ribbon settings error: " .. tostring(refresh))
+        for index, text in ipairs({ "Could not open settings.",
             "See the client console for the error." }) do
             local message = ui.Text.new(event.component)
             message:SetPos(8, 8 + (index - 1) * 24)

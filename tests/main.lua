@@ -17,6 +17,11 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
             built = built + 1
             return function() end, nil, function() destroyed = destroyed + 1 end
         end },
+        ["editor/preferences"] = { build = function(_, _, prettyui)
+            test.equal(prettyui, library)
+            built = built + 1
+            return function() end, nil, function() destroyed = destroyed + 1 end
+        end },
     }
     local events = setmetatable({}, { __index = function(target, key)
         local event = { Subscribe = function(_, callback) target[key].callback = callback end }
@@ -37,5 +42,7 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
     events.ContentLayerReady.callback({ component = {} })
     test.equal(built, 2)
     test.equal(destroyed, 1)
+    events.SettingsLayerReady.callback({ component = {} })
+    test.equal(built, 3, "Main settings still builds the full editor")
     events.MiniMenuEntrySelected.callback({ entry = { verbText = "Select" } })
 end)
