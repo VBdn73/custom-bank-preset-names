@@ -135,7 +135,9 @@ local function createFixture(colours)
         Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
         StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 },
         Sprite = { RS3_BUTTON_INFO_PARENT_0 = 28787, RS3_BUTTON_INFO_PARENT_1 = 32135,
-            RS3_BUTTON_INFO_PARENT_2 = 32136 },
+            RS3_BUTTON_INFO_PARENT_2 = 32136,
+            RS3_ICON_STOPWATCH_RESET_0 = 14805, RS3_ICON_STOPWATCH_RESET_1 = 14806,
+            RS3_ICON_STOPWATCH_RESET_2 = 14807 },
     }
     f.names = {
         normalize = dofile("presets/names.lua").normalize,
@@ -285,14 +287,13 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     end
     local function choose(index, hex)
         controls[index].hooks[ui.Hook.ONCLICK]()
-        local input, apply
+        local input
         for _, control in ipairs(f.controls) do
             if not control.destroyed and control.kind == "input" and control.limit == 7 then input = control end
-            if control.label == "Apply" then apply = control end
         end
         input.content = hex
         input.hooks[ui.Hook.ONCONTENTCHANGED]()
-        apply.hooks[ui.Hook.ONBUTTONPRESSED]()
+        controls[index].hooks[ui.Hook.ONCLICK]()
     end
     test.equal(#controls, 2)
     test.equal(f.save.y > controls[1].y + controls[1].height, true)
@@ -304,6 +305,19 @@ test.case("Bottom buttons save and reset names and staged colours for the select
     f:select(17)
     choose(1, "#008000")
     choose(2, "#FF0000")
+    local colourResets = {}
+    for _, control in ipairs(f.controls) do
+        if control.kind == "sprite" and control.sprite == id.Sprite.RS3_ICON_STOPWATCH_RESET_0 then
+            colourResets[#colourResets + 1] = control
+        end
+    end
+    test.equal(#colourResets, 2)
+    colourResets[1].hooks[ui.Hook.ONCLICK]()
+    test.equal(controls[1].colour[2], require("editor/theme").background[2],
+        "Colour reset immediately previews Default")
+    test.equal(controls[2].colour[1], 1, "Reset leaves the other colour unchanged")
+    test.equal(calls, 0, "Colour reset stays staged until Save")
+    choose(1, "#008000")
     f.refresh()
     test.equal(f.input.containerSprite.alpha, 0)
     test.equal(f.input.text.alignHorizontal, ui.AlignMode.CENTRE,
@@ -485,14 +499,14 @@ test.case("Managed preview updates clipped restore colours without making text v
     test.equal(f.saveCalls, 0, "Closing discards the draft reset")
 end)
 
-test.case("Colour picker validates hex, previews colours, cancels and restores defaults", function()
+test.case("Colour picker updates colours immediately and validates hex without action buttons", function()
     local f = createFixture()
     local applied = "unchanged"
     local picker = require("components/colour_picker/init")
     local function open(title)
         local first = #f.controls + 1
         local close = picker.open(f.parent, {
-            title = title, initial = "#38A4FF", onApply = function(value) applied = value end,
+            title = title, initial = "#38A4FF", onChange = function(value) applied = value end,
         })
         local found = { close = close, root = f.controls[first] }
         for i = first, #f.controls do
@@ -507,6 +521,10 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
         return found
     end
     local p = open()
+    test.equal(p.Apply, nil)
+    test.equal(p.Cancel, nil)
+    test.equal(p.Default, nil)
+    test.equal(applied, "unchanged", "Opening does not change the colour")
     test.equal(p.title.content, "Choose colour")
     test.equal(p.root.clickthrough, false, "Picker blocks clicks into the game")
     test.equal(p.root.hooks[ui.Hook.ONCLICK](), true, "Empty popup space consumes clicks")
@@ -518,31 +536,30 @@ test.case("Colour picker validates hex, previews colours, cancels and restores d
     p.hue.hooks[ui.Hook.ONCLICK](p.hue, 0, 0)
     p.shade.hooks[ui.Hook.ONCLICK](p.shade, 263, 0)
     test.equal(p.input.content, "#FF0000", "Hue and shade controls update the exact colour")
+    test.equal(applied, "#FF0000", "Selection immediately updates the host")
     p.shade.hooks[ui.Hook.ONHOLD](p.shade, 131.5, 77.5)
     test.equal(p.input.content, "#804040", "Dragging selects between painted cells")
+    test.equal(applied, "#804040", "Dragging immediately updates the host")
     p.shade.hooks[ui.Hook.ONHOLD](p.shade, -20, -20)
     test.equal(p.input.content, "#FFFFFF", "Dragging clamps to the field edges")
     p.shade.hooks[ui.Hook.ONRELEASE](p.shade, 263, 0)
     p.hue.hooks[ui.Hook.ONHOLD](p.hue, 131.5, 0)
     test.equal(p.input.content, "#00FFFF", "Hue strip supports continuous dragging too")
     p.input.content = "#INVALID"
-    p.Apply.hooks[ui.Hook.ONBUTTONPRESSED]()
-    test.equal(applied, "unchanged")
+    p.input.hooks[ui.Hook.ONCONTENTCHANGED]()
+    test.equal(applied, "#00FFFF", "Invalid input preserves the last valid colour")
     test.equal(p.root.destroyed, nil)
     p.input.content = "#12ab34"
     p.input.hooks[ui.Hook.ONCONTENTCHANGED]()
     test.equal(p.preview.colour[2], 171 / 255)
-    p.Apply.hooks[ui.Hook.ONBUTTONPRESSED]()
     test.equal(applied, "#12AB34")
+    test.equal(p.root.destroyed, nil, "Valid input keeps the picker open")
+    p.close()
     test.equal(p.root.destroyed, true)
     p = open("Choose background colour")
     test.equal(p.title.content, "Choose background colour")
-    p.Cancel.hooks[ui.Hook.ONBUTTONPRESSED]()
+    p.close()
     test.equal(applied, "#12AB34")
-    test.equal(p.root.destroyed, true)
-    p = open()
-    p.Default.hooks[ui.Hook.ONBUTTONPRESSED]()
-    test.equal(applied, "")
     test.equal(p.root.destroyed, true)
     p.close() -- Idempotent cleanup after an action.
 end)
@@ -574,10 +591,10 @@ test.case("Colour swatches toggle their picker and switch between colours", func
         test.equal(other.destroyed, nil, "Other swatch opens its own picker")
         click(3 - index)
         root = click(index)
-        f.controls[#f.controls - 1].hooks[ui.Hook.ONBUTTONPRESSED]() -- Cancel
+        click(index)
         test.equal(root.destroyed, true)
         root = click(index)
-        test.equal(root.kind, "layer", "Click after Cancel opens immediately")
+        test.equal(root.kind, "layer", "Click after closing opens immediately")
         click(index)
     end
     test.equal(f.saveCalls, 0)
@@ -682,7 +699,7 @@ test.case("Colour picker anchors beside its swatch, follows movement and clamps 
     local anchor = { xyGlobal = { x = 300, y = 250 }, width = 32 }
     local first = #f.controls + 1
     local close, update = require("components/colour_picker/init").open(f.parent, {
-        initial = "#FFFFFF", onApply = function() end, anchor = anchor,
+        initial = "#FFFFFF", onChange = function() end, anchor = anchor,
     })
     local root = f.controls[first]
     test.equal(root.x, 240, "Picker opens just right of the swatch in the overlay's coordinates")
@@ -690,7 +707,7 @@ test.case("Colour picker anchors beside its swatch, follows movement and clamps 
     anchor.xyGlobal = { x = 600, y = 390 }
     update()
     test.equal(root.x, 204, "Picker flips left when the right side does not fit")
-    test.equal(root.y, 74, "Picker stays above the bottom screen edge")
+    test.equal(root.y, 400 - root.height, "Picker stays above the bottom screen edge")
     anchor.xyGlobal = { x = 80, y = 180 }
     update()
     test.equal(root.x >= 0, true)
@@ -717,7 +734,7 @@ test.case("Colour picker joins the PrettyUI window overlay stack and unregisters
     local anchor = { xyGlobal = { x = 50, y = 50 }, width = 32 }
     local first = #f.controls + 1
     local close = require("components/colour_picker/init").open(f.parent, {
-        initial = "#FFFFFF", onApply = function() end, anchor = anchor,
+        initial = "#FFFFFF", onChange = function() end, anchor = anchor,
         attachOverlay = function(root, position)
             owner:_RegisterOverlay(root, nil, position)
             owner:_SyncOverlays(false)

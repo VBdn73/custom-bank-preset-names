@@ -13,10 +13,10 @@ end
 -- persistence or PrettyUI. attachOverlay may return a cleanup function.
 function picker.open(host, options)
     options = options or {}
-    local initial, onApply = options.initial, options.onApply
+    local initial, onChange = options.initial, options.onChange
     local anchor, onClose = options.anchor, options.onClose
     local theme = options.theme or defaultTheme
-    assert(type(onApply) == "function", "Colour picker requires an onApply callback.")
+    assert(type(onChange) == "function", "Colour picker requires an onChange callback.")
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
     local root = ui.Layer.new(parent)
@@ -48,7 +48,7 @@ function picker.open(host, options)
         label.clickthrough = true
         return label
     end
-    local width, height = 288, 326
+    local width, height = 288, 288
     root:SetSize(width, height)
     root.clickthrough = false
     -- Empty popup space must consume clicks rather than forwarding them to
@@ -132,6 +132,7 @@ function picker.open(host, options)
                 math.max(0, math.min(1, my / (height - 1))))
             selected = colourValue.fromHSV(h, s, v)
             refresh()
+            onChange(selected)
             return true
         end
         area:Subscribe(ui.Hook.ONCLICK, select)
@@ -159,23 +160,8 @@ function picker.open(host, options)
         end
         status.content = "Hex colour: #RRGGBB"
         positionMarkers()
+        onChange(selected)
     end)
-    local function button(x, label, callback)
-        local control = ui.Button.new(root)
-        control:SetPos(x, 288)
-        control:SetSize(84, 28)
-        control.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
-        control.label = label
-        control:Subscribe(ui.Hook.ONBUTTONPRESSED, callback)
-    end
-    button(12, "Apply", function()
-        local hex = colourValue.normalize(input.content)
-        if not hex then status.content = "Enter six hex digits, e.g. #38A4FF"; return end
-        close()
-        onApply(hex)
-    end)
-    button(102, "Cancel", close)
-    button(192, "Default", function() close(); onApply("") end)
     if options.attachOverlay then detachOverlay = options.attachOverlay(root, updatePosition) end
     return close, updatePosition
 end

@@ -35,8 +35,8 @@ enable commands do not download dependencies automatically.
 
 1. Open the plugin's Plugin Hub Settings icon.
 2. Select a preset, enter a name, and click a background/text swatch to choose colours.
-3. Click or drag across the hue strip and shade area, or enter `#RRGGBB`. **Apply** stages the colour;
-   **Cancel** discards it. Click the same swatch again to close the picker.
+3. Click or drag across the hue strip and shade area, or enter `#RRGGBB`. Changes
+   immediately update the preview. Click the same swatch again to close the picker.
 4. Click **Save** (or press Enter in the name field) to save the name and colours.
    **Reset** previews all defaults; click **Save** to commit the reset.
    Saving a blank name keeps your chosen colours.
@@ -53,7 +53,7 @@ and kept within UI bounds. **×** or closing the bank closes the editor.
 - Switching presets discards unsaved edits. Saving requires your logged-in
   character's display name. Closing the editor also discards unsaved edits.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
-- **Default** stages the game's colour; click **Save** to apply it. A crossed
+- The **↺** icon beside each colour swatch restores that colour's default; click **Save** to apply it. A crossed
   swatch means Default. Text colour affects only the name.
 - Colours are opaque `#RRGGBB` values. Older named colours use Default until replaced.
 - In Plugin Hub settings, **Hide predefined-name dropdown** hides the game's

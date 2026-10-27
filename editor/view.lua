@@ -247,6 +247,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         statusLabel.colour = theme.colour(succeeded and theme.success or theme.error)
     end
     local colourControls = {}
+    local updateColourResetIcons = {}
     local defaultMarks = {}
     local defaultMarkKinds = {}
     local colourLabels = {}
@@ -321,6 +322,18 @@ function editor.build(parent, names, bindings, initialSlot, options)
             control.clickthrough = false
             trackPosition(control, layout.swatchX, y)
             colourControls[kind] = control
+            local resetColour, updateReset = icons.new(parent,
+                id.Sprite.RS3_ICON_STOPWATCH_RESET_0,
+                id.Sprite.RS3_ICON_STOPWATCH_RESET_1,
+                id.Sprite.RS3_ICON_STOPWATCH_RESET_2, function()
+                dismissPicker()
+                pendingColours[kind] = ""
+                statusLabel.content = ""
+                refreshColours()
+            end)
+            resetColour:SetSize(22, 22)
+            trackPosition(resetColour, layout.swatchX + 40, y - 1)
+            updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
             defaultMarks[kind] = {}
             -- Draw thin diagonals with native rectangles, without relying on
             -- rotation support. Keep a small inset inside the swatch border.
@@ -353,9 +366,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                         contentHost:_SyncOverlays(false)
                         return function() contentHost:_UnregisterOverlay(root) end
                     end or nil,
-                    onApply = function(value)
-                    closePicker = nil
-                    updatePicker = nil
+                    onChange = function(value)
                     if selectedSlot ~= slot or names.getContext() ~= context then return end
                     pendingColours[kind] = value
                     statusLabel.content = ""
@@ -580,7 +591,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local availableWidth = isColumn and buttonWidth or controlWidth
             local isSwatch = position.x >= layout.swatchX - 1 and position.width <= 34
             local isColourLabel = control == colourLabels.background or control == colourLabels.text
-            local swatchX = math.max(layout.padding, math.min(layout.swatchX, width - layout.padding - 34))
+            local swatchX = math.max(layout.padding, math.min(layout.swatchX, width - layout.padding - 62))
             if isSwatch then
                 availableWidth = position.width
                 x = swatchX + position.x - layout.swatchX
@@ -648,6 +659,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         updateClipping()
         if updateInfo then updateInfo() end
+        for _, updateReset in ipairs(updateColourResetIcons) do updateReset() end
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
         end
