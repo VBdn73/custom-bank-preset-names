@@ -37,6 +37,17 @@ local function createFixture(colours)
         return control
     end
     ui = {
+        Canvas = { new = function(parent)
+            local control = createControl("canvas", parent)
+            control.gradients = {}
+            function control:AddGradientH(...)
+                self.gradients[#self.gradients + 1] = { direction = "horizontal", ... }
+            end
+            function control:AddGradientV(...)
+                self.gradients[#self.gradients + 1] = { direction = "vertical", ... }
+            end
+            return control
+        end },
         Layer = { new = function(parent) return createControl("layer", parent) end },
         Rectangle = { new = function(parent) return createControl("rectangle", parent) end },
         Text = { new = function(parent) return createControl("text", parent) end },
@@ -135,6 +146,7 @@ local function createFixture(colours)
         Font = { MUSEO_SANS_15PT_REGULAR = 1, MUSEO_SANS_11PT_REGULAR = 2 },
         StyleSheet = { DROPDOWN_DEFAULT = 1, INPUT_DEFAULT = 2, BUTTON_DEFAULT = 3 },
         Sprite = { RS3_BUTTON_INFO_PARENT_0 = 28787, RS3_BUTTON_INFO_PARENT_1 = 32135,
+            RS3_BTN_MODAL_WINDOW_1_CLOSE_NML = 1001, RS3_BTN_MODAL_WINDOW_1_CLOSE_OVR = 1002,
             RS3_BUTTON_INFO_PARENT_2 = 32136,
             RS3_ICON_STOPWATCH_RESET_0 = 14805, RS3_ICON_STOPWATCH_RESET_1 = 14806,
             RS3_ICON_STOPWATCH_RESET_2 = 14807 },
@@ -511,8 +523,13 @@ test.case("Colour picker updates colours immediately and validates hex without a
         local found = { close = close, root = f.controls[first] }
         for i = first, #f.controls do
             local control = f.controls[i]
-            if control.kind == "text" and control.y == 8 then found.title = control end
+            if control.kind == "text" and control.y == 8 and control.x == 12 then found.title = control end
+            if control.kind == "sprite" and control.x == 256 and control.y == 8 then
+                found.closeButton = control
+            end
+            if control.kind == "text" and control.y == 258 then found.hint = control end
             if control.kind == "input" then found.input = control end
+            if control.kind == "canvas" then found.canvas = control end
             if control.label then found[control.label] = control end
             if control.kind == "rectangle" and control.width == 44 then found.preview = control end
             if control.kind == "layer" and control.x == 12 and control.y == 200 then found.hue = control end
@@ -526,6 +543,13 @@ test.case("Colour picker updates colours immediately and validates hex without a
     test.equal(p.Default, nil)
     test.equal(applied, "unchanged", "Opening does not change the colour")
     test.equal(p.title.content, "Choose colour")
+    test.equal(p.hint, nil, "No redundant hex hint below the input")
+    test.equal(p.root.height, 266, "Popup removes the unused hint row")
+    test.equal(p.closeButton.sprite, id.Sprite.RS3_BTN_MODAL_WINDOW_1_CLOSE_NML)
+    p.closeButton.hooks[ui.Hook.ONMOUSEOVER]()
+    test.equal(p.closeButton.sprite, id.Sprite.RS3_BTN_MODAL_WINDOW_1_CLOSE_OVR)
+    p.closeButton.hooks[ui.Hook.ONMOUSELEAVE]()
+    test.equal(p.closeButton.sprite, id.Sprite.RS3_BTN_MODAL_WINDOW_1_CLOSE_NML)
     test.equal(p.root.clickthrough, false, "Picker blocks clicks into the game")
     test.equal(p.root.hooks[ui.Hook.ONCLICK](), true, "Empty popup space consumes clicks")
     for _, control in ipairs(f.controls) do
@@ -533,18 +557,22 @@ test.case("Colour picker updates colours immediately and validates hex without a
             test.equal(control.hooks[ui.Hook.ONCLICK](), true, "Popup background consumes clicks")
         end
     end
-    p.hue.hooks[ui.Hook.ONCLICK](p.hue, 0, 0)
-    p.shade.hooks[ui.Hook.ONCLICK](p.shade, 263, 0)
-    test.equal(p.input.content, "#FF0000", "Hue and shade controls update the exact colour")
+    test.equal(p.hue, nil, "No separate hue strip")
+    test.equal(#p.canvas.gradients, 8, "Six smooth hue gradients plus white and black overlays")
+    p.shade.hooks[ui.Hook.ONCLICK](p.shade, 0, 90.5)
+    test.equal(p.input.content, "#FF0000", "Canvas centre selects saturated colour")
     test.equal(applied, "#FF0000", "Selection immediately updates the host")
-    p.shade.hooks[ui.Hook.ONHOLD](p.shade, 131.5, 77.5)
-    test.equal(p.input.content, "#804040", "Dragging selects between painted cells")
-    test.equal(applied, "#804040", "Dragging immediately updates the host")
+    p.shade.hooks[ui.Hook.ONHOLD](p.shade, 0, 45.25)
+    test.equal(p.input.content, "#FF8080", "Canvas top half blends towards white")
+    test.equal(applied, "#FF8080", "Dragging immediately updates the host")
+    p.shade.hooks[ui.Hook.ONHOLD](p.shade, 0, 135.75)
+    test.equal(applied, "#800000", "Canvas bottom half blends towards black")
+    p.shade.hooks[ui.Hook.ONHOLD](p.shade, 0, 250)
+    test.equal(applied, "#000000", "Canvas bottom edge selects black")
     p.shade.hooks[ui.Hook.ONHOLD](p.shade, -20, -20)
     test.equal(p.input.content, "#FFFFFF", "Dragging clamps to the field edges")
-    p.shade.hooks[ui.Hook.ONRELEASE](p.shade, 263, 0)
-    p.hue.hooks[ui.Hook.ONHOLD](p.hue, 131.5, 0)
-    test.equal(p.input.content, "#00FFFF", "Hue strip supports continuous dragging too")
+    p.shade.hooks[ui.Hook.ONRELEASE](p.shade, 131.5, 90.5)
+    test.equal(p.input.content, "#00FFFF", "Horizontal dragging selects hue")
     p.input.content = "#INVALID"
     p.input.hooks[ui.Hook.ONCONTENTCHANGED]()
     test.equal(applied, "#00FFFF", "Invalid input preserves the last valid colour")
@@ -554,8 +582,9 @@ test.case("Colour picker updates colours immediately and validates hex without a
     test.equal(p.preview.colour[2], 171 / 255)
     test.equal(applied, "#12AB34")
     test.equal(p.root.destroyed, nil, "Valid input keeps the picker open")
-    p.close()
+    test.equal(p.closeButton.hooks[ui.Hook.ONCLICK](), true, "Close button consumes its click")
     test.equal(p.root.destroyed, true)
+    test.equal(applied, "#12AB34", "Closing retains the selected colour")
     p = open("Choose background colour")
     test.equal(p.title.content, "Choose background colour")
     p.close()
