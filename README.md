@@ -11,6 +11,10 @@ changes their appearance locally, not their server-side names or behaviour.
 - Dragging one bank preset onto another swaps their saved names and colours too.
 - Edit through the main Plugin Hub settings or directly from the bank.
 - Save settings locally for each character; reset individual presets at any time.
+- Editor saves and customisation swaps validate names and colours together. On storage
+  failure, the plugin attempts to restore previous customisations (best-effort, not
+  atomic). Failed recovery is reported explicitly; console diagnostics identify the
+  affected slot and field. Native bank preset swaps are not undone by this recovery.
 - Draggable bank editor that remembers its position and follows preset selection.
 - Option to hide the bank's predefined-name dropdown (visible by default).
 

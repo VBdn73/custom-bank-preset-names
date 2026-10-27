@@ -7,6 +7,7 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
         [5] = { name = "Fifth", background = "", text = "#38A4FF" } }
     local context = "character"
     local names = { getContext = function() return context end,
+        normalize = dofile("presets/names.lua").normalize,
         get = function(slot) return data[slot].name end,
         save = function(slot, value) data[slot].name = value return true end }
     package.loaded["presets/names"] = names

@@ -9,6 +9,7 @@ local info = require("editor/info")
 local bankAppearance = require("bank/appearance")
 local bankLabels = require("bank/labels")
 local bankPreview = require("bank/preview")
+local customisations = require("presets/customisations")
 local editor = {}
 
 local function createText(parent, content, font)
@@ -30,6 +31,7 @@ end
 
 function editor.build(parent, names, bindings, initialSlot, options)
     options = options or {}
+    local persistence = customisations.new(names, bindings.colours)
     local host = parent
     local scrollView
     local contentHost = options.contentHost
@@ -405,27 +407,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
             return false
         end
 
-        -- pcall separates unexpected host errors from ordinary validation failures.
-        local callSucceeded, saveSucceeded, message = pcall(names.save, selectedSlot, value)
-        if not callSucceeded then
-            print("[Preset names] Save error: " .. tostring(saveSucceeded))
-            setStatus("Save error. See the client console.", false)
-            return false
-        end
-        if saveSucceeded then refreshPresetLabels() end
-        if saveSucceeded and bindings.colours then
-            for _, kind in ipairs({ "background", "text" }) do
-                local ok, saved, colourMessage = pcall(bindings.colours.save,
-                    selectedSlot, kind, pendingColours[kind])
-                if not ok or not saved then
-                    setStatus(ok and colourMessage or "Colour save error. See the client console.", false)
-                    return false
-                end
-            end
-            message = "Name and colours saved."
-        end
+        local saveSucceeded, message = persistence.save(selectedSlot, {
+            name = value, background = pendingColours.background, text = pendingColours.text,
+        })
         setStatus(message, saveSucceeded)
-        if saveSucceeded then refreshPresetLabels() end
+        refreshPresetLabels()
         return saveSucceeded
     end
 

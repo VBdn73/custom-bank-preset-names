@@ -138,6 +138,7 @@ local function createFixture(colours)
             RS3_BUTTON_INFO_PARENT_2 = 32136 },
     }
     f.names = {
+        normalize = dofile("presets/names.lua").normalize,
         getContext = function() return f.context end,
         get = function(slot) return f.stored[slot] end,
         save = function(slot, value)
@@ -810,7 +811,7 @@ test.case("Status colours switch between success and failure without icons", fun
     test.equal(f.status.colour[2] > f.status.colour[1], true)
     f.saveMode = "rejected"
     f:clickSave()
-    test.equal(f.status.content, "Simulated validation failure")
+    test.equal(f.status.content, "Save failed; recovery incomplete. Check customisations and the client console.")
     test.equal(f.status.colour[1] > f.status.colour[2], true)
     f:select(17)
     test.equal(f.status.content, "")
@@ -1071,11 +1072,11 @@ test.case("Rejected saves preserve edits; reset stages defaults without storage"
     f.saveMode = "rejected"
     f.input.content = "Keep this edit"
     f:clickSave()
-    test.equal(f.status.content, "Simulated validation failure")
+    test.equal(f.status.content, "Save failed; recovery incomplete. Check customisations and the client console.")
     test.equal(f.status.colour[1] > f.status.colour[2], true, "Failure is red")
     f:clickReset()
     test.equal(f.input.content, "")
-    test.equal(f.saveCalls, 1)
+    test.equal(f.saveCalls, 2)
     test.equal(f.status.content, "Defaults staged. Click Save to apply.")
     test.equal(f.stored[1], nil)
 end)
@@ -1090,7 +1091,7 @@ test.case("Storage exceptions are caught, logged, and displayed without clearing
     print = originalPrint -- Restore even if the editor unexpectedly throws.
     test.equal(succeeded, true, message)
     test.equal(logged:find("Simulated storage exception", 1, true) ~= nil, true)
-    test.equal(f.status.content, "Save error. See the client console.")
+    test.equal(f.status.content, "Save failed; recovery incomplete. Check customisations and the client console.")
     test.equal(f.input.content, "Keep this edit")
 end)
 
