@@ -540,8 +540,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
     end
 
-    local function centreContent()
-        dismissPicker()
+    local function sizeContent()
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
             - (options.hideTitle and layout.titleHeight or 0)
@@ -559,6 +558,19 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local width = math.min(contentWidth, math.max(1, availableHostWidth))
         local controlWidth = math.max(1, width - layout.padding * 2)
         local buttonWidth = math.max(1, (controlWidth - layout.buttonGap) / 2)
+        return {
+            overflowing = overflowing,
+            compact = compact,
+            titleOffset = titleOffset,
+            width = width,
+            controlWidth = controlWidth,
+            buttonWidth = buttonWidth,
+            offsetX = math.max(0, math.floor((availableHostWidth - width) / 2)),
+            offsetY = math.max(0, math.floor((hostHeight - height) / 2)),
+        }
+    end
+
+    local function buildCompactRowMapping()
         -- Tight ribbon panels need smaller gaps, not smaller text or fields.
         -- Leave the established popup/settings spacing alone when it fits.
         local compactRows = {
@@ -579,8 +591,13 @@ function editor.build(parent, names, bindings, initialSlot, options)
             compactRows[layout.rows.buttons] = layout.compactRows.buttons
             compactRows[layout.rows.status] = layout.compactRows.status
         end
-        local offsetX = math.max(0, math.floor((availableHostWidth - width) / 2))
-        local offsetY = math.max(0, math.floor((hostHeight - height) / 2))
+        return compactRows
+    end
+
+    local function positionControls(size, compactRows)
+        local compact, titleOffset = size.compact, size.titleOffset
+        local width, controlWidth, buttonWidth = size.width, size.controlWidth, size.buttonWidth
+        local offsetX, offsetY = size.offsetX, size.offsetY
         for _, position in ipairs(controlPositions) do
             local control = position.component
             local x = position.x == layout.resetX
@@ -635,8 +652,14 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 control:SetPos(offsetX + x + 1, offsetY + y + 1)
             end
         end
+    end
+
+    local function centreContent()
+        dismissPicker()
+        local size = sizeContent()
+        positionControls(size, buildCompactRowMapping())
         if infoButton then
-            infoButton.hidden = overflowing
+            infoButton.hidden = size.overflowing
             infoButton:SetPos(math.max(0, host.width - layout.padding - layout.popupCloseSize),
                 layout.padding)
         end
