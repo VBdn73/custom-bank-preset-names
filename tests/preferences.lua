@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 local preferences = require("editor/preferences")
 
-test.case("Preferences show only the dropdown option and bank-only editing guidance", function()
+test.case("Preferences show both display options and bank-only editing guidance", function()
     local previousUI, previousID = ui, id
     local note = { SetPos = function(self, x, y) self.x, self.y = x, y end,
         SetSize = function() end }
@@ -9,7 +9,8 @@ test.case("Preferences show only the dropdown option and bank-only editing guida
         Text = { new = function() return note end } }
     id = { Font = { MUSEO_SANS_11PT_REGULAR = 11 } }
     local ok, message = pcall(function()
-        local hidden, canSave = false, true
+        local hidden, backgrounds, canSave = false, true, true
+        local controls = {}
         local parent = { width = 270, Subscribe = function(self, _, _, callback)
             self.resize = callback
         end }
@@ -23,7 +24,26 @@ test.case("Preferences show only the dropdown option and bank-only editing guida
                 hidden = value
                 return true
             end,
+            showCompactBackgrounds = function() return backgrounds end,
+            setShowCompactBackgrounds = function(value)
+                if not canSave then return false end
+                backgrounds = value
+                return true
+            end,
         }, { CheckboxButton = { new = function(_, entries, options)
+            if entries[1].value == "compactBackgrounds" then
+                test.equal(entries[1].selected, true)
+                local control = { root = { SetPos = function() end, SetSize = function() end },
+                    items = { { label = { SetSize = function() end },
+                        box = { SetPos = function() end }, row = { SetSize = function() end } } },
+                    SetSelected = function(self, key, value, notify)
+                        test.equal(key, "compactBackgrounds")
+                        test.equal(notify, false)
+                        self.selected = value
+                    end, change = options.onChange }
+                controls.backgrounds = control
+                return control
+            end
             count = #entries
             test.equal(entries[1].selected, false)
             change = options.onChange
@@ -41,7 +61,7 @@ test.case("Preferences show only the dropdown option and bank-only editing guida
         test.equal(note.font, 11)
         test.equal(root.width, 254)
         test.equal(root.height, 36)
-        test.equal(note.y, 52, "Wrapped checkbox has a small gap before guidance")
+        test.equal(note.y, 96, "Wrapped checkboxes have a small gap before guidance")
         change(nil, nil, nil, true)
         test.equal(hidden, true)
         refresh()
@@ -56,8 +76,17 @@ test.case("Preferences show only the dropdown option and bank-only editing guida
         parent.width = 700
         parent.resize()
         test.equal(root.height, 20)
-        test.equal(note.y, 36, "Wide settings do not reserve unused checkbox lines")
+        test.equal(note.y, 64, "Wide settings do not reserve unused checkbox lines")
+        controls.backgrounds.change(nil, nil, nil, false)
+        test.equal(backgrounds, false)
+        refresh()
+        test.equal(controls.backgrounds.selected, false)
+        backgrounds = true
+        refresh()
+        test.equal(controls.backgrounds.selected, true, "Other panels reflect background changes")
         canSave = false
+        controls.backgrounds.change(nil, nil, nil, false)
+        test.equal(controls.backgrounds.selected, true, "Failed saves restore background preference")
         change(nil, nil, nil, true)
         test.equal(selected, false, "Failed saves restore the stored preference")
     end)

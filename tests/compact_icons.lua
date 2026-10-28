@@ -67,7 +67,7 @@ local function fixture()
     f.renderer = assert(loadfile("bank/compact_icons.lua", "t", environment))()
     f.store = { get = function(slot) return f.selected[slot] end }
     function f.update()
-        f.renderer.update(bindings, f.store, { rgba = function(slot, kind)
+        f.renderer.update(bindings, f.store, not f.hideBackgrounds and { rgba = function(slot, kind)
             test.equal(kind, "background")
             return f.colours[slot]
         end })
@@ -82,6 +82,23 @@ local function fixture()
     end
     return f
 end
+
+test.case("Compact backgrounds toggle live without changing icons or saved colours", function()
+    local f = fixture()
+    f.selected[1], f.colours[1] = "skill", 0x123456FF
+    f.update()
+    local sprite = f.sprites[1]
+    f.hideBackgrounds = true
+    f.update()
+    for _, background in ipairs(f.backgrounds) do test.equal(background.destroyed, true) end
+    test.equal(sprite.destroyed, nil)
+    test.equal(#f.sprites, 1)
+    test.equal(f.colours[1], 0x123456FF)
+    f.hideBackgrounds = false
+    f.update()
+    test.equal(f.backgrounds[4].rgba, 0x123456FF)
+    test.equal(#f.sprites, 1)
+end)
 
 test.case("Compact icons centre full-colour non-interactive siblings without clearing native text", function()
     local f = fixture()

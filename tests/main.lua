@@ -52,12 +52,17 @@ test.case("Main renders saved icons at Draw and restores them on shutdown", func
     local events, calls = {}, {}
     local bindings = { numbers = {}, compactButtons = {}, labels = {}, appearance = {} }
     local store = {}
+    local showBackgrounds = true
     local modules = { ["bank/bindings"] = bindings, ["presets/icons"] = store }
+    modules["presets/settings"] = {
+        hidePredefinedDropdown = function() return false end,
+        showCompactBackgrounds = function() return showBackgrounds end,
+    }
     modules["bank/compact_icons"] = {
         update = function(buttons, icons, colours)
             test.equal(buttons, bindings.compactButtons)
             test.equal(icons, store)
-            test.equal(colours, modules["presets/colours"])
+            test.equal(colours, showBackgrounds and modules["presets/colours"] or nil)
             calls[#calls + 1] = "compact.update"
         end,
         restore = function() calls[#calls + 1] = "compact.restore" end,
@@ -90,6 +95,8 @@ test.case("Main renders saved icons at Draw and restores them on shutdown", func
     events.Draw.callback()
     test.equal(calls[#calls - 1], "icons.update")
     test.equal(calls[#calls], "compact.update", "Apply compact icons at the render boundary")
+    showBackgrounds = false
+    events.Draw.callback()
     local drawCalls = #calls
     environment.PluginShutdown()
     test.equal(calls[drawCalls + 1], "compact.restore")

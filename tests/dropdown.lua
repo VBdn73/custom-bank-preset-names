@@ -31,6 +31,28 @@ test.case("Predefined dropdown stays untouched by default and restores on toggle
     test.equal(component.hidden, false)
 end)
 
+test.case("Compact background preference defaults on and persists without changing dropdown settings", function()
+    local values = {}
+    local environment = setmetatable({ PersistentDB = {
+        GetString = function(_, key) return values[key] end,
+        SetString = function(_, key, value) values[key] = value end,
+    } }, { __index = _G })
+    local function loadSettings()
+        return assert(loadfile("presets/settings.lua", "t", environment))()
+    end
+    local settings = loadSettings()
+    test.equal(settings.showCompactBackgrounds(), true)
+    test.equal(settings.setShowCompactBackgrounds(false), true)
+    settings = loadSettings()
+    test.equal(settings.showCompactBackgrounds(), false)
+    test.equal(settings.hidePredefinedDropdown(), false)
+    test.equal(settings.setShowCompactBackgrounds(true), true)
+    test.equal(loadSettings().showCompactBackgrounds(), true)
+    environment.PersistentDB.SetString = function() return false end
+    test.equal(settings.setShowCompactBackgrounds(false), false)
+    test.equal(settings.showCompactBackgrounds(), true)
+end)
+
 test.case("Dropdown restoration preserves originally hidden state", function()
     local dropdown, _, component = fixture()
     component.hidden = true

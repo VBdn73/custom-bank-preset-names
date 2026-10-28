@@ -9,7 +9,8 @@ Give your RuneScape bank presets custom names, colours, and skill icons. This Lu
 - Background and text colours via swatches, a colour picker, or hex input.
 - Choose from all 29 skill icons to replace the numbers on presets 1–18 in both
   the preset-management rows and the compact bank Presets buttons, using native client assets.
-- Compact preset icons also show their saved background colour when one is set.
+- Compact preset icons also show their saved background colour when one is set,
+  with an option to turn those backgrounds off.
 - Editable preset-row preview shows staged names, colours, and icons before saving.
 - Dragging one bank preset onto another swaps their saved names, colours, and icons too.
 - Beast of Burden has its own saved name and colours and is excluded from numbered-preset swaps.
@@ -58,8 +59,12 @@ without closing it. Drag the title bar to move it. Its position is saved on clos
 and kept within UI bounds. **×** or closing the bank closes the editor.
 
 - Click **i** to show or hide help notes, which start hidden.
-- Plugin Hub settings and the ribbon panel only show **Hide predefined-name dropdown**
-  and guidance for opening the editor. Customisations can only be edited in the bank UI.
+- Plugin Hub settings and the ribbon panel show **Hide predefined-name dropdown**,
+  **Show background colours in small bank UI**, and guidance for opening the editor.
+  Customisations can only be edited in the bank UI.
+- **Show background colours in small bank UI** is enabled by default. Untick it to
+  hide compact-button backgrounds immediately without changing icons, saved colours,
+  or management-row colours. The preference persists across reloads.
 - Switching presets discards unsaved edits. Saving requires your logged-in
   character's display name. Closing the editor also discards unsaved edits.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
@@ -84,13 +89,13 @@ network requests.
 ## Data protection - Case 1 (local only)
 
 The plugin stores your character's display name, preset names, colours, icon
-selections, editor position, and dropdown preference locally. Nothing is sent to
+selections, editor position, and bank display preferences locally. Nothing is sent to
 the developer or external services. No screenshots or gameplay history are collected.
 
 Settings persist locally through the client's `PersistentDB` API. The character
 display name forms part of the storage keys, ignoring case and surrounding
 spaces. Names, colours, and icons are stored per character; editor position is shared
-across characters on this device, as is the dropdown visibility preference.
+across characters on this device, as are the bank display preferences.
 
 - Settings do not sync between devices; beta and live storage are separate.
 - After a character rename, re-enter or manually migrate your settings. Reusing
