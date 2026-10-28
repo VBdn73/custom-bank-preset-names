@@ -81,7 +81,7 @@ test.case("Bank icons render as untinted, non-interactive siblings and leave nat
     test.equal(sprite.parent, number.parent)
     test.equal(sprite.width, 24)
     test.equal(sprite.height, 24)
-    test.equal(sprite.x, 4)
+    test.equal(sprite.x, 8, "Bank icon has a 4-unit inset from the native number area")
     test.equal(sprite.y, 3)
     test.equal(sprite.clickthrough, true)
     test.equal(sprite.enabled, false)

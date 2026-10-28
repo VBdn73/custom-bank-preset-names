@@ -2,6 +2,9 @@ local catalogue = require("presets/icon_catalogue")
 local slots = require("presets/slots")
 local renderer = {}
 local states, errors = {}, {}
+-- Native number labels sit close to the row border. Give replacement icons
+-- a small inset like the editor preview, without moving native labels or hits.
+local horizontalInset = 4
 
 local function editable(number)
     return number and not number.isRestricted and number.type == ui.ComponentType.LABEL
@@ -58,7 +61,7 @@ local function apply(binding, store)
     local w = math.max(1, math.floor(entry.width * scale))
     local h = math.max(1, math.floor(entry.height * scale))
     state.sprite:SetSize(w, h)
-    state.sprite:SetPos(number.x + math.floor((number.width - w) / 2),
+    state.sprite:SetPos(number.x + horizontalInset + math.floor((number.width - w) / 2),
         number.y + math.floor((number.height - h) / 2))
     state.sprite.hidden = not number.visibleGlobal
     assert(state.sprite.spriteID == spriteID, "Native sprite assignment was not accepted.")
