@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Added optional native skill icons for numbered presets 1–18, covering all 29 skills.
+- Added a reusable Skills icon picker with selection highlighting and skill-name labels.
+- Icons preview immediately in the editor and commit with names and colours on **Save**.
+- Added icon reset controls; full **Reset** stages all defaults, including the preset number.
+- Icon and colour pickers are mutually exclusive and follow the editor's overlay positioning.
+- Stored stable icon keys per character; existing names and colours require no migration.
+- Included icons in native preset swaps and best-effort grouped-save recovery.
+- Restored native numbers on reset, unavailable resources, rendering failure, and shutdown;
+  removed plugin-owned sprites without changing native row interactions or BoB's icon.
+- Added a font-independent dropdown arrow and a small bank-icon inset for clearer spacing.
+- Removed temporary asset-inspection tools and expanded mocked regression coverage.
+
 ## 0.6.0 - 2026-10-27
 
 - Preset names and colours are now edited only in the bank via **Customize preset**.
