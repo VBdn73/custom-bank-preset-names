@@ -195,6 +195,17 @@ needed. The catalogue explicitly maps resource suffixes rather than assuming
 they are skill IDs. Combined Challenge icon 26 is excluded; Necromancy uses the
 verified full-colour `SKILL_ICON_NECROMANCY_52PX_0`.
 
+#### Adding an icon tab
+
+Add a module under `presets/icon_categories/` returning `{ key, name, entries }`,
+then add its `require` to the list in `presets/icon_catalogue.lua`. Each entry has
+a stable namespaced `key` (for example `skills:farming`), matching `category`, display
+`name`, and native `sprite` constant name. Optional `width`/`height` preserve the
+source aspect ratio (default 24×24). Follow `skills.lua` as an example.
+The picker creates tabs and pagination automatically; lookup, validation, storage,
+and bank rendering work through the shared catalogue without category-specific changes.
+Keep existing keys stable so saved selections continue to work.
+
 ### Reusable colour picker
 
 The picker remains bundled in this plugin, but has no editor, storage or PrettyUI
