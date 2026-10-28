@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 
 local function fixture()
-    local f = { labels = {}, selected = {}, sprites = {}, messages = {} }
+    local f = { labels = {}, selected = {}, sprites = {}, backgrounds = {}, colours = {}, messages = {}, order = {} }
     local bindings = dofile("bank/bindings.lua").compactButtons
     function f.label(index)
         return { type = 1, content = tostring(index), rgba = 0xFFCB75FF,
@@ -42,7 +42,8 @@ local function fixture()
             end
             function sprite:SetPos(x, y) self.x, self.y = x, y end
             function sprite:Destroy() self.destroyed = true end
-            function sprite:MoveToFront()
+             function sprite:MoveToFront()
+                 f.order[#f.order + 1] = self
                 self.frontMoves = (self.frontMoves or 0) + 1
                 self.occluded = false
             end
@@ -51,11 +52,26 @@ local function fixture()
             end })
             f.sprites[#f.sprites + 1] = sprite
             return sprite
+        end }, Rectangle = { new = function(parent, categoryID, dynamicID)
+            if f.backgroundFails then return nil end
+            test.equal(categoryID, 2)
+            local rectangle = { parent = parent, dynamicID = dynamicID }
+            function rectangle:SetSize(w, h) self.width, self.height = w, h end
+            function rectangle:SetPos(x, y) self.x, self.y = x, y end
+            function rectangle:MoveToFront() f.order[#f.order + 1] = self end
+            function rectangle:Destroy() self.destroyed = true end
+            f.backgrounds[#f.backgrounds + 1] = rectangle
+            return rectangle
         end } },
     }, { __index = _G })
     f.renderer = assert(loadfile("bank/compact_icons.lua", "t", environment))()
     f.store = { get = function(slot) return f.selected[slot] end }
-    function f.update() f.renderer.update(bindings, f.store) end
+    function f.update()
+        f.renderer.update(bindings, f.store, { rgba = function(slot, kind)
+            test.equal(kind, "background")
+            return f.colours[slot]
+        end })
+    end
     function f.page(offset)
         for index = 1, 9 do f.labels[index].content = tostring(index + offset) end
     end
@@ -92,6 +108,75 @@ test.case("Compact icons centre full-colour non-interactive siblings without cle
     f.update()
     test.equal(f.live(), 0)
     test.equal(f.labels[1].rgba, 0xFFCB75FF)
+end)
+
+test.case("Compact backgrounds follow saved colours, geometry, visibility and resets behind untinted icons", function()
+    local f = fixture()
+    f.selected[1], f.colours[1] = "skill", 0x123456FF
+    f.update()
+    local background, sprite = f.backgrounds[1], f.sprites[1]
+    test.equal(background.parent, sprite.parent)
+    test.equal(background.fill, true)
+    test.equal(background.clickthrough, true)
+    test.equal(background.enabled, false)
+    test.equal(background.width, 26, "Background fills the interior without covering the bevel")
+    test.equal(background.height, 24)
+    test.equal(background.x, 9)
+    test.equal(background.y, 14)
+    test.equal(background.rgba, 0x123456FF)
+    test.equal(f.order[#f.order - 3], background)
+    test.equal(f.backgrounds[2].width, 24)
+    test.equal(f.backgrounds[2].height, 1)
+    test.equal(f.backgrounds[2].x, 10)
+    test.equal(f.backgrounds[2].y, 13)
+    test.equal(f.backgrounds[3].y, 38)
+    test.equal(f.order[#f.order], sprite)
+    test.equal(sprite.rgba, 0xFFFFFFFF)
+    f.colours[1] = 0xABCDEF80
+    f.labels[1].x, f.labels[1].hidden = 15, true
+    f.update()
+    test.equal(#f.backgrounds, 3)
+    test.equal(background.rgba, 0xABCDEF80)
+    test.equal(background.x, 17)
+    test.equal(background.hidden, true)
+    f.colours[1] = nil
+    f.update()
+    test.equal(background.destroyed, true)
+    test.equal(sprite.destroyed, nil)
+    test.equal(#f.sprites, 1)
+end)
+
+test.case("Compact backgrounds follow page identity and are removed on shutdown or icon reset", function()
+    local f = fixture()
+    f.selected[1], f.selected[10] = "skill", "skill"
+    f.colours[1], f.colours[10] = 0x123456FF, 0xABCDEFff
+    f.update()
+    local first = f.backgrounds[1]
+    f.page(9)
+    f.update()
+    test.equal(first.destroyed, true)
+    test.equal(f.backgrounds[4].rgba, f.colours[10])
+    f.selected[10] = nil
+    f.update()
+    test.equal(f.backgrounds[4].destroyed, true)
+    f.selected[10] = "skill"
+    f.update()
+    f.renderer.restore()
+    test.equal(f.backgrounds[7].destroyed, true)
+    test.equal(f.live(), 0)
+end)
+
+test.case("Compact background setup failure retains native numbers and cleans up sprites", function()
+    local f = fixture()
+    f.selected[1], f.colours[1], f.backgroundFails = "skill", 0x123456FF, true
+    f.update()
+    test.equal(f.live(), 0)
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+    test.equal(#f.messages, 1)
+    f.backgroundFails = false
+    f.update()
+    test.equal(f.live(), 1)
+    test.equal(f.backgrounds[1].rgba, 0x123456FF)
 end)
 
 test.case("All compact positions follow both pages on unchanged component objects", function()

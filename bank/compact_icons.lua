@@ -8,6 +8,7 @@ local states, errors = {}, {}
 -- Category 1 is separate from the verified native labels in category 0;
 -- creation must still fail safely if an address is already occupied.
 local spriteCategory = 1
+local backgroundInset = 2
 
 local function editable(number)
     return number and not number.isRestricted and number.type == ui.ComponentType.LABEL
@@ -24,6 +25,8 @@ local function release(index)
         end
     end)
     pcall(function() state.sprite:Destroy() end)
+    if state.background then pcall(function() state.background:Destroy() end) end
+    for _, cap in ipairs(state.backgroundCaps or {}) do pcall(function() cap:Destroy() end) end
 end
 
 local function displayedSlot(text, index)
@@ -32,7 +35,7 @@ local function displayedSlot(text, index)
     if slot == index or slot == index + ids.compactPresetButtonCount then return slot end
 end
 
-local function apply(binding, store)
+local function apply(binding, store, colours)
     local index = binding.buttonIndex
     local number = ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
         binding.categoryID, binding.dynamicID)
@@ -74,6 +77,45 @@ local function apply(binding, store)
     -- suppression back into sibling visibility and can leave an empty button.
     -- Follow native local hiding and the unsuppressed parent's visibility.
     state.sprite.hidden = number.hidden == true or parent.visibleGlobal == false
+    local background = colours and colours.rgba(slot, "background")
+    if background then
+        if not state.background then
+            state.background = ui.Rectangle.new(parent, spriteCategory + 1, index)
+            assert(state.background, "Native compact number parent rejected background creation.")
+            state.background.fill = true
+            state.background.clickthrough = true
+            state.background.enabled = false
+            state.backgroundCaps = {}
+            for capIndex = 1, 2 do
+                local cap = ui.Rectangle.new(parent, spriteCategory + 1, index + capIndex * 9)
+                assert(cap, "Native compact number parent rejected background corner creation.")
+                state.backgroundCaps[capIndex] = cap
+                cap.fill, cap.clickthrough, cap.enabled = true, true, false
+            end
+        end
+        -- The native number bounds include the button's bevel. Our sibling is
+        -- raised above that frame, so keep the fill inside its inner edge.
+        state.background:SetSize(math.max(1, number.width - backgroundInset * 2),
+            math.max(1, number.height - backgroundInset * 2 - 2))
+        state.background:SetPos(number.x + backgroundInset, number.y + backgroundInset + 1)
+        state.background.rgba = background
+        state.background.hidden = state.sprite.hidden
+        state.background:MoveToFront()
+        -- Narrow one-pixel end strips leave the four corner pixels clear.
+        -- Non-overlapping rectangles preserve the saved colour's alpha.
+        for capIndex, cap in ipairs(state.backgroundCaps) do
+            cap:SetSize(math.max(1, number.width - backgroundInset * 2 - 2), 1)
+            cap:SetPos(number.x + backgroundInset + 1,
+                number.y + (capIndex == 1 and backgroundInset or number.height - backgroundInset - 1))
+            cap.rgba, cap.hidden = background, state.sprite.hidden
+            cap:MoveToFront()
+        end
+    elseif state.background then
+        state.background:Destroy()
+        state.background = nil
+        for _, cap in ipairs(state.backgroundCaps) do cap:Destroy() end
+        state.backgroundCaps = nil
+    end
     -- Native redraws may add/reorder sibling backgrounds after our child was
     -- attached. Raise only our clickthrough sprite, never native components.
     state.sprite:MoveToFront()
@@ -101,14 +143,14 @@ local function apply(binding, store)
     assert(number.rgba == state.applied, "Compact number transparency was not accepted.")
 end
 
-function renderer.update(bindings, store)
+function renderer.update(bindings, store, colours)
     local active = {}
     for _, binding in ipairs(bindings or {}) do
         local index = binding.buttonIndex
         if type(index) == "number" and index % 1 == 0
             and index >= 1 and index <= ids.compactPresetButtonCount then
             active[index] = true
-            local ok, err = pcall(apply, binding, store)
+            local ok, err = pcall(apply, binding, store, colours)
             if not ok then
                 release(index)
                 local message = tostring(err)

@@ -54,9 +54,10 @@ test.case("Main renders saved icons at Draw and restores them on shutdown", func
     local store = {}
     local modules = { ["bank/bindings"] = bindings, ["presets/icons"] = store }
     modules["bank/compact_icons"] = {
-        update = function(buttons, icons)
+        update = function(buttons, icons, colours)
             test.equal(buttons, bindings.compactButtons)
             test.equal(icons, store)
+            test.equal(colours, modules["presets/colours"])
             calls[#calls + 1] = "compact.update"
         end,
         restore = function() calls[#calls + 1] = "compact.restore" end,

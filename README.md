@@ -9,6 +9,7 @@ Give your RuneScape bank presets custom names, colours, and skill icons. This Lu
 - Background and text colours via swatches, a colour picker, or hex input.
 - Choose from all 29 skill icons to replace the numbers on presets 1–18 in both
   the preset-management rows and the compact bank Presets buttons, using native client assets.
+- Compact preset icons also show their saved background colour when one is set.
 - Editable preset-row preview shows staged names, colours, and icons before saving.
 - Dragging one bank preset onto another swaps their saved names, colours, and icons too.
 - Beast of Burden has its own saved name and colours and is excluded from numbered-preset swaps.
