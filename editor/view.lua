@@ -3,6 +3,8 @@ local layout = require("editor/layout")
 local theme = require("editor/theme")
 local icons = require("editor/icon")
 local colourPicker = require("components/colour_picker/init")
+local iconPicker = require("components/icon_picker/init")
+local iconCatalogue = require("presets/icon_catalogue")
 local colourValue = require("presets/colour_value")
 local slots = require("presets/slots")
 local info = require("editor/info")
@@ -31,7 +33,7 @@ end
 
 function editor.build(parent, names, bindings, initialSlot, options)
     options = options or {}
-    local persistence = customisations.new(names, bindings.colours)
+    local persistence = customisations.new(names, bindings.colours, bindings.icons)
     local host = parent
     local scrollView
     local contentHost = options.contentHost
@@ -53,6 +55,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentWidth = layout.width
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
+    if bindings.icons then contentHeight = contentHeight + layout.iconHeight end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
     contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
@@ -100,6 +103,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 customized = customized or bindings.colours.get(preset, "background") ~= ""
                     or bindings.colours.get(preset, "text") ~= ""
             end
+            if bindings.icons then customized = customized or bindings.icons.get(preset) ~= "" end
             labels[preset] = slots.title(preset) .. (customized and " *" or "")
             changed = changed or labels[preset] ~= presetLabels[preset]
         end
@@ -164,6 +168,11 @@ function editor.build(parent, names, bindings, initialSlot, options)
         trackPosition(defaultNamePreview, layout.padding, layout.rows.input)
         nameInput.emptyText = ""
     end
+    local pendingIcon = ""
+    local previewSkillIcon
+    local iconControl, iconControlSprite, iconControlNumber, iconLabel, iconReset
+    local iconComponents = {}
+    local iconHidden = {}
     local previewNumber, previewIcons = nil, {}
     if previewBackground then
         previewNumber = ui.Text.new(parent)
@@ -173,12 +182,60 @@ function editor.build(parent, names, bindings, initialSlot, options)
         previewNumber.isShadowed = true
         previewNumber.clickthrough = true
         trackPosition(previewNumber, layout.padding, layout.rows.input)
+        if bindings.icons then
+            previewSkillIcon = ui.Sprite.new(parent)
+            previewSkillIcon.clickthrough = true
+            previewSkillIcon.enabled = false
+            previewSkillIcon:SetSize(24, 24)
+            trackPosition(previewSkillIcon, layout.padding, layout.rows.input)
+        end
         for index = 1, 3 do
             local sprite = ui.Sprite.new(parent)
             sprite:SetSize(20, 20)
             sprite.clickthrough = true
             trackPosition(sprite, layout.padding, layout.rows.input)
             previewIcons[index] = sprite
+        end
+    end
+    local function applyIcon(sprite)
+        if not sprite then return false end
+        local spriteID, entry = iconCatalogue.resolve(pendingIcon)
+        local ok = false
+        if slots.valid(selectedSlot) and spriteID then
+            ok = pcall(function()
+                sprite.sprite = spriteID
+                assert(sprite.spriteID == spriteID)
+                sprite.rgba = 0xFFFFFFFF
+                local scale = math.min(24 / entry.width, 24 / entry.height, 1)
+                sprite:SetSize(math.max(1, math.floor(entry.width * scale)),
+                    math.max(1, math.floor(entry.height * scale)))
+            end)
+        end
+        sprite.hidden = not ok
+        iconHidden[sprite] = not ok
+        return ok
+    end
+    local function refreshIcon()
+        local active = applyIcon(previewSkillIcon)
+        if previewNumber then
+            previewNumber.hidden = active
+            iconHidden[previewNumber] = active
+        end
+        if iconControl then
+            local supported = slots.valid(selectedSlot)
+            for component in pairs(iconComponents) do
+                component.hidden = not supported
+                iconHidden[component] = not supported
+            end
+            iconControl.enabled = supported
+            local available = applyIcon(iconControlSprite)
+            iconControlNumber.content = tostring(selectedSlot)
+            iconControlNumber.hidden = not supported or available
+            iconHidden[iconControlNumber] = not supported or available
+            if not supported then
+                iconControlSprite.hidden = true
+                iconHidden[iconControlSprite] = true
+            end
         end
     end
     local function refreshDecorations()
@@ -190,6 +247,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             previewNumber.font = number.font
             previewNumber.isShadowed = number.isShadowed
         end
+        refreshIcon()
         for index, sprite in ipairs(previewIcons) do
             local source = bankPreview.decoration(selectedSlot, index)
             local resource = source and source.sprite
@@ -332,7 +390,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 refreshColours()
             end)
             resetColour:SetSize(22, 22)
-            trackPosition(resetColour, layout.swatchX + 40, y - 1)
+            trackPosition(resetColour, layout.swatchX + (bindings.icons and 66 or 40), y - 1)
             updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
             defaultMarks[kind] = {}
             -- Draw thin diagonals with native rectangles, without relying on
@@ -381,6 +439,80 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end)
         end
     end
+    if bindings.icons then
+        local function trackIcon(component, x, y)
+            iconComponents[component] = true
+            return trackPosition(component, x, y)
+        end
+        iconLabel = createText(parent, "Icon:", smallFont)
+        iconLabel:SetSize(layout.swatchX - layout.padding - 6, 20)
+        iconLabel.clickthrough = true
+        trackIcon(iconLabel, layout.padding, layout.rows.colourLabel)
+        iconControl = ui.Button.new(parent)
+        iconControl:SetSize(58, 26)
+        iconControl.stylesheetID = id.StyleSheet.BUTTON_DEFAULT
+        iconControl.label = ""
+        trackIcon(iconControl, layout.swatchX, layout.rows.colourLabel - 3)
+        iconControlNumber = createText(parent, "", smallFont)
+        iconControlNumber:SetSize(24, 24)
+        iconControlNumber.alignHorizontal = ui.AlignMode.CENTRE
+        iconControlNumber.alignVertical = ui.AlignMode.CENTRE
+        iconControlNumber.clickthrough = true
+        trackIcon(iconControlNumber, layout.swatchX + 4, layout.rows.colourLabel - 2)
+        -- The client font lacks the Unicode dropdown triangle. Draw a small
+        -- click-through triangle instead, independent of font glyph coverage.
+        for row = 0, 3 do
+            local arrow = ui.Rectangle.new(parent)
+            arrow:SetSize(7 - row * 2, 1)
+            arrow.fill = true
+            arrow.colour = theme.colour(theme.titleText)
+            arrow.clickthrough = true
+            trackIcon(arrow, layout.swatchX + 40 + row, layout.rows.colourLabel + 8 + row)
+        end
+        iconControlSprite = ui.Sprite.new(parent)
+        iconControlSprite:SetSize(24, 24)
+        iconControlSprite.clickthrough = true
+        iconControlSprite.enabled = false
+        trackIcon(iconControlSprite, layout.swatchX + 4, layout.rows.colourLabel - 2)
+        local updateReset
+        iconReset, updateReset = icons.new(parent,
+            id.Sprite.RS3_ICON_STOPWATCH_RESET_0, id.Sprite.RS3_ICON_STOPWATCH_RESET_1,
+            id.Sprite.RS3_ICON_STOPWATCH_RESET_2, function()
+                dismissPicker()
+                pendingIcon = ""
+                statusLabel.content = ""
+                refreshIcon()
+            end)
+        iconReset:SetSize(22, 22)
+        trackIcon(iconReset, layout.swatchX + 66, layout.rows.colourLabel - 1)
+        updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
+        iconControl:Subscribe(ui.Hook.ONBUTTONPRESSED, function()
+            if not slots.valid(selectedSlot) then return end
+            local toggleClosed = pickerKind == "icon"
+            dismissPicker()
+            if toggleClosed then return end
+            pickerKind = "icon"
+            local slot, context = selectedSlot, names.getContext()
+            closePicker, updatePicker = iconPicker.open(host, {
+                categories = iconCatalogue.categories, initial = pendingIcon,
+                resolve = iconCatalogue.resolve, anchor = iconControl, theme = theme,
+                attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)
+                    contentHost:_RegisterOverlay(root, nil, updatePosition)
+                    contentHost:_SyncOverlays(false)
+                    return function() contentHost:_UnregisterOverlay(root) end
+                end or nil,
+                onSelect = function(value)
+                    if selectedSlot ~= slot or names.getContext() ~= context then return end
+                    pendingIcon = value
+                    statusLabel.content = ""
+                    refreshIcon()
+                end,
+                onClose = function()
+                    closePicker, updatePicker, pickerKind = nil, nil, nil
+                end,
+            })
+        end)
+    end
     local toggleInfo, positionInfo = info.new(options.infoParent or host, {
         header = options.infoParent ~= nil,
     })
@@ -396,6 +528,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function refreshSelectedName()
         dismissPicker()
         displayedCharacterContext = names.getContext()
+        pendingIcon = bindings.icons and bindings.icons.get(selectedSlot) or ""
         if bindings.colours then
             for kind in pairs(colourControls) do
                 pendingColours[kind] = bindings.colours.get(selectedSlot, kind)
@@ -403,6 +536,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         refreshColours()
         refreshPresetLabels()
+        refreshIcon()
         nameInput.content = names.get(selectedSlot) or ""
         refreshInputAlignment()
         statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
@@ -419,6 +553,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
 
         local saveSucceeded, message = persistence.save(selectedSlot, {
             name = value, background = pendingColours.background, text = pendingColours.text,
+            icon = bindings.icons and pendingIcon or nil,
         })
         setStatus(message, saveSucceeded)
         refreshPresetLabels()
@@ -464,7 +599,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         nameInput.content = ""
         pendingColours.background, pendingColours.text = "", ""
+        pendingIcon = ""
         refreshColours()
+        refreshIcon()
         setStatus("Defaults staged. Click Save to apply.", true)
     end), layout.resetX, buttonsY)
     if managedInput then
@@ -509,7 +646,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 local kind = defaultMarkKinds[control]
                 local customColour = kind and colourValue.normalize(pendingColours[kind]) ~= nil
                 local nonemptyPreview = control == defaultNamePreview and nativeTextVisible
-                control.hidden = not not (customColour or nonemptyPreview
+                control.hidden = not not (customColour or nonemptyPreview or iconHidden[control]
                     or top < 0 or top + control.height > host.height)
             end
         end
@@ -518,6 +655,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local function sizeContent()
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
+            + (bindings.icons and layout.iconHeight or 0)
             - (options.hideTitle and layout.titleHeight or 0)
             - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight
@@ -576,9 +714,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local isColumn = position.width == layout.buttonWidth
                 or (bindings.colours and position.y + titleOffset == layout.rows.colourLabel)
             local availableWidth = isColumn and buttonWidth or controlWidth
-            local isSwatch = position.x >= layout.swatchX - 1 and position.width <= 34
-            local isColourLabel = control == colourLabels.background or control == colourLabels.text
-            local swatchX = math.max(layout.padding, math.min(layout.swatchX, width - layout.padding - 62))
+            local isSwatch = position.x >= layout.swatchX - 1 and (position.width <= 34 or control == iconControl)
+            local isColourLabel = control == colourLabels.background or control == colourLabels.text or control == iconLabel
+            local swatchX = math.max(layout.padding, math.min(layout.swatchX,
+                width - layout.padding - (bindings.icons and 88 or 62)))
             if isSwatch then
                 availableWidth = position.width
                 x = swatchX + position.x - layout.swatchX
@@ -594,6 +733,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if position.y + titleOffset >= layout.rows.input then
                 y = y - headingGapReduction
             end
+            if bindings.icons and not iconComponents[control]
+                and position.y + titleOffset >= layout.rows.colourLabel - 3 then
+                y = y + layout.iconHeight
+            end
             if control.content == constants.editorTitle or control.content == "Preset customisation" then
                 control.content = width < layout.width and "Preset customisation" or constants.editorTitle
                 availableWidth = math.max(1, controlWidth - layout.popupCloseSize - 4)
@@ -607,6 +750,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             elseif control == previewNumber then
                 control:SetSize(24, layout.fieldHeight)
                 control:SetPos(offsetX + layout.padding + 5, offsetY + y)
+            elseif control == previewSkillIcon then
+                control:SetSize(24, 24)
+                control:SetPos(offsetX + layout.padding + 5, offsetY + y + (layout.fieldHeight - 24) / 2)
             else
                 for index, sprite in ipairs(previewIcons) do
                     if control == sprite then
@@ -634,6 +780,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         positionInfo()
         refreshInputAlignment()
+        refreshIcon()
         updateClipping()
         if managedInput then
             -- Refresh after repositioning too, not only when the user scrolls.
@@ -655,6 +802,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
         refreshPresetLabels()
         refreshColours()
+        refreshIcon()
         updateClipping()
     end, toggleInfo, function()
         dismissPicker()

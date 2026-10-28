@@ -1,13 +1,15 @@
 local test = require("tests.test_helper")
 
 -- Mock only the native API used by the editor. No actual client UI is created.
-local function createFixture(colours)
+local function createFixture(colours, iconStore)
     local f = { controls = {}, stored = { [18] = "Last preset" }, context = "first",
         saveCalls = 0, saveMode = "success" }
     local function createControl(kind, parent)
         local control = { kind = kind, parent = parent, entries = {}, hooks = {},
             text = {}, containerSprite = {} }
-        setmetatable(control, { __newindex = function(target, key, value)
+        setmetatable(control, { __index = function(target, key)
+            if key == "spriteID" then return target.sprite end
+        end, __newindex = function(target, key, value)
             if kind == "text" and key == "shadowRGBA" then
                 error("Native Text does not expose a writable shadowRGBA property")
             end
@@ -57,7 +59,7 @@ local function createFixture(colours)
         List = { new = function(parent) return createControl("list", parent) end },
         Hook = { ONBUTTONPRESSED = 1, ONCONTENTCHANGED = 2, ONSELECTIONCHANGED = 3, ONRESIZE = 4, ONCLICK = 5,
             ONSCROLLWHEEL = 6, ONHOLD = 7, ONRELEASE = 8,
-            ONMOUSEOVER = 9, ONMOUSELEAVE = 10 },
+            ONMOUSEOVER = 9, ONMOUSELEAVE = 10, ONKEY = 11 },
         SelectionChangeEvent = { SELECTED = 1, DESELECTED = 0 },
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
         AlignMode = { CENTRE = 1 },
@@ -140,6 +142,11 @@ local function createFixture(colours)
             RS3_ICON_STOPWATCH_RESET_0 = 14805, RS3_ICON_STOPWATCH_RESET_1 = 14806,
             RS3_ICON_STOPWATCH_RESET_2 = 14807 },
     }
+    if iconStore then
+        for index, entry in ipairs(require("presets/icon_catalogue").categories[1].entries) do
+            id.Sprite[entry.sprite] = 2000 + index
+        end
+    end
     f.names = {
         normalize = dofile("presets/names.lua").normalize,
         getContext = function() return f.context end,
@@ -162,7 +169,7 @@ local function createFixture(colours)
         end
         local firstNewControl = #self.controls + 1
         self.refresh, self.toggleInfo, self.destroy, self.selectSlot = dofile("editor/view.lua").build(self.parent, self.names,
-            self.bindings or { presetCount = 18, colours = colours }, initialSlot, options)
+            self.bindings or { presetCount = 18, colours = colours, icons = iconStore }, initialSlot, options)
         for index = firstNewControl, #self.controls do
             local control = self.controls[index]
             if control.kind == "list" and control.entries[17] then self.selector = control
@@ -1030,7 +1037,7 @@ test.case("Editor info button reveals and hides scope notes without saving or ch
     for _, control in ipairs(f.controls) do
         if control.kind == "text" then text[control.content] = true end
     end
-    test.equal(text["Changes names and colours only."], true)
+    test.equal(text["Local appearance changes only."], true)
     test.equal(text["Does not load presets or unlock slots."], true)
     test.equal(text["Stored on this device, per character name."], true)
     test.equal(f.input.y, originalY, "Help must not move the form")
@@ -1165,4 +1172,262 @@ test.case("Reopening starts at preset 1 without overwriting saved settings", fun
     test.equal(f.input.content, "First preset")
     test.equal(f.stored[18], "Last preset")
     test.equal(f.saveCalls, 0)
+end)
+
+local function iconFixture(mockPicker)
+    local data, writes, opened = { [1] = "skills:farming" }, 0, {}
+    local store = {
+        normalize = dofile("presets/icons.lua").normalize,
+        get = function(slot) return data[slot] or "" end,
+        save = function(slot, value)
+            test.equal(slot == 19, false)
+            data[slot], writes = value, writes + 1
+            return true
+        end,
+    }
+    local old = package.loaded["components/icon_picker/init"]
+    if mockPicker ~= false then
+        package.loaded["components/icon_picker/init"] = { open = function(host, options)
+            local popup = { options = options, host = host, moves = 0 }
+            opened[#opened + 1] = popup
+            return function()
+                if popup.closed then return end
+                popup.closed = true
+                options.onClose()
+            end, function() popup.moves = popup.moves + 1 end
+        end }
+    end
+    local colours = { get = function() return "" end, save = function() return true end }
+    local f = createFixture(colours, store)
+    package.loaded["components/icon_picker/init"] = old
+    f.iconData, f.iconPopups = data, opened
+    function f:iconWrites() return writes end
+    function f:iconButton()
+        for index = #self.controls, 1, -1 do
+            local c = self.controls[index]
+            if c.kind == "button" and c.width == 58 then return c end
+        end
+    end
+    function f:openIcons() self:iconButton().hooks[ui.Hook.ONBUTTONPRESSED]() end
+    function f:iconNumber()
+        for index = #self.controls, 1, -1 do
+            local c = self.controls[index]
+            if c.kind == "text" and c.width == 24 and c.height == 24 then return c end
+        end
+    end
+    function f:stageIcon(key)
+        self:openIcons()
+        local popup = opened[#opened]
+        popup.closed = true
+        popup.options.onClose()
+        popup.options.onSelect(key)
+    end
+    function f:skillPreviews()
+        local resource = require("presets/icon_catalogue").resolve("skills:necromancy")
+        local found = {}
+        if resource == nil then return found end
+        for _, c in ipairs(self.controls) do
+            if c.kind == "sprite" and c.sprite == resource and not c.hidden then found[#found + 1] = c end
+        end
+        return found
+    end
+    return f
+end
+
+test.case("Editor icon choices are staged, previewed, saved and restored on reopen", function()
+    local f = iconFixture()
+    f:stageIcon("skills:necromancy")
+    test.equal(f:iconWrites(), 0)
+    test.equal(f.iconData[1], "skills:farming")
+    test.equal(#f:skillPreviews(), 2, "Control and preset preview share the catalogue")
+    f.refresh()
+    test.equal(#f:skillPreviews(), 2)
+    f.input.content = ""
+    f:clickSave()
+    test.equal(f.iconData[1], "skills:necromancy")
+    test.equal(f:iconWrites(), 1)
+    test.equal(f.selector.entries[0], "Preset 1 *")
+    f:open()
+    test.equal(f:iconNumber().hidden, true)
+end)
+
+test.case("Editor icon reset and full Reset stage defaults until Save", function()
+    local f = iconFixture()
+    f:stageIcon("skills:necromancy")
+    local button = f:iconButton()
+    local reset
+    for _, c in ipairs(f.controls) do
+        if c.kind == "sprite" and c.sprite == id.Sprite.RS3_ICON_STOPWATCH_RESET_0
+            and c.y == button.y + 2 then reset = c end
+    end
+    test.equal(reset ~= nil, true)
+    reset.hooks[ui.Hook.ONCLICK]()
+    test.equal(f:iconNumber().content, "1")
+    test.equal(f:iconNumber().hidden, false)
+    test.equal(f:iconWrites(), 0)
+    f:stageIcon("skills:necromancy")
+    f:clickReset()
+    test.equal(f:iconNumber().hidden, false)
+    test.equal(f.iconData[1], "skills:farming")
+    f:clickSave()
+    test.equal(f.iconData[1], "")
+end)
+
+test.case("Preset changes and disposal discard staged icon edits and close their picker", function()
+    local f = iconFixture()
+    f:stageIcon("skills:necromancy")
+    f:openIcons()
+    local old = f.iconPopups[#f.iconPopups]
+    f.selectSlot(2)
+    test.equal(old.closed, true)
+    old.options.onSelect("skills:magic")
+    test.equal(f:iconNumber().content, "2")
+    test.equal(f:iconNumber().hidden, false)
+    f.selectSlot(1)
+    f:openIcons()
+    test.equal(f.iconPopups[#f.iconPopups].options.initial, "skills:farming")
+    f.destroy()
+    test.equal(f.iconPopups[#f.iconPopups].closed, true)
+    test.equal(f:iconWrites(), 0)
+end)
+
+test.case("Icon and colour pickers are mutually exclusive and same-button clicks toggle", function()
+    local f = iconFixture()
+    f:openIcons()
+    local first = f.iconPopups[1]
+    f:openIcons()
+    test.equal(first.closed, true)
+    test.equal(#f.iconPopups, 1)
+    f:openIcons()
+    local swatch
+    for _, c in ipairs(f.controls) do
+        if c.kind == "rectangle" and c.width == 32 and c.height == 20 then swatch = swatch or c end
+    end
+    swatch.hooks[ui.Hook.ONCLICK]()
+    test.equal(f.iconPopups[2].closed, true)
+    local colourRoot
+    for _, c in ipairs(f.controls) do
+        if c.kind == "layer" and c.width == 288 then colourRoot = c end
+    end
+    f:openIcons()
+    test.equal(colourRoot.destroyed, true)
+end)
+
+test.case("Character changes reject stale icon callbacks and failed saves preserve the draft", function()
+    local f = iconFixture()
+    f:stageIcon("skills:necromancy")
+    f.saveMode = "rejected"
+    f:clickSave()
+    test.equal(f.iconData[1], "skills:farming")
+    test.equal(#f:skillPreviews(), 2)
+    f.saveMode = "success"
+    f:openIcons()
+    local old = f.iconPopups[#f.iconPopups]
+    f.context = "second"
+    old.options.onSelect("skills:magic")
+    f.refresh()
+    test.equal(old.closed, true)
+    test.equal(f:iconWrites(), 0)
+end)
+
+test.case("BoB hides icon controls and unavailable sprites retain the preview number", function()
+    local f = iconFixture()
+    f:stageIcon("skills:necromancy")
+    local entry = require("presets/icon_catalogue").get("skills:necromancy")
+    local oldResource = id.Sprite[entry.sprite]
+    id.Sprite[entry.sprite] = nil
+    f.refresh()
+    test.equal(f:iconNumber().content, "1")
+    test.equal(f:iconNumber().hidden, false)
+    test.equal(#f:skillPreviews(), 0)
+    for _, c in ipairs(f.controls) do
+        if c.kind == "sprite" and c.sprite == oldResource then test.equal(c.hidden, true) end
+        if c.kind == "text" and c.content == "1" then test.equal(c.hidden, false) end
+    end
+    f.bindings = dofile("bank/bindings.lua")
+    f.bindings.colours = { get = function() return "" end, save = function() return true end }
+    f.bindings.icons = { get = function() return "" end, normalize = dofile("presets/icons.lua").normalize,
+        save = function() error("BoB must not write icons") end }
+    ui.Interfaces = { GetComponent = function() return nil end }
+    f:open(19)
+    test.equal(f:iconButton().hidden, true)
+    f.refresh()
+    test.equal(f:iconButton().hidden, true)
+    f:clickReset()
+    f:clickSave()
+end)
+
+test.case("The real icon picker stages an available catalogue entry in the editor", function()
+    local f = iconFixture(false)
+    f:openIcons()
+    local tile
+    for _, c in ipairs(f.controls) do
+        if c.kind == "button" and c.width == 40 and c.height == 40 then tile = tile or c end
+    end
+    test.equal(tile ~= nil, true)
+    tile.hooks[ui.Hook.ONBUTTONPRESSED]()
+    test.equal(f:iconWrites(), 0)
+    f:clickSave()
+    test.equal(f.iconData[1], "skills:attack")
+end)
+
+test.case("Icon row aligns above colours and fits narrow clipped layouts", function()
+    local f = iconFixture(false)
+    local iconLabel, colourLabel
+    for _, c in ipairs(f.controls) do
+        if c.content == "Icon:" then iconLabel = c end
+        if c.content == "Background colour:" then colourLabel = c end
+    end
+    test.equal(colourLabel.y - iconLabel.y, require("editor/layout").iconHeight)
+    test.equal(iconLabel.x, colourLabel.x)
+    f.parent.width, f.parent.height = 200, 100
+    f:open(nil, { scrollable = true })
+    local button = f:iconButton()
+    test.equal(button.x + button.width <= f.scrollView.contentWidth, true)
+    test.equal(button.hidden, true, "Below-viewport icon row stays clipped")
+    f.scrollView:SetScrollPosition(80)
+    f.refresh()
+    test.equal(button.hidden, false)
+    f.destroy()
+end)
+
+test.case("Icon control draws a click-through dropdown arrow without font glyphs", function()
+    local f = iconFixture(false)
+    local button = f:iconButton()
+    test.equal(button.label, "")
+    local rows = 0
+    for _, c in ipairs(f.controls) do
+        if c.kind == "rectangle" and c.height == 1 and c.x >= button.x + 40
+            and c.x <= button.x + 43 and c.y >= button.y + 11 and c.y <= button.y + 14 then
+            rows = rows + 1
+            test.equal(c.clickthrough, true)
+            test.equal(c.fill, true)
+            test.equal(c.x + c.width <= button.x + button.width, true)
+        end
+    end
+    test.equal(rows, 4)
+end)
+
+test.case("Editor icon overlay registers, follows movement, and closes when hidden", function()
+    local f = iconFixture(false)
+    local owner = prettyui.SimpleView.new(f.parent, { width = 580, height = 360 })
+    owner.overlays = {}
+    function owner:_RegisterOverlay(root, _, position) self.overlays[root] = position end
+    function owner:_UnregisterOverlay(root) self.overlays[root] = nil end
+    function owner:_SyncOverlays()
+        for _, position in pairs(self.overlays) do position() end
+    end
+    f:open(nil, { contentHost = owner })
+    f:iconButton().xyGlobal = { x = 50, y = 50 }
+    f:openIcons()
+    local root = next(owner.overlays)
+    test.equal(root ~= nil, true)
+    local x = root.x
+    f:iconButton().xyGlobal.x = 100
+    f.refresh()
+    test.equal(root.x, x + 50)
+    f.parent.visibleGlobal = false
+    f.refresh()
+    test.equal(root.destroyed, true)
+    test.equal(next(owner.overlays), nil)
 end)

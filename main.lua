@@ -12,6 +12,7 @@ local bankDropdown = require("bank/dropdown")
 local settings = require("presets/settings")
 local preferences = require("editor/preferences")
 bankBindings.colours = presetColours
+bankBindings.icons = require("presets/icons")
 
 -- Each open editor supplies a callback that follows character changes.
 local editorRefreshCallbacks = {}

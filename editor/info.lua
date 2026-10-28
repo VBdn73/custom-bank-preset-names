@@ -35,7 +35,7 @@ function info.new(host, options)
             controls[#controls + 1] = { control = box, x = 0, y = 0 }
         end
         for index, text in ipairs({ "Stored on this device, per character name.",
-            "Changes names and colours only.", "Does not load presets or unlock slots." }) do
+            "Local appearance changes only.", "Does not load presets or unlock slots." }) do
             local note = ui.Text.new(host)
             note.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
             note.content = text

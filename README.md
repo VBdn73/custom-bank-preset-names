@@ -68,13 +68,13 @@ network requests.
 
 ## Data protection - Case 1 (local only)
 
-The plugin stores your character's display name, preset names, colours, editor
+The plugin stores your character's display name, preset names, colours, icon selections, editor
 position, and dropdown preference locally. Nothing is sent to the developer or
 external services. No screenshots or gameplay history are collected.
 
 Settings persist locally through the client's `PersistentDB` API. The character
 display name forms part of the storage keys, ignoring case and surrounding
-spaces. Names and colours are stored per character; editor position is shared
+spaces. Names, colours, and icons are stored per character; editor position is shared
 across characters on this device, as is the dropdown visibility preference.
 
 - Settings do not sync between devices; beta and live storage are separate.

@@ -124,6 +124,10 @@ test.case("PrettyUI popup retains bank ownership, selected slot and safe cleanup
     test.equal(built[#built].options.formHeight,
         layout.compactBodyHeight + layout.colourHeight - layout.popupEditorGapReduction)
     test.equal(windows[#windows].content.height, built[#built].options.formHeight)
+    popup.open(1, {}, { labels = bindings.labels, colours = {}, icons = {} }, library)
+    test.equal(built[#built].options.formHeight,
+        layout.compactBodyHeight + layout.colourHeight + layout.iconHeight - layout.popupEditorGapReduction)
+    test.equal(windows[#windows].content.height, built[#built].options.formHeight)
     popup.close()
     local count = #windows
     source.visibleGlobal = false
