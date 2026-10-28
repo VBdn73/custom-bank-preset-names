@@ -5,6 +5,9 @@ local states, errors = {}, {}
 -- Native number labels sit close to the row border. Give replacement icons
 -- a small inset like the editor preview, without moving native labels or hits.
 local horizontalInset = 4
+-- Keep injected children out of the native category-0 ID sequence. Both IDs
+-- remain within the client's accepted range, as in the compact renderer.
+local spriteCategory = 1
 
 local function editable(number)
     return number and not number.isRestricted and number.type == ui.ComponentType.LABEL
@@ -42,7 +45,7 @@ local function apply(binding, store)
         state = nil
     end
     if not state then
-        local sprite = ui.Sprite.new(parent)
+        local sprite = ui.Sprite.new(parent, spriteCategory, slot)
         assert(sprite, "Native number parent rejected sprite creation.")
         -- Track immediately: any later setup failure must destroy our sprite.
         state = { number = number, parent = parent, sprite = sprite,
@@ -64,6 +67,9 @@ local function apply(binding, store)
     state.sprite:SetPos(number.x + horizontalInset + math.floor((number.width - w) / 2),
         number.y + math.floor((number.height - h) / 2))
     state.sprite.hidden = not number.visibleGlobal
+    -- Selection scripts can reorder native sibling backgrounds after creation.
+    -- Raise only our non-interactive child, without changing native hit targets.
+    state.sprite:MoveToFront()
     assert(state.sprite.spriteID == spriteID, "Native sprite assignment was not accepted.")
     -- Sibling placement inherits native list scrolling/clipping without changing
     -- hit targets, row backgrounds, visibility, or input hooks. Only clear text

@@ -9,6 +9,8 @@
   retained native number text for page detection and restored number colour on cleanup.
 - Used explicit compact sprite IDs outside native category 0 and refreshed their
   sibling render order to prevent icons disappearing during bank/page redraws.
+- Applied explicit sprite IDs and sibling render-order refresh to management-row
+  icons as well, so switching preset selections does not leave them behind native backgrounds.
 - Added a reusable Skills icon picker with selection highlighting and skill-name labels.
 - Icons preview immediately in the editor and commit with names and colours on **Save**.
 - Added icon reset controls; full **Reset** stages all defaults, including the preset number.

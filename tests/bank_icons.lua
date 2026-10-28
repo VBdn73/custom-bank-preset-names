@@ -28,15 +28,26 @@ local function fixture()
                 test.equal(dynamicID % 3, 0)
                 return f.numbers[dynamicID / 3 + 1]
             end },
-            Sprite = { new = function(parent)
+            Sprite = { new = function(parent, categoryID, dynamicID)
                 if f.creationFails then return nil end
-                local sprite = { parent = parent }
+                assert(type(categoryID) == "number" and categoryID % 1 == 0
+                    and categoryID >= 0 and categoryID <= 256, "Invalid sprite category ID")
+                assert(type(dynamicID) == "number" and dynamicID % 1 == 0
+                    and dynamicID >= 0 and dynamicID <= 256, "Invalid sprite dynamic ID")
+                test.equal(categoryID, 1, "Plugin sprites must not inherit native category 0")
+                test.equal(dynamicID >= 1 and dynamicID <= 18, true)
+                local sprite = { parent = parent, categoryID = categoryID, dynamicID = dynamicID }
                 function sprite:SetSize(w, h)
                     if f.layoutFails then error("Injected layout failure") end
                     self.width, self.height = w, h
                 end
                 function sprite:SetPos(x, y) self.x, self.y = x, y end
                 function sprite:Destroy() self.destroyed = true end
+                function sprite:MoveToFront()
+                    if f.frontFails then error("Injected render-order failure") end
+                    self.frontMoves = (self.frontMoves or 0) + 1
+                    self.occluded = false
+                end
                 setmetatable(sprite, { __index = function(self, key)
                     if key == "spriteID" then return f.assignmentFails and -1 or self.sprite end
                 end })
@@ -79,6 +90,9 @@ test.case("Bank icons render as untinted, non-interactive siblings and leave nat
     local number, sprite = f.numbers[1], f.sprites[1]
     test.equal(number.content, "")
     test.equal(sprite.parent, number.parent)
+    test.equal(sprite.categoryID, 1)
+    test.equal(sprite.dynamicID, 1)
+    test.equal(sprite.frontMoves, 1)
     test.equal(sprite.width, 24)
     test.equal(sprite.height, 24)
     test.equal(sprite.x, 8, "Bank icon has a 4-unit inset from the native number area")
@@ -98,6 +112,7 @@ test.case("Bank icons render as untinted, non-interactive siblings and leave nat
     test.equal(f.numbers[2].content, "2")
     f.update()
     test.equal(#f.sprites, 1, "Unchanged components reuse their sprite")
+    test.equal(sprite.frontMoves, 2)
 end)
 
 test.case("All 18 bank rows render saved icons and reset independently", function()
@@ -116,6 +131,42 @@ test.case("All 18 bank rows render saved icons and reset independently", functio
     for slot = 1, 18 do test.equal(f.numbers[slot].content, tostring(slot)) end
 end)
 
+test.case("Management icons survive repeated native selection redraws without losing saved icons", function()
+    local f = fixture()
+    local parent = {}
+    for slot = 1, 18 do
+        f.numbers[slot].parent = parent
+        f.selected[slot] = slot % 2 == 0 and "skills:necromancy" or "skills:farming"
+    end
+    f.update()
+    local addresses = {}
+    for slot, sprite in ipairs(f.sprites) do
+        test.equal(sprite.parent, parent)
+        test.equal(sprite.categoryID, 1)
+        test.equal(sprite.dynamicID, slot)
+        local address = sprite.categoryID .. ":" .. sprite.dynamicID
+        test.equal(addresses[address], nil, "Each row gets a distinct plugin child address")
+        addresses[address] = true
+    end
+    for _, selectedSlot in ipairs({ 1, 16, 2, 18, 16 }) do
+        -- Model native selection scripts rewriting numbers and drawing sibling
+        -- backgrounds over retained injected sprites, without rebuilding rows.
+        f.numbers[selectedSlot].content = tostring(selectedSlot)
+        for _, sprite in ipairs(f.sprites) do sprite.occluded = true end
+        f.update()
+        test.equal(#f.sprites, 18, "Selection redraws reuse existing sprites")
+        for slot, sprite in ipairs(f.sprites) do
+            test.equal(sprite.occluded, false)
+            test.equal(sprite.destroyed, nil)
+            test.equal(f.numbers[slot].content, "")
+            test.equal(sprite.sprite, f.spriteIDs[catalogue.get(f.selected[slot]).sprite])
+        end
+    end
+    f.renderer.restore()
+    test.equal(f.live(), 0)
+    for slot = 1, 18 do test.equal(f.numbers[slot].content, tostring(slot)) end
+end)
+
 test.case("Unknown selections and missing resources retain or restore the native number", function()
     local f = fixture()
     f.selected[1], f.selected[2] = "skills:removed", "skills:farming"
@@ -127,7 +178,7 @@ test.case("Unknown selections and missing resources retain or restore the native
     test.equal(f.live(), 0)
 end)
 
-for _, failure in ipairs({ "creationFails", "layoutFails", "assignmentFails" }) do
+for _, failure in ipairs({ "creationFails", "layoutFails", "assignmentFails", "frontFails" }) do
     test.case("Renderer keeps numbers and cleans up on " .. failure, function()
         local f = fixture()
         f.selected[1], f[failure] = "skills:farming", true
