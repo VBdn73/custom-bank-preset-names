@@ -11,8 +11,6 @@ local bankReorder = require("bank/reorder")
 local bankDropdown = require("bank/dropdown")
 local settings = require("presets/settings")
 local preferences = require("editor/preferences")
-local iconProbe = require("bank/icon_probe")
-local iconProbeConfig = require("bank/icon_probe_config")
 bankBindings.colours = presetColours
 
 -- Each open editor supplies a callback that follows character changes.
@@ -83,11 +81,9 @@ Event.Draw.Subscribe("presetNames.labels", function()
     bankDropdown.update(settings.hidePredefinedDropdown())
     bankAppearance.update(bankBindings.appearance, presetColours)
     bankLabels.update(bankBindings.labels, presetNames)
-    iconProbe.update(iconProbeConfig)
 end)
 
 function PluginShutdown()
-    iconProbe.restore()
     bankDropdown.restore()
     bankReorder.clear()
     if destroyContentView then pcall(destroyContentView) end
