@@ -9,6 +9,7 @@ local states, errors = {}, {}
 -- creation must still fail safely if an address is already occupied.
 local spriteCategory = 1
 local backgroundInset = 2
+local bob = require("presets/slots").bob
 
 local function editable(number)
     return number and not number.isRestricted and number.type == ui.ComponentType.LABEL
@@ -35,15 +36,34 @@ local function displayedSlot(text, index)
     if slot == index or slot == index + ids.compactPresetButtonCount then return slot end
 end
 
+local function resolve(binding)
+    return ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
+        binding.categoryID, binding.dynamicID)
+end
+
 local function apply(binding, store, colours)
     local index = binding.buttonIndex
-    local number = ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
-        binding.categoryID, binding.dynamicID)
+    local number = resolve(binding)
     if not editable(number) then release(index); return end
     local parent = number.parent
-    local slot = displayedSlot(number.content, index)
+    local slot = binding.slot == bob and bob or displayedSlot(number.content, index)
     if not slot or not parent or parent.isRestricted then release(index); return end
     local spriteID, entry = catalogue.resolve(store.get(slot))
+    if slot == bob then
+        -- BoB retains its native artwork; only mirror it while a background is
+        -- enabled, so the colour can sit behind it without reordering native UI.
+        if not colours or not colours.rgba(slot, "background") then release(index); return end
+        -- Captured native addresses: label 133 supplies the full 30px button
+        -- bounds; sprite 134 supplies its 24px artwork on either preset page.
+        local icon = ui.Interfaces:GetComponent(binding.interfaceID, binding.staticID,
+            binding.categoryID, ids.compactBobIcon)
+        if not icon or icon.isRestricted or icon.type ~= ui.ComponentType.SPRITE then
+            release(index); return
+        end
+        spriteID, entry = icon.spriteID, { width = icon.width, height = icon.height }
+    elseif number.type ~= ui.ComponentType.LABEL then
+        release(index); return
+    end
     if not spriteID then release(index); return end
     local state = states[index]
     if state and (state.number ~= number or state.parent ~= parent
@@ -87,7 +107,8 @@ local function apply(binding, store, colours)
             state.background.enabled = false
             state.backgroundCaps = {}
             for capIndex = 1, 2 do
-                local cap = ui.Rectangle.new(parent, spriteCategory + 1, index + capIndex * 9)
+                local cap = ui.Rectangle.new(parent, spriteCategory + 1,
+                    index + capIndex * (ids.compactPresetButtonCount + 1))
                 assert(cap, "Native compact number parent rejected background corner creation.")
                 state.backgroundCaps[capIndex] = cap
                 cap.fill, cap.clickthrough, cap.enabled = true, true, false
@@ -148,7 +169,8 @@ function renderer.update(bindings, store, colours)
     for _, binding in ipairs(bindings or {}) do
         local index = binding.buttonIndex
         if type(index) == "number" and index % 1 == 0
-            and index >= 1 and index <= ids.compactPresetButtonCount then
+            and index >= 1 and index <= ids.compactPresetButtonCount + 1
+            and (index <= ids.compactPresetButtonCount or binding.slot == bob) then
             active[index] = true
             local ok, err = pcall(apply, binding, store, colours)
             if not ok then

@@ -22,6 +22,8 @@ return {
     compactPresetFirstDynamicID = 9,
     compactPresetDynamicStride = 11,
     compactPresetButtonCount = 9,
+    compactBobLabel = 133,
+    compactBobIcon = 134,
 
     -- Each preset has zero-based number, name, and extra-text labels.
     labelsPerPreset = 3,

@@ -36,6 +36,9 @@ for slot = 1, presetCount do
 end
 
 local bob = require("presets/slots").bob
+compactButtons[#compactButtons + 1] = { buttonIndex = bankIds.compactPresetButtonCount + 1,
+    slot = bob, interfaceID = bankIds.interface, staticID = bankIds.compactPresetLabel,
+    categoryID = bankIds.category, dynamicID = bankIds.compactBobLabel }
 labels[bob] = { slot = bob, interfaceID = bankIds.interface,
     staticID = bankIds.presetLabel, categoryID = bankIds.category, dynamicID = bankIds.bobName }
 appearance[#appearance + 1] = { slot = bob, staticID = bankIds.presetBackground,

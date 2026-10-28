@@ -1,9 +1,9 @@
 local test = require("tests.test_helper")
 
-test.case("Compact bindings target only the nine verified native number labels", function()
+test.case("Compact bindings target nine native number labels and the fixed BoB icon", function()
     local bindings = dofile("bank/bindings.lua")
     local expectedDynamicIDs = { 9, 20, 31, 42, 53, 64, 75, 86, 97 }
-    test.equal(#bindings.compactButtons, 9)
+    test.equal(#bindings.compactButtons, 10)
     for buttonIndex, dynamicID in ipairs(expectedDynamicIDs) do
         local binding = bindings.compactButtons[buttonIndex]
         test.equal(binding.buttonIndex, buttonIndex)
@@ -13,7 +13,13 @@ test.case("Compact bindings target only the nine verified native number labels",
         test.equal(binding.dynamicID, dynamicID)
         test.equal(binding.slot, nil, "A physical button must not imply a permanent preset slot")
     end
-    test.equal(bindings.compactButtons[10], nil)
+    local bob = bindings.compactButtons[10]
+    test.equal(bob.buttonIndex, 10)
+    test.equal(bob.slot, 19)
+    test.equal(bob.interfaceID, 517)
+    test.equal(bob.staticID, 117)
+    test.equal(bob.categoryID, 0)
+    test.equal(bob.dynamicID, 133)
 end)
 
 test.case("Compact bindings leave management rows and Beast of Burden mappings unchanged", function()

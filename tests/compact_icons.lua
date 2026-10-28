@@ -19,11 +19,13 @@ local function fixture()
             end
             return require(path)
         end,
-        ui = { ComponentType = { LABEL = 1 }, Interfaces = {
+        ui = { ComponentType = { LABEL = 1, SPRITE = 2 }, Interfaces = {
             GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
                 test.equal(interfaceID, 517)
                 test.equal(staticID, 117)
                 test.equal(categoryID, 0)
+                if dynamicID == 133 then return f.bob end
+                if dynamicID == 134 then return f.bobIcon end
                 return f.labels[(dynamicID - 9) / 11 + 1]
             end,
         }, Sprite = { new = function(parent, categoryID, dynamicID)
@@ -33,7 +35,7 @@ local function fixture()
             assert(type(dynamicID) == "number" and dynamicID % 1 == 0
                 and dynamicID >= 0 and dynamicID <= 256, "Invalid sprite dynamic ID")
             test.equal(categoryID, 1, "Plugin children must not inherit native category 0")
-            test.equal(dynamicID >= 1 and dynamicID <= 9, true)
+            test.equal(dynamicID >= 1 and dynamicID <= 10, true)
             local sprite = { parent = parent, visibleGlobal = f.initialSpriteVisibility,
                 categoryID = categoryID, dynamicID = dynamicID }
             function sprite:SetSize(w, h)
@@ -82,6 +84,41 @@ local function fixture()
     end
     return f
 end
+
+test.case("Compact BoB background follows the setting and saved colour without a custom icon", function()
+    local f = fixture()
+    f.bob = f.label(19)
+    f.bobIcon = { type = 2, spriteID = 18787, width = 24, height = 24 }
+    f.colours[19] = 0x123456FF
+    f.update()
+    test.equal(#f.messages, 0)
+    test.equal(f.sprites[1].sprite, 18787)
+    test.equal(f.backgrounds[1].width, 26)
+    test.equal(f.backgrounds[1].height, 24)
+    test.equal(f.backgrounds[1].rgba, 0x123456FF)
+    test.equal(f.bob.rgba, 0xFFCB7500)
+    f.page(9)
+    f.colours[19] = 0xABCDEF80
+    f.update()
+    test.equal(f.backgrounds[1].rgba, 0xABCDEF80)
+    f.hideBackgrounds = true
+    f.update()
+    test.equal(f.backgrounds[1].destroyed, true)
+    test.equal(f.bob.rgba, 0xFFCB75FF)
+    f.hideBackgrounds = false
+    f.update()
+    test.equal(f.sprites[2].sprite, 18787)
+    local old = f.bob
+    f.bob = nil
+    f.update()
+    test.equal(old.rgba, 0xFFCB75FF)
+    test.equal(f.sprites[2].destroyed, true)
+    f.bob = old
+    f.update()
+    f.renderer.restore()
+    test.equal(f.bob.rgba, 0xFFCB75FF)
+    test.equal(f.live(), 0)
+end)
 
 test.case("Compact backgrounds toggle live without changing icons or saved colours", function()
     local f = fixture()
