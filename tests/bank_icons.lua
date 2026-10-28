@@ -1,0 +1,253 @@
+local test = require("tests.test_helper")
+local catalogue = require("presets/icon_catalogue")
+
+local function fixture()
+    local f = { numbers = {}, selected = {}, sprites = {}, messages = {} }
+    local spriteIDs = {}
+    for index, entry in ipairs(catalogue.categories[1].entries) do spriteIDs[entry.sprite] = 1000 + index end
+    local bindings = dofile("bank/bindings.lua").numbers
+    function f.number(slot)
+        return { content = tostring(slot), type = 1, parent = {}, width = 24, height = 30,
+            x = 4, y = (slot - 1) * 30, visibleGlobal = true, rgba = 0xFFCB75FF,
+            font = 12, isShadowed = true }
+    end
+    for slot = 1, 18 do f.numbers[slot] = f.number(slot) end
+    local environment = setmetatable({
+        print = function(message) f.messages[#f.messages + 1] = message end,
+        require = function(path)
+            if path == "presets/icon_catalogue" then
+                return { resolve = function(key) return catalogue.resolve(key, spriteIDs) end }
+            end
+            return require(path)
+        end,
+        ui = { ComponentType = { LABEL = 1 },
+            Interfaces = { GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
+                test.equal(interfaceID, 517)
+                test.equal(staticID, 266)
+                test.equal(categoryID, 0)
+                test.equal(dynamicID % 3, 0)
+                return f.numbers[dynamicID / 3 + 1]
+            end },
+            Sprite = { new = function(parent)
+                if f.creationFails then return nil end
+                local sprite = { parent = parent }
+                function sprite:SetSize(w, h)
+                    if f.layoutFails then error("Injected layout failure") end
+                    self.width, self.height = w, h
+                end
+                function sprite:SetPos(x, y) self.x, self.y = x, y end
+                function sprite:Destroy() self.destroyed = true end
+                setmetatable(sprite, { __index = function(self, key)
+                    if key == "spriteID" then return f.assignmentFails and -1 or self.sprite end
+                end })
+                f.sprites[#f.sprites + 1] = sprite
+                return sprite
+            end },
+        },
+    }, { __index = _G })
+    f.renderer = assert(loadfile("bank/icons.lua", "t", environment))()
+    f.preview = assert(loadfile("bank/preview.lua", "t", environment))()
+    f.store = { get = function(slot)
+        if f.storeFails == slot then error("Injected storage error") end
+        return f.selected[slot] or ""
+    end }
+    f.bindings = bindings
+    function f.update() f.renderer.update(f.bindings, f.store) end
+    function f.live()
+        local count = 0
+        for _, sprite in ipairs(f.sprites) do if not sprite.destroyed then count = count + 1 end end
+        return count
+    end
+    f.spriteIDs = spriteIDs
+    return f
+end
+
+test.case("Number bindings cover only presets 1..18 with zero-based dynamic IDs", function()
+    local numbers = dofile("bank/bindings.lua").numbers
+    test.equal(#numbers, 18)
+    for slot, binding in ipairs(numbers) do
+        test.equal(binding.slot, slot)
+        test.equal(binding.dynamicID, (slot - 1) * 3)
+    end
+    test.equal(numbers[19], nil)
+end)
+
+test.case("Bank icons render as untinted, non-interactive siblings and leave native styling intact", function()
+    local f = fixture()
+    f.selected[1] = "skills:farming"
+    f.update()
+    local number, sprite = f.numbers[1], f.sprites[1]
+    test.equal(number.content, "")
+    test.equal(sprite.parent, number.parent)
+    test.equal(sprite.width, 24)
+    test.equal(sprite.height, 24)
+    test.equal(sprite.x, 4)
+    test.equal(sprite.y, 3)
+    test.equal(sprite.clickthrough, true)
+    test.equal(sprite.enabled, false)
+    test.equal(sprite.rgba, 0xFFFFFFFF)
+    test.equal(number.rgba, 0xFFCB75FF)
+    test.equal(number.font, 12)
+    test.equal(number.isShadowed, true)
+    test.equal(number.hidden, nil)
+    test.equal(number.hooks, nil)
+    local previewNumber = f.preview.number(1)
+    test.equal(previewNumber, number, "Editor can still read native number styling while its text is overridden")
+    test.equal(previewNumber.font, 12)
+    test.equal(previewNumber.width, 24)
+    test.equal(f.numbers[2].content, "2")
+    f.update()
+    test.equal(#f.sprites, 1, "Unchanged components reuse their sprite")
+end)
+
+test.case("All 18 bank rows render saved icons and reset independently", function()
+    local f = fixture()
+    for slot = 1, 18 do f.selected[slot] = "skills:necromancy" end
+    f.update()
+    test.equal(f.live(), 18)
+    for slot = 1, 18 do test.equal(f.numbers[slot].content, "") end
+    f.selected[18] = ""
+    f.update()
+    test.equal(f.numbers[18].content, "18")
+    test.equal(f.live(), 17)
+    f.renderer.restore()
+    f.renderer.restore()
+    test.equal(f.live(), 0)
+    for slot = 1, 18 do test.equal(f.numbers[slot].content, tostring(slot)) end
+end)
+
+test.case("Unknown selections and missing resources retain or restore the native number", function()
+    local f = fixture()
+    f.selected[1], f.selected[2] = "skills:removed", "skills:farming"
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+    f.spriteIDs[catalogue.get("skills:farming").sprite] = nil
+    f.update()
+    test.equal(f.numbers[2].content, "2")
+    test.equal(f.live(), 0)
+end)
+
+for _, failure in ipairs({ "creationFails", "layoutFails", "assignmentFails" }) do
+    test.case("Renderer keeps numbers and cleans up on " .. failure, function()
+        local f = fixture()
+        f.selected[1], f[failure] = "skills:farming", true
+        f.update()
+        test.equal(f.numbers[1].content, "1")
+        test.equal(f.live(), 0)
+        test.equal(#f.messages, 1)
+        f.update()
+        test.equal(#f.messages, 1, "Repeated failure is not logged every frame")
+        f[failure] = false
+        f.update()
+        test.equal(f.numbers[1].content, "")
+        test.equal(f.live(), 1)
+    end)
+end
+
+test.case("A later rendering failure restores the original and does not affect other rows", function()
+    local f = fixture()
+    f.selected[1], f.selected[2] = "skills:farming", "skills:magic"
+    f.update()
+    f.numbers[1].width = 0
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+    test.equal(f.numbers[2].content, "")
+    test.equal(f.live(), 1)
+    f.storeFails = 2
+    f.update()
+    test.equal(f.numbers[2].content, "2")
+    test.equal(f.live(), 0)
+end)
+
+test.case("Native text updates survive reset and shutdown without changing geometry", function()
+    local f = fixture()
+    f.selected[1] = "skills:farming"
+    f.update()
+    f.numbers[1].content = "Native update"
+    f.update()
+    test.equal(f.numbers[1].content, "")
+    f.selected[1] = ""
+    f.update()
+    test.equal(f.numbers[1].content, "Native update")
+    f.selected[1] = "skills:farming"
+    f.update()
+    f.numbers[1].content = "Newer update"
+    f.renderer.restore()
+    test.equal(f.numbers[1].content, "Newer update")
+    test.equal(f.numbers[1].width, 24)
+    test.equal(f.numbers[1].height, 30)
+end)
+
+test.case("Bank close and component or parent rebuilds dispose old sprites and reacquire rows", function()
+    local f = fixture()
+    f.selected[1] = "skills:farming"
+    f.update()
+    local old = f.numbers[1]
+    f.numbers[1] = nil
+    f.update()
+    test.equal(f.live(), 0)
+    test.equal(old.content, "1")
+    f.numbers[1] = f.number(1)
+    f.update()
+    local oldSprite = f.sprites[#f.sprites]
+    f.numbers[1] = f.number(1)
+    f.update()
+    test.equal(oldSprite.destroyed, true)
+    test.equal(f.live(), 1)
+    oldSprite = f.sprites[#f.sprites]
+    f.numbers[1].parent = {}
+    f.update()
+    test.equal(oldSprite.destroyed, true)
+    test.equal(f.live(), 1)
+end)
+
+test.case("Missing and restricted parents and labels never hide a number", function()
+    local f = fixture()
+    f.selected[1] = "skills:farming"
+    f.numbers[1].isRestricted = true
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+    f.numbers[1].isRestricted = false
+    f.numbers[1].parent.isRestricted = true
+    f.update()
+    test.equal(f.live(), 0)
+    f.numbers[1].parent = nil
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+    f.numbers[1].parent = {}
+    f.numbers[1].type = 2
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+end)
+
+test.case("Native scrolling and visibility move or suppress the sprite with its row", function()
+    local f = fixture()
+    f.selected[1] = "skills:farming"
+    f.update()
+    local sprite = f.sprites[1]
+    f.numbers[1].y, f.numbers[1].visibleGlobal = -30, false
+    f.update()
+    test.equal(sprite.y, -27)
+    test.equal(sprite.hidden, true)
+    f.numbers[1].y, f.numbers[1].visibleGlobal = 60, true
+    f.update()
+    test.equal(sprite.y, 63)
+    test.equal(sprite.hidden, false)
+end)
+
+test.case("Removed bindings and changed selections release only plugin-owned sprites", function()
+    local f = fixture()
+    f.selected[1] = "skills:farming"
+    f.update()
+    local first = f.sprites[1]
+    f.selected[1] = "skills:necromancy"
+    f.update()
+    test.equal(first.destroyed, true)
+    test.equal(f.live(), 1)
+    f.bindings = {}
+    f.update()
+    test.equal(f.numbers[1].content, "1")
+    test.equal(f.live(), 0)
+    f.renderer.update({ { slot = 19 } }, f.store)
+    test.equal(f.live(), 0, "BoB bindings cannot trigger rendering")
+end)

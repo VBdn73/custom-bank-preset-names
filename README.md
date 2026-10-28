@@ -1,18 +1,19 @@
 # Custom bank preset names
 
-Give your RuneScape bank presets custom names and colours. This Lua 5.4 plugin
+Give your RuneScape bank presets custom names, colours, and skill icons. This Lua 5.4 plugin
 changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
 
 - Custom names for all 18 numbered presets and the Beast of Burden row, up to 40 Unicode characters each.
 - Background and text colours via swatches, a colour picker, or hex input.
-- Editable name field previews staged background and text colours before saving.
-- Dragging one bank preset onto another swaps their saved names and colours too.
+- Optional skill icons replace the numbers on presets 1–18, using native client assets.
+- Editable preset-row preview shows staged names, colours, and icons before saving.
+- Dragging one bank preset onto another swaps their saved names, colours, and icons too.
 - Beast of Burden has its own saved name and colours and is excluded from numbered-preset swaps.
-- Edit names and colours only from inside the bank UI.
+- Edit names, colours, and icons only from inside the bank UI.
 - Save settings locally for each character; reset individual presets at any time.
-- Editor saves and customisation swaps validate names and colours together. On storage
+- Editor saves and customisation swaps validate names, colours, and icons together. On storage
   failure, the plugin attempts to restore previous customisations (best-effort, not
   atomic). Failed recovery is reported explicitly; console diagnostics identify the
   affected slot and field. Native bank preset swaps are not undone by this recovery.
@@ -20,7 +21,8 @@ changes their appearance locally, not their server-side names or behaviour.
 - Option to hide the bank's predefined-name dropdown (visible by default).
 
 No preset loading, automation, hidden information, or slot unlocking. Bank actions
-are unchanged. Disabling restores original labels and colours where available.
+are unchanged. Disabling restores original labels and colours where available
+and removes plugin-owned icon sprites. Beast of Burden's native icon is unchanged.
 
 See [changelog.md](changelog.md) for release changes.
 
@@ -40,9 +42,13 @@ enable commands do not download dependencies automatically.
    left to right, with white at the top and black at the bottom. Changes
    immediately update the preview. Click **×** or the same swatch again to close
    the picker without discarding the selected colour.
-4. Click **Save** (or press Enter in the name field) to save the name and colours.
+4. For a numbered preset, click **Icon** to open the Skills picker. Hover an icon
+   to see its skill name; click it to stage that selection and close the picker.
+   **Use preset number** or the adjacent **↺** stages the default number. Closing
+   the picker without selecting leaves the staged value unchanged.
+5. Click **Save** (or press Enter in the name field) to save the name, colours, and icon.
    **Reset** previews all defaults; click **Save** to commit the reset.
-   Saving a blank name keeps your chosen colours.
+    Saving a blank name keeps your chosen colours and icon.
 
 The editor shows a read-only preset heading; select another preset in the bank to switch
 without closing it. Drag the title bar to move it. Its position is saved on close
@@ -50,13 +56,15 @@ and kept within UI bounds. **×** or closing the bank closes the editor.
 
 - Click **i** to show or hide help notes, which start hidden.
 - Plugin Hub settings and the ribbon panel only show **Hide predefined-name dropdown**
-  and guidance for opening the editor. Preset names and colours can only be edited in the bank UI.
+   and guidance for opening the editor. Customisations can only be edited in the bank UI.
 - Switching presets discards unsaved edits. Saving requires your logged-in
   character's display name. Closing the editor also discards unsaved edits.
 - Names cannot contain markup delimiters (`<`, `>`) or control characters.
 - The **↺** icon beside each colour swatch restores that colour's default; click **Save** to apply it. A crossed
   swatch means Default. Text colour affects only the name.
 - Colours are opaque `#RRGGBB` values.
+- Only one icon or colour picker opens at a time. Unknown icon keys or unavailable
+  assets fall back to the preset number; no images are downloaded or bundled.
 - In Plugin Hub settings, **Hide predefined-name dropdown** hides the game's
   dropdown and expands the preset list. It applies to all presets without changing
   their predefined names; untick to restore the dropdown.
@@ -119,9 +127,11 @@ Mocked tests do not replace in-client visual and interaction checks.
 
 - `main.lua`: lifecycle, editor entry points, and label refresh/restoration.
 - `bank/`: preset bindings, local label/colour overrides, and the context menu.
+- `bank/icons.lua`: saved-icon rendering, native number restoration, and sprite cleanup.
 - `editor/`: shared editor, PrettyUI popup, layout, help, theme, and icons.
 - `presets/`: validation and per-character persistent settings.
 - `components/colour_picker/`: self-contained picker and colour conversions.
+- `components/icon_picker/`: data-driven, storage-independent native sprite picker.
 - `tests/`: mocked regression suites; `plugin.json`: manifest and dependency.
 
 Use slash-separated imports such as `require("editor/view")`, without `.lua`.

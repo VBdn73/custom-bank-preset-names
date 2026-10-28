@@ -47,3 +47,40 @@ test.case("Entry point retains PrettyUI for later content events and disposes ol
     test.equal(destroyed, 2, "Reopening settings disposes its previous view")
     events.MiniMenuEntrySelected.callback({ entry = { verbText = "Select" } })
 end)
+
+test.case("Main renders saved icons at Draw and restores them on shutdown", function()
+    local events, calls = {}, {}
+    local bindings = { numbers = {}, labels = {}, appearance = {} }
+    local store = {}
+    local modules = { ["bank/bindings"] = bindings, ["presets/icons"] = store }
+    modules["bank/icons"] = {
+        update = function(numbers, icons)
+            test.equal(numbers, bindings.numbers)
+            test.equal(icons, store)
+            calls[#calls + 1] = "icons.update"
+        end,
+        restore = function() calls[#calls + 1] = "icons.restore" end,
+    }
+    local environment = setmetatable({
+        Event = setmetatable(events, { __index = function(target, key)
+            local event = { Subscribe = function(_, callback) target[key].callback = callback end,
+                Unsubscribe = function() end }
+            target[key] = event
+            return event
+        end }),
+        require = function(path)
+            if not modules[path] then
+                modules[path] = setmetatable({}, { __index = function(_, method)
+                    return function() calls[#calls + 1] = path .. "." .. method end
+                end })
+            end
+            return modules[path]
+        end,
+    }, { __index = _G })
+    assert(loadfile("main.lua", "t", environment))()
+    events.Draw.callback()
+    test.equal(calls[#calls], "icons.update", "Apply after native UI/other overrides at the render boundary")
+    local drawCalls = #calls
+    environment.PluginShutdown()
+    test.equal(calls[drawCalls + 1], "icons.restore", "Restore icons before native layout cleanup")
+end)
