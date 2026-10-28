@@ -6,7 +6,7 @@ local test = require("tests.test_helper")
 for _, suite in ipairs({
     "slots", "storage", "customisations", "preferences", "icon_catalogue", "icons", "icon_picker",
     "preset_layout", "dropdown", "colours", "main", "reorder", "reorder_wrappers", "text_validation", "preset_names",
-    "bank_bindings", "bank_labels", "bank_icons", "bank_preview", "editor_style", "name_editor", "preset_menu", "editor_popup", "bob",
+    "bank_bindings", "bank_labels", "bank_icons", "compact_icons", "bank_preview", "editor_style", "name_editor", "preset_menu", "editor_popup", "bob",
 }) do
     print("\n" .. suite)
     dofile("tests/" .. suite .. ".lua")

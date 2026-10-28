@@ -1,0 +1,287 @@
+local test = require("tests.test_helper")
+
+local function fixture()
+    local f = { labels = {}, selected = {}, sprites = {}, messages = {} }
+    local bindings = dofile("bank/bindings.lua").compactButtons
+    function f.label(index)
+        return { type = 1, content = tostring(index), rgba = 0xFFCB75FF,
+            parent = { visibleGlobal = true }, x = 7, y = 11, width = 30, height = 30, visibleGlobal = true }
+    end
+    for index = 1, 9 do f.labels[index] = f.label(index) end
+    local environment = setmetatable({
+        print = function(message) f.messages[#f.messages + 1] = message end,
+        require = function(path)
+            if path == "presets/icon_catalogue" then
+                return { resolve = function(key)
+                    if key == "skill" then return 101, { width = 32, height = 16 } end
+                    if key == "large" then return 102, { width = 64, height = 64 } end
+                end }
+            end
+            return require(path)
+        end,
+        ui = { ComponentType = { LABEL = 1 }, Interfaces = {
+            GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
+                test.equal(interfaceID, 517)
+                test.equal(staticID, 117)
+                test.equal(categoryID, 0)
+                return f.labels[(dynamicID - 9) / 11 + 1]
+            end,
+        }, Sprite = { new = function(parent, categoryID, dynamicID)
+            if f.creationFails then return nil end
+            assert(type(categoryID) == "number" and categoryID % 1 == 0
+                and categoryID >= 0 and categoryID <= 256, "Invalid sprite category ID")
+            assert(type(dynamicID) == "number" and dynamicID % 1 == 0
+                and dynamicID >= 0 and dynamicID <= 256, "Invalid sprite dynamic ID")
+            test.equal(categoryID, 1, "Plugin children must not inherit native category 0")
+            test.equal(dynamicID >= 1 and dynamicID <= 9, true)
+            local sprite = { parent = parent, visibleGlobal = f.initialSpriteVisibility,
+                categoryID = categoryID, dynamicID = dynamicID }
+            function sprite:SetSize(w, h)
+                if f.layoutFails then error("Injected layout failure") end
+                self.width, self.height = w, h
+            end
+            function sprite:SetPos(x, y) self.x, self.y = x, y end
+            function sprite:Destroy() self.destroyed = true end
+            function sprite:MoveToFront()
+                self.frontMoves = (self.frontMoves or 0) + 1
+                self.occluded = false
+            end
+            setmetatable(sprite, { __index = function(self, key)
+                if key == "spriteID" then return f.assignmentFails and -1 or self.sprite end
+            end })
+            f.sprites[#f.sprites + 1] = sprite
+            return sprite
+        end } },
+    }, { __index = _G })
+    f.renderer = assert(loadfile("bank/compact_icons.lua", "t", environment))()
+    f.store = { get = function(slot) return f.selected[slot] end }
+    function f.update() f.renderer.update(bindings, f.store) end
+    function f.page(offset)
+        for index = 1, 9 do f.labels[index].content = tostring(index + offset) end
+    end
+    function f.live()
+        local count = 0
+        for _, sprite in ipairs(f.sprites) do if not sprite.destroyed then count = count + 1 end end
+        return count
+    end
+    return f
+end
+
+test.case("Compact icons centre full-colour non-interactive siblings without clearing native text", function()
+    local f = fixture()
+    f.selected[1] = "skill"
+    f.update()
+    local sprite = f.sprites[1]
+    test.equal(sprite.parent, f.labels[1].parent)
+    test.equal(sprite.width, 24)
+    test.equal(sprite.height, 12)
+    test.equal(sprite.x, 10)
+    test.equal(sprite.y, 20)
+    test.equal(sprite.rgba, 0xFFFFFFFF)
+    test.equal(sprite.clickthrough, true)
+    test.equal(sprite.enabled, false)
+    test.equal(sprite.categoryID, 1)
+    test.equal(sprite.dynamicID, 1)
+    test.equal(sprite.frontMoves, 1)
+    test.equal(f.labels[1].content, "1")
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    f.update()
+    test.equal(#f.sprites, 1)
+    test.equal(sprite.frontMoves, 2, "Reassert render order after native sibling redraws")
+    f.selected[1] = nil
+    f.update()
+    test.equal(f.live(), 0)
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+end)
+
+test.case("All compact positions follow both pages on unchanged component objects", function()
+    local f = fixture()
+    for slot = 1, 18 do f.selected[slot] = slot <= 9 and "skill" or "large" end
+    for _, offset in ipairs({ 0, 9, 0 }) do
+        f.page(offset)
+        f.update()
+        test.equal(f.live(), 9)
+        for index = 1, 9 do
+            test.equal(f.labels[index].content, tostring(index + offset))
+            test.equal(f.sprites[#f.sprites - 9 + index].sprite, offset == 0 and 101 or 102)
+        end
+    end
+end)
+
+test.case("Native sibling redraws cannot leave a retained compact icon behind a background", function()
+    local f = fixture()
+    f.selected[2] = "skill"
+    f.update()
+    local sprite = f.sprites[1]
+    sprite.occluded = true
+    f.update()
+    test.equal(sprite.occluded, false)
+    test.equal(#f.sprites, 1)
+    test.equal(sprite.frontMoves, 2)
+    test.equal(f.labels[2].content, "2")
+end)
+
+test.case("Transparent native labels do not hide their replacement icons on later Draws", function()
+    local f = fixture()
+    f.selected[1], f.selected[10] = "skill", "large"
+    f.update()
+    local number = f.labels[1]
+    -- Model a client whose effective visibility includes label alpha.
+    number.visibleGlobal = false
+    for _ = 1, 3 do
+        f.update()
+        test.equal(f.sprites[#f.sprites].hidden, false)
+    end
+    f.page(9)
+    f.update()
+    test.equal(f.sprites[#f.sprites].hidden, false)
+    test.equal(f.sprites[#f.sprites].sprite, 102)
+    number.parent.visibleGlobal = false
+    f.update()
+    test.equal(f.sprites[#f.sprites].hidden, true)
+    number.parent.visibleGlobal = true
+    number.hidden = true
+    f.update()
+    test.equal(f.sprites[#f.sprites].hidden, true)
+    number.hidden = false
+    f.update()
+    test.equal(f.sprites[#f.sprites].hidden, false)
+end)
+
+test.case("Tree visibility is diagnostic only and never recreates retained compact sprites", function()
+    local f = fixture()
+    f.selected[1] = "skill"
+    f.update()
+    local stale = f.sprites[1]
+    -- The resource ID alone does not establish that the native child survived.
+    stale.visibleGlobal = false
+    f.update()
+    test.equal(stale.destroyed, nil)
+    test.equal(f.live(), 1)
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    test.equal(f.labels[1].content, "1")
+    test.equal(#f.messages, 0, "Do not diagnose transient tree visibility as asset loading")
+    for _ = 1, 5 do f.update() end
+    test.equal(#f.sprites, 1)
+    test.equal(#f.messages, 1)
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    stale.visibleGlobal = true
+    f.update()
+    test.equal(f.live(), 1)
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    test.equal(f.sprites[1].sprite, 101)
+end)
+
+test.case("Initial tree visibility does not delay a newly assigned compact icon", function()
+    local f = fixture()
+    f.initialSpriteVisibility = false
+    f.selected[1] = "skill"
+    f.update()
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    test.equal(f.labels[1].content, "1")
+    f.update()
+    test.equal(#f.sprites, 1)
+    test.equal(#f.messages, 0)
+    f.sprites[1].visibleGlobal = true
+    f.update()
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    f.renderer.restore()
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+end)
+
+test.case("Same-resource page switches track slot identity and mixed defaults", function()
+    local f = fixture()
+    f.selected[1], f.selected[10], f.selected[11] = "skill", "skill", "large"
+    f.update()
+    local first = f.sprites[1]
+    f.page(9)
+    f.update()
+    test.equal(first.destroyed, true)
+    test.equal(f.live(), 2)
+    f.selected[10] = nil
+    f.update()
+    test.equal(f.live(), 1)
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+    f.page(0)
+    f.update()
+    test.equal(f.live(), 1)
+    test.equal(f.labels[2].rgba, 0xFFCB75FF)
+end)
+
+test.case("Unexpected text and wrong-position numbers never reuse a stale icon", function()
+    for _, text in ipairs({ "", "unexpected", "2", "19", "1.0", "-1", " 1 " }) do
+        local f = fixture()
+        f.selected[1] = "skill"
+        f.update()
+        f.labels[1].content = text
+        f.update()
+        test.equal(f.live(), 0)
+        test.equal(f.labels[1].content, text)
+        test.equal(f.labels[1].rgba, 0xFFCB75FF)
+    end
+end)
+
+test.case("Compact refresh follows saved changes, swaps and character store changes", function()
+    local f = fixture()
+    f.selected[1] = "skill"
+    f.update()
+    f.selected[1], f.selected[2] = f.selected[2], f.selected[1]
+    f.update()
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+    test.equal(f.labels[2].rgba, 0xFFCB7500)
+    f.selected = { [1] = "large" }
+    f.update()
+    test.equal(f.live(), 1)
+    test.equal(f.sprites[#f.sprites].sprite, 102)
+    f.selected = {}
+    f.update()
+    test.equal(f.live(), 0)
+end)
+
+test.case("Missing assets and compact setup failures retain numbers and deduplicate errors", function()
+    for _, failure in ipairs({ "creationFails", "layoutFails", "assignmentFails", "zeroBounds", "missingAsset" }) do
+        local f = fixture()
+        f.selected[1] = "skill"
+        if failure == "zeroBounds" then f.labels[1].width = 0
+        elseif failure == "missingAsset" then f.selected[1] = "unknown"
+        else f[failure] = true end
+        f.update()
+        f.update()
+        test.equal(f.live(), 0)
+        test.equal(f.labels[1].content, "1")
+        test.equal(f.labels[1].rgba, 0xFFCB75FF)
+        test.equal(#f.messages, failure == "missingAsset" and 0 or 1)
+    end
+end)
+
+test.case("Compact closure, rebuilds and restricted components release owned sprites safely", function()
+    for _, change in ipairs({ "missing", "restricted", "parentRestricted", "parentMissing", "rebuilt" }) do
+        local f = fixture()
+        f.selected[1] = "skill"
+        f.update()
+        local old, sprite = f.labels[1], f.sprites[1]
+        if change == "missing" then f.labels[1] = nil
+        elseif change == "restricted" then old.isRestricted = true
+        elseif change == "parentRestricted" then old.parent.isRestricted = true
+        elseif change == "parentMissing" then old.parent = nil
+        else f.labels[1] = f.label(1) end
+        f.update()
+        test.equal(sprite.destroyed, true)
+        test.equal(old.rgba, change == "restricted" and 0xFFCB7500 or 0xFFCB75FF)
+        test.equal(f.live(), change == "rebuilt" and 1 or 0)
+    end
+end)
+
+test.case("Compact cleanup preserves newer native text and colours and is repeatable", function()
+    local f = fixture()
+    f.selected[1], f.selected[2] = "skill", "skill"
+    f.update()
+    f.labels[1].content = "10"
+    f.labels[2].rgba = 0x123456FF
+    f.renderer.restore()
+    f.renderer.restore()
+    test.equal(f.labels[1].content, "10")
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+    test.equal(f.labels[2].rgba, 0x123456FF)
+    test.equal(f.live(), 0)
+end)
