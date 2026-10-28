@@ -3,6 +3,12 @@
 ## Unreleased
 
 - Added optional native skill icons for numbered presets 1–18, covering all 29 skills.
+- Displayed the same saved icons on both preset-management rows and compact bank
+  Presets buttons, following presets 1–9 and 10–18 when switching pages.
+- Centred compact icons within a 24 × 24 area while preserving their aspect ratio;
+  retained native number text for page detection and restored number colour on cleanup.
+- Used explicit compact sprite IDs outside native category 0 and refreshed their
+  sibling render order to prevent icons disappearing during bank/page redraws.
 - Added a reusable Skills icon picker with selection highlighting and skill-name labels.
 - Icons preview immediately in the editor and commit with names and colours on **Save**.
 - Added icon reset controls; full **Reset** stages all defaults, including the preset number.

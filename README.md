@@ -7,7 +7,8 @@ Give your RuneScape bank presets custom names, colours, and skill icons. This Lu
 
 - Custom names for all 18 numbered presets and the Beast of Burden row, up to 40 Unicode characters each.
 - Background and text colours via swatches, a colour picker, or hex input.
-- Choose from all 29 skill icons to replace the numbers on presets 1–18, using native client assets.
+- Choose from all 29 skill icons to replace the numbers on presets 1–18 in both
+  the preset-management rows and the compact bank Presets buttons, using native client assets.
 - Editable preset-row preview shows staged names, colours, and icons before saving.
 - Dragging one bank preset onto another swaps their saved names, colours, and icons too.
 - Beast of Burden has its own saved name and colours and is excluded from numbered-preset swaps.
@@ -22,7 +23,8 @@ Give your RuneScape bank presets custom names, colours, and skill icons. This Lu
 
 No preset loading, automation, hidden information, or slot unlocking. Bank actions
 are unchanged. Disabling restores original labels and colours where available
-and removes plugin-owned icon sprites. Beast of Burden's native icon is unchanged.
+and removes plugin-owned icon sprites, restoring native numbers on both surfaces.
+Beast of Burden's native icon is unchanged.
 
 See [changelog.md](changelog.md) for release changes.
 
@@ -65,6 +67,10 @@ and kept within UI bounds. **×** or closing the bank closes the editor.
 - Colours are opaque `#RRGGBB` values.
 - Only one icon or colour picker opens at a time. Unknown icon keys or unavailable
   assets fall back to the preset number; no images are downloaded or bundled.
+- Saved icons also appear on the compact bank Presets buttons. Both pages use the
+  same saved selections as the management rows; there is no separate picker or setting.
+  Buttons follow the displayed preset numbers when switching between presets 1–9
+  and 10–18. **Use preset number**, followed by **Save**, restores the number on both surfaces.
 - In Plugin Hub settings, **Hide predefined-name dropdown** hides the game's
   dropdown and expands the preset list. It applies to all presets without changing
   their predefined names; untick to restore the dropdown.
@@ -123,13 +129,25 @@ character settings, persistence after reload/restart, popup position, scrolling,
 resizing, help/close buttons, colour/icon defaults, and restoration on disable.
 Check that icons stay clipped to the bank list, swaps transfer icons with other
 customisations, and Beast of Burden's native icon remains unchanged.
+For compact buttons, also check:
+
+- Different icons on presets 1 and 10, switching pages repeatedly in both directions.
+- All nine button positions with mixed icons and default numbers on both pages.
+- Icon centring and recognisability, including the larger Necromancy source asset.
+- Movement/resizing, close/reopen, resets, swaps, reload, and disable with the bank open.
+- Unchanged preset loading, hover text, right-click menus, and keyboard behaviour;
+  Beast of Burden, page-switch, and settings buttons remain untouched.
+- Management-row icons and the editor preview still work independently.
+
 Mocked tests do not replace in-client visual and interaction checks.
 
 ### Code overview
 
 - `main.lua`: lifecycle, editor entry points, and label refresh/restoration.
 - `bank/`: preset bindings, local label/colour overrides, and the context menu.
-- `bank/icons.lua`: saved-icon rendering, native number restoration, and sprite cleanup.
+- `bank/icons.lua`: management-row icon rendering, native number restoration, and sprite cleanup.
+- `bank/compact_icons.lua`: compact-button icon rendering, page detection from native number text,
+  reversible number-colour suppression, and independent sprite cleanup.
 - `editor/`: shared editor, PrettyUI popup, layout, help, theme, and icons.
 - `presets/`: validation and per-character persistent settings.
 - `components/colour_picker/`: self-contained picker and colour conversions.
@@ -203,6 +221,17 @@ ID `(slot - 1) * 3 + 1` for the 18 numbered presets. Live diagnostics confirmed
 the number label at dynamic ID `(slot - 1) * 3`. The bank icon renderer attaches
 non-interactive sprites under the number's native parent, with a 4-unit right
 inset; native number styling and geometry remain available to the preview.
+Compact buttons use static component 117, category 0, with number-label dynamic
+IDs `9 + (buttonIndex - 1) * 11` for button positions 1–9. These addresses are
+reused on both pages, so the compact renderer reads native number text each Draw
+and accepts only the position's first- or second-page preset number. It does not
+clear that text: it suppresses label colour alpha only after sprite setup succeeds.
+Icons are centred in the label's bounds, preserve aspect ratio, and fit within
+24 × 24 UI units. Plugin sprites use explicit category 1/dynamic IDs 1–9 and
+are moved to the front of their native parent as non-interactive siblings.
+Cleanup restores only colour still owned by the plugin and never writes cached
+page numbers over newer native text. The management and compact renderers keep
+separate lifecycle state while sharing the existing catalogue and character settings.
 Live diagnostics also confirmed
 the Beast of Burden name at dynamic 55, background at static 265/dynamic 19,
 and hit target at static 267/dynamic 19 (all category 0). Its internal saved
