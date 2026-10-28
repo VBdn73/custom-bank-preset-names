@@ -6,6 +6,16 @@ local nameLabelOffset = bankIds.nameLabelOffset
 local labels = {}
 local appearance = {}
 local numbers = {}
+local compactButtons = {}
+
+-- These addresses identify physical buttons, not permanent preset slots.
+-- Resolve the displayed slot from native number text when rendering.
+for buttonIndex = 1, bankIds.compactPresetButtonCount do
+    compactButtons[buttonIndex] = { buttonIndex = buttonIndex, interfaceID = bankIds.interface,
+        staticID = bankIds.compactPresetLabel, categoryID = bankIds.category,
+        dynamicID = bankIds.compactPresetFirstDynamicID
+            + (buttonIndex - 1) * bankIds.compactPresetDynamicStride }
+end
 
 for slot = 1, presetCount do
     numbers[slot] = { slot = slot, interfaceID = bankIds.interface,
@@ -39,4 +49,5 @@ return {
     labels = labels,
     appearance = appearance,
     numbers = numbers,
+    compactButtons = compactButtons,
 }

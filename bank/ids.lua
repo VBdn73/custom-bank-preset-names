@@ -17,6 +17,12 @@ return {
     inventoryTickboxes = 293,
     predefinedNameDropdown = 300,
 
+    -- Compact bank buttons reuse these number labels on both preset pages.
+    compactPresetLabel = 117,
+    compactPresetFirstDynamicID = 9,
+    compactPresetDynamicStride = 11,
+    compactPresetButtonCount = 9,
+
     -- Each preset has zero-based number, name, and extra-text labels.
     labelsPerPreset = 3,
     numberLabelOffset = 0,
