@@ -3,8 +3,9 @@ local test = require("tests.test_helper")
 test.case("Native drops swap all customisations and ignore invalid destinations", function()
     local oldNames, oldColours = package.loaded["presets/names"], package.loaded["presets/colours"]
     local oldSwap = package.loaded["presets/swap"]
-    local data = { [1] = { name = "First", background = "#008000", text = "" },
-        [5] = { name = "Fifth", background = "", text = "#38A4FF" } }
+    local oldIcons = package.loaded["presets/icons"]
+    local data = { [1] = { name = "First", background = "#008000", text = "", icon = "skills:farming" },
+        [5] = { name = "Fifth", background = "", text = "#38A4FF", icon = "" } }
     local context = "character"
     local names = { getContext = function() return context end,
         normalize = dofile("presets/names.lua").normalize,
@@ -14,6 +15,11 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     package.loaded["presets/colours"] = {
         get = function(slot, kind) return data[slot][kind] end,
         save = function(slot, kind, value) data[slot][kind] = value return true end,
+    }
+    package.loaded["presets/icons"] = {
+        normalize = dofile("presets/icons.lua").normalize,
+        get = function(slot) return data[slot].icon end,
+        save = function(slot, value) data[slot].icon = value return true end,
     }
     package.loaded["presets/swap"] = dofile("presets/swap.lua")
     local rows = {}
@@ -46,6 +52,8 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     test.equal(data[1].name, "Fifth")
     test.equal(data[1].text, "#38A4FF")
     test.equal(data[1].background, "")
+    test.equal(data[5].icon, "skills:farming")
+    test.equal(data[1].icon, "")
     rows[1].callback(rows[1], nil)
     rows[1].callback(rows[1], rows[1])
     test.equal(data[1].name, "Fifth")
@@ -56,4 +64,5 @@ test.case("Native drops swap all customisations and ignore invalid destinations"
     test.equal(rows[1].callback, nil)
     package.loaded["presets/names"], package.loaded["presets/colours"] = oldNames, oldColours
     package.loaded["presets/swap"] = oldSwap
+    package.loaded["presets/icons"] = oldIcons
 end)

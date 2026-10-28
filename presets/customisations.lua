@@ -3,7 +3,7 @@ local slots = require("presets/slots")
 local customisations = {}
 
 -- Dependencies are explicit so editor and native-swap entry points share one path.
-function customisations.new(names, colours)
+function customisations.new(names, colours, icons)
     local service = {}
     local function failure(message, status, details)
         return false, message, { status = status, details = details }
@@ -30,6 +30,18 @@ function customisations.new(names, colours)
                         writes[#writes + 1] = { slot = change.slot, kind = kind, value = normalized,
                             get = function() return colours.get(change.slot, kind) end,
                             save = function(v) return colours.save(change.slot, kind, v) end }
+                    end
+                end
+                -- Omitted icons preserve existing values for callers that have not
+                -- integrated icon editing yet. An explicit "" resets to the number.
+                if icons and change.icon ~= nil then
+                    local icon, iconMessage = icons.normalize(change.icon)
+                    assert(icon ~= nil, iconMessage)
+                    assert(slots.valid(change.slot) or icon == "", "Beast of Burden does not support custom icons.")
+                    if slots.valid(change.slot) then
+                        writes[#writes + 1] = { slot = change.slot, kind = "icon", value = icon,
+                            get = function() return icons.get(change.slot) end,
+                            save = function(v) return icons.save(change.slot, v) end }
                     end
                 end
             end
@@ -62,12 +74,13 @@ function customisations.new(names, colours)
                     recovered and "recovered" or "recovery_failed", details)
             end
         end
-        return true, colours and "Name and colours saved." or "Name saved.", { status = "success" }
+        return true, icons and "Customisations saved."
+            or (colours and "Name and colours saved." or "Name saved."), { status = "success" }
     end
 
     function service.save(slot, values)
         return service.apply({ { slot = slot, name = values.name,
-            background = values.background, text = values.text } })
+            background = values.background, text = values.text, icon = values.icon } })
     end
 
     function service.swap(first, second)
@@ -76,7 +89,8 @@ function customisations.new(names, colours)
         end
         if first == second then return true, nil, { status = "success" } end
         local ok, changes = pcall(function()
-            assert(names.getContext(), "Log in before swapping customisations.")
+            local context = names.getContext()
+            assert(context, "Log in before swapping customisations.")
             local result = {}
             local transfers = {
                 { destinationSlot = first, sourceSlot = second },
@@ -86,10 +100,12 @@ function customisations.new(names, colours)
                 result[#result + 1] = {
                     slot = transfer.destinationSlot,
                     name = names.get(transfer.sourceSlot) or "",
-                    background = colours.get(transfer.sourceSlot, "background"),
-                    text = colours.get(transfer.sourceSlot, "text"),
+                    background = colours and colours.get(transfer.sourceSlot, "background"),
+                    text = colours and colours.get(transfer.sourceSlot, "text"),
+                    icon = icons and icons.get(transfer.sourceSlot),
                 }
             end
+            assert(names.getContext() == context, "Character changed before swapping.")
             return result
         end)
         if not ok then return failure(tostring(changes), "failed", { tostring(changes) }) end
