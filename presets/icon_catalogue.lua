@@ -3,6 +3,7 @@ local catalogue = { categories = {
     (require("presets/icon_categories/skills")),
     (require("presets/icon_categories/weapons")),
     (require("presets/icon_categories/holidays")),
+    (require("presets/icon_categories/misc")),
 } }
 local byKey, categoryKeys = {}, {}
 for _, category in ipairs(catalogue.categories) do

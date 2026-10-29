@@ -9,7 +9,7 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         "runecrafting", "slayer", "farming", "construction", "hunter", "summoning",
         "dungeoneering", "divination", "invention", "archaeology", "necromancy",
     }
-    test.equal(#catalogue.categories, 3)
+    test.equal(#catalogue.categories, 4)
     local category = catalogue.categories[1]
     test.equal(category.key, "skills")
     test.equal(category.name, "Skills")
@@ -102,6 +102,52 @@ test.case("Holiday tab exposes unique seasonal item artwork and named sprites", 
             "Retired coloured eggs must not expose placeholder artwork")
     end
     for objectID = 4558, 4564 do test.equal(seenItems[objectID], nil) end
+end)
+
+test.case("Misc tab exposes coin variants, achievements, clues and utility artwork", function()
+    local category = catalogue.categories[4]
+    test.equal(category.key, "misc")
+    test.equal(category.name, "Misc")
+    test.equal(#category.entries, 39)
+    local seen = {}
+    for _, entry in ipairs(category.entries) do
+        test.equal(entry.category, "misc")
+        test.equal(seen[entry.key], nil)
+        seen[entry.key] = true
+        test.equal(catalogue.get(entry.key), entry)
+        if entry.objectID then
+            test.equal(catalogue.resolve(entry.key, {}), entry.objectID)
+        else
+            test.equal(catalogue.resolve(entry.key, {}), nil)
+            test.equal(catalogue.resolve(entry.key, { [entry.sprite] = 123 }), 123)
+        end
+    end
+    for index, amount in ipairs({ 1, 2, 3, 4, 5, 25, 100, 250, 1000, 10000 }) do
+        test.equal(catalogue.get("misc:coins-" .. amount).objectID, 994 + index)
+    end
+    for index, tier in ipairs({ "easy", "medium", "hard", "elite", "master" }) do
+        test.equal(catalogue.get("misc:clue-scroll-" .. tier).objectID, 42005 + index)
+        test.equal(catalogue.get("misc:casket-" .. tier).objectID, 42000 + index)
+    end
+    test.equal(catalogue.get("misc:max-cape").objectID, 20767)
+    test.equal(catalogue.get("misc:quests").sprite, "RS3_ICON_QUEST_LIST")
+    test.equal(catalogue.get("misc:runescore").sprite, "ACHIEVEMENT_ICON_RUNESCORE")
+    test.equal(catalogue.get("misc:skills").sprite, "RS3_ICON_TAB_SKILLS")
+    local utilitySprites = {
+        ["home-teleport"] = "BUTTON_HUD_HOMETELEPORT_DEFAULT",
+        ["combat-level"] = "AIF_COMBAT_ICON",
+        ["world-map"] = "NAVIGATION_ICON_WORLDMAP_ON",
+        calendar = "BTN_MOBILE_CALENDAR",
+        ["run-energy"] = "NAVIGATION_ICON_ENERGY_ON",
+        rest = "NAVIGATION_ICON_ENERGY_REST",
+        ["life-points"] = "RS3_HUD_COMBAT_BAR_ICON_HEALTH",
+        bank = "RS3_ICON_WORLDMAP_KEY_BANK",
+        ["grand-exchange"] = "RS3_ICON_PATH_GRAND_EXCHANGE",
+        lodestone = "RS3_ICON_LODESTONE_TOWER",
+    }
+    for key, resource in pairs(utilitySprites) do
+        test.equal(catalogue.get("misc:" .. key).sprite, resource)
+    end
 end)
 
 test.case("Native item assignment hides quantities and clears when returning to skills", function()
