@@ -1,26 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.7.0 - 2026-10-29
 
-- Added optional native skill icons for numbered presets 1–18, covering all 29 skills.
-- Displayed the same saved icons on both preset-management rows and compact bank
-  Presets buttons, following presets 1–9 and 10–18 when switching pages.
-- Centred compact icons within a 24 × 24 area while preserving their aspect ratio;
-  retained native number text for page detection and restored number colour on cleanup.
-- Used explicit compact sprite IDs outside native category 0 and refreshed their
-  sibling render order to prevent icons disappearing during bank/page redraws.
-- Applied explicit sprite IDs and sibling render-order refresh to management-row
-  icons as well, so switching preset selections does not leave them behind native backgrounds.
-- Added a reusable Skills icon picker with selection highlighting and skill-name labels.
-- Icons preview immediately in the editor and commit with names and colours on **Save**.
-- Added icon reset controls; full **Reset** stages all defaults, including the preset number.
-- Icon and colour pickers are mutually exclusive and follow the editor's overlay positioning.
-- Stored stable icon keys per character; existing names and colours require no migration.
-- Included icons in native preset swaps and best-effort grouped-save recovery.
-- Restored native numbers on reset, unavailable resources, rendering failure, and shutdown;
-  removed plugin-owned sprites without changing native row interactions or BoB's icon.
-- Added a font-independent dropdown arrow and a small bank-icon inset for clearer spacing.
-- Removed temporary asset-inspection tools and expanded mocked regression coverage.
+- Added preset icons in four categories: Skills (all 29), Weapons, Holidays, and Misc.
+- Show saved icons in the editor preview, preset-management rows, and both compact bank pages.
+- Added compact preset background colours with an option to hide them (shown by default).
+- Added custom names and colours for the Beast of Burden row; its native icon stays unchanged.
+- Icons save per character, follow preset swaps, and reset alongside names and colours.
+- Improved icon layering and cleanup, restoring native numbers when icons are unavailable or the plugin is disabled.
+- Added reusable icon-picker components and expanded regression tests.
 
 ## 0.6.0 - 2026-10-27
 
