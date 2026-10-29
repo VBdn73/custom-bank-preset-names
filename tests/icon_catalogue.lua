@@ -9,7 +9,7 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         "runecrafting", "slayer", "farming", "construction", "hunter", "summoning",
         "dungeoneering", "divination", "invention", "archaeology", "necromancy",
     }
-    test.equal(#catalogue.categories, 2)
+    test.equal(#catalogue.categories, 3)
     local category = catalogue.categories[1]
     test.equal(category.key, "skills")
     test.equal(category.name, "Skills")
@@ -46,6 +46,62 @@ test.case("Weapons have unique stable keys, valid item IDs and alphabetical orde
         "Beta client uses 64341 for the crossbow; 64191 is a cure potion")
     test.equal(catalogue.get("weapons90:elder-crossbow").objectID, 63579,
         "Beta client uses 63579 for Elder crossbow; 63315 is a trophy")
+end)
+
+test.case("Holiday tab exposes unique seasonal item artwork and named sprites", function()
+    local category = catalogue.categories[3]
+    test.equal(category.key, "holidays")
+    test.equal(category.name, "Holidays")
+    test.equal(#category.entries, 47)
+    local seen, seenItems = {}, {}
+    for _, entry in ipairs(category.entries) do
+        test.equal(entry.category, category.key)
+        test.equal(seen[entry.key], nil)
+        seen[entry.key] = true
+        test.equal(catalogue.get(entry.key), entry)
+        if entry.objectID then
+            test.equal(seenItems[entry.objectID], nil)
+            seenItems[entry.objectID] = true
+            test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
+            test.equal(catalogue.resolve(entry.key, {}), entry.objectID)
+        else
+            test.equal(catalogue.resolve(entry.key, {}), nil)
+            test.equal(catalogue.resolve(entry.key, { [entry.sprite] = 123 }), 123)
+        end
+    end
+    test.equal(catalogue.get("holidays:pumpkin").objectID, 1959)
+    test.equal(catalogue.get("holidays:easter-egg").objectID, 1961)
+    test.equal(catalogue.get("holidays:christmas-tree-hat").objectID, 26493)
+    local expected = {
+        ["christmas-cracker"] = 962, ["bunny-ears"] = 1037,
+        ["rubber-chicken"] = 4566, ["easter-basket"] = 54618,
+        ["yo-yo"] = 4079, ["reindeer-hat"] = 10507,
+        ["blue-marionette"] = 6865, ["green-marionette"] = 6866,
+        ["red-marionette"] = 6867, ["scythe"] = 1419,
+        ["christmas-scythe"] = 33625, ["festive-scythe"] = 52757,
+        ["red-partyhat"] = 1038, ["yellow-partyhat"] = 1040,
+        ["blue-partyhat"] = 1042, ["green-partyhat"] = 1044,
+        ["purple-partyhat"] = 1046, ["white-partyhat"] = 1048,
+        ["pink-partyhat"] = 37590, ["golden-partyhat"] = 52664,
+        ["black-partyhat"] = 56161, ["chromatic-partyhat"] = 34358,
+        ["santa-hat"] = 1050, ["black-santa-hat"] = 30412,
+        ["green-santa-hat"] = 52748, ["purple-santa-hat"] = 56222,
+        ["pink-santa-hat"] = 57941, ["aurora-santa-hat"] = 58273,
+        ["yellow-santa-hat"] = 60016, ["blue-santa-hat"] = 60020,
+        ["festive-aurora-santa-hat"] = 60115,
+        ["green-halloween-mask"] = 1053, ["blue-halloween-mask"] = 1055,
+        ["red-halloween-mask"] = 1057, ["purple-halloween-mask"] = 53982,
+        ["orange-halloween-mask"] = 55968, ["yellow-halloween-mask"] = 59820,
+        ["soul-halloween-mask"] = 59823, ["pink-halloween-mask"] = 63952,
+    }
+    for key, objectID in pairs(expected) do
+        test.equal(catalogue.get("holidays:" .. key).objectID, objectID, key)
+    end
+    for _, colour in ipairs({ "light-blue", "dark-blue", "white", "purple", "red", "green", "pink" }) do
+        test.equal(catalogue.get("holidays:" .. colour .. "-easter-egg"), nil,
+            "Retired coloured eggs must not expose placeholder artwork")
+    end
+    for objectID = 4558, 4564 do test.equal(seenItems[objectID], nil) end
 end)
 
 test.case("Native item assignment hides quantities and clears when returning to skills", function()
