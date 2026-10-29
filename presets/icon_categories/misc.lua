@@ -42,6 +42,5 @@ sprite("rest", "Rest", "NAVIGATION_ICON_ENERGY_REST")
 sprite("life-points", "Life points", "RS3_HUD_COMBAT_BAR_ICON_HEALTH")
 sprite("bank", "Bank", "RS3_ICON_WORLDMAP_KEY_BANK")
 sprite("grand-exchange", "Grand Exchange", "RS3_ICON_PATH_GRAND_EXCHANGE")
-sprite("lodestone", "Lodestone", "RS3_ICON_LODESTONE_TOWER")
 
 return category

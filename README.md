@@ -1,116 +1,93 @@
 # Custom bank preset names
 
-Give your RuneScape bank presets custom names, colours, and skill icons. This Lua
-5.4 plugin changes their appearance locally, not their server-side names or behaviour.
+Give your RuneScape bank presets custom names, colours, and icons. Version **0.7.0**
+changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
 
-- Custom names for all 18 numbered presets and the Beast of Burden row, up to 40 Unicode characters each.
-- Background and text colours via swatches, a colour picker, or hex input.
-- Choose from all 29 skill icons to replace the numbers on presets 1–18 in both
-  the preset-management rows and the compact bank Presets buttons, using native client assets.
-- Compact preset icons also show their saved background colour when one is set,
-  with an option to turn those backgrounds off.
-- Editable preset-row preview shows staged names, colours, and icons before saving.
-- Dragging one bank preset onto another swaps their saved names, colours, and icons too.
-- Beast of Burden has its own saved name and colours and is excluded from numbered-preset swaps.
-- Edit names, colours, and icons only from inside the bank UI.
-- Save settings locally for each character; reset individual presets at any time.
-- Editor saves and customisation swaps validate names, colours, and icons together. On storage
-  failure, the plugin attempts to restore previous customisations (best-effort, not
-  atomic). Failed recovery is reported explicitly; console diagnostics identify the
-  affected slot and field. Native bank preset swaps are not undone by this recovery.
-- Draggable bank editor that remembers its position and follows preset selection.
-- Option to hide the bank's predefined-name dropdown (visible by default).
+- Custom names (up to 40 Unicode characters) and background/text colours for all
+  18 numbered presets and the Beast of Burden row.
+- Icons for numbered presets from **Skills**, **Weapons**, **Holidays**, and **Misc**,
+  using native client assets. All 29 skills are included.
+- Saved icons appear in preset-management rows and both compact bank pages.
+- Optional compact-button background colours, enabled by default.
+- Draggable editor with live previews, colour/hex controls, and individual resets.
+- Per-character settings; names, colours, and icons follow drag-and-drop preset swaps.
+- Option to hide the bank's predefined-name dropdown.
 
 No preset loading, automation, hidden information, or slot unlocking. Bank actions
-are unchanged. Disabling restores original labels and colours where available
-and removes plugin-owned icon sprites, restoring native numbers on both surfaces.
-Beast of Burden's native icon is unchanged.
+are unchanged. Disabling restores native labels, colours, and numbers where available.
+Beast of Burden's native icon is unchanged, and its customisation is excluded from swaps.
 
 See [changelog.md](changelog.md) for release changes.
 
-## Availability and requirements
+## Requirements
 
 This is a development version for the RuneScape plugin beta. Distribution requires
 Jagex moderation approval; this repository does not imply approval.
 
-**Dependency:** PrettyUI (mod.io ID `6398181`) must be installed. Development
-enable commands do not download dependencies automatically.
+**PrettyUI** (mod.io ID `6398181`) must be installed. Development enable commands
+do not download dependencies automatically.
 
 ## How to use
 
-1. In the bank UI, right-click a preset name and choose **Customize preset**.
-2. Enter a name and click a background/text swatch to choose colours.
-3. Click or drag across the smooth colour canvas, or enter `#RRGGBB`. Hue runs
-   left to right, with white at the top and black at the bottom. Changes
-   immediately update the preview. Click **×** or the same swatch again to close
-   the picker without discarding the selected colour.
-4. For a numbered preset, click **Icon** and choose **Skills** or **Weapons**. Hover an icon
-   to see its name; click it to stage that selection and close the picker.
-   **Use preset number** or the adjacent **↺** stages the default number. Closing
-   the picker without selecting leaves the staged value unchanged.
-5. Click **Save** (or press Enter in the name field) to save the name, colours, and icon.
-   **Reset** previews all defaults; click **Save** to commit the reset.
-   Saving a blank name keeps your chosen colours and icon.
+1. In the bank, right-click a preset name and choose **Customize preset**.
+2. Enter a name and click the background/text swatches to choose colours. Use the
+   colour canvas or enter `#RRGGBB`; changes preview immediately.
+3. For numbered presets, click **Icon**, choose a category, and select an icon.
+   Hover an icon to see its name. **Use preset number** restores the default.
+4. Click **Save**, or press Enter in the name field, to apply your changes.
 
-The editor shows a read-only preset heading; select another preset in the bank to switch
-without closing it. Drag the title bar to move it. Its position is saved on close
-and kept within UI bounds. **×** or closing the bank closes the editor.
+### Editor controls
 
-- Click **i** to show or hide help notes, which start hidden.
-- Plugin Hub settings and the ribbon panel show **Hide predefined-name dropdown**,
-  **Show background colours in small bank UI**, and guidance for opening the editor.
-  Customisations can only be edited in the bank UI.
-- **Show background colours in small bank UI** is enabled by default. Untick it to
-  hide compact-button backgrounds immediately without changing icons, saved colours,
-  or management-row colours. The preference persists across reloads.
-- Switching presets discards unsaved edits. Saving requires your logged-in
-  character's display name. Closing the editor also discards unsaved edits.
-- Names cannot contain markup delimiters (`<`, `>`) or control characters.
-- The **↺** icon beside each colour swatch restores that colour's default; click **Save** to apply it. A crossed
-  swatch means Default. Text colour affects only the name.
-- Colours are opaque `#RRGGBB` values.
-- Only one icon or colour picker opens at a time. Unknown icon keys or unavailable
-  assets fall back to the preset number; no images are downloaded or bundled.
-- Saved icons also appear on the compact bank Presets buttons. Both pages use the
-  same saved selections as the management rows; there is no separate picker or setting.
-  Buttons follow the displayed preset numbers when switching between presets 1–9
-  and 10–18. **Use preset number**, followed by **Save**, restores the number on both surfaces.
-- In Plugin Hub settings, **Hide predefined-name dropdown** hides the game's
-  dropdown and expands the preset list. It applies to all presets without changing
-  their predefined names; untick to restore the dropdown.
+- **Reset** previews all defaults; click **Save** to apply them. The **↺** controls
+  reset individual colours or the icon. A crossed swatch means Default.
+- A blank name uses the predefined name while keeping your colours and icon.
+  Names cannot contain `<`, `>`, or control characters.
+- Only one picker opens at a time. Closing it keeps staged changes; closing the
+  editor or switching presets discards unsaved changes.
+- Drag the title bar to move the editor; its position is remembered. Click **i**
+  for help. **×** or closing the bank closes the editor.
+- Saving requires your logged-in character's display name. Unknown or unavailable
+  icons fall back to the preset number.
 
-## Permissions
+### Display settings
 
-This plugin requests no additional permissions. It does not access chat or make
-network requests.
+Plugin Hub settings and the ribbon panel offer:
 
-## Data protection - Case 1 (local only)
+- **Hide predefined-name dropdown** — hides the game's dropdown and expands the
+  preset list without changing predefined names. Off by default.
+- **Show background colours in small bank UI** — toggles compact-button backgrounds
+  without changing saved colours, icons, or management rows. On by default.
 
-The plugin stores your character's display name, preset names, colours, icon
-selections, editor position, and bank display preferences locally. Nothing is sent to
-the developer or external services. No screenshots or gameplay history are collected.
+Customisations can only be edited inside the bank. Display preferences persist across reloads.
+Failed saves or customisation swaps attempt best-effort recovery and report failures;
+native bank preset swaps are not undone.
 
-Settings persist locally through the client's `PersistentDB` API. The character
-display name forms part of the storage keys, ignoring case and surrounding
-spaces. Names, colours, and icons are stored per character; editor position is shared
-across characters on this device, as are the bank display preferences.
+## Permissions and privacy
+
+**Data protection — Case 1 (local only).** No additional permissions, chat access,
+network requests, screenshots, or gameplay-history collection.
+
+Settings use the client's `PersistentDB` API. Your display name, preset names,
+colours, and icons are stored locally per character. Display-name keys ignore case
+and surrounding spaces. Editor position and display preferences are shared across
+characters on this device. Nothing is sent to the developer or external services.
 
 - Settings do not sync between devices; beta and live storage are separate.
-- After a character rename, re-enter or manually migrate your settings. Reusing
-  a display name on the same device can inherit its previous settings.
+- After a character rename, re-enter or manually migrate settings. Reusing a display
+  name on the same device can inherit its previous settings.
 - Older device-wide and tracking-ID-based settings are not imported automatically.
-- Settings have no automatic expiry. Reset clears a slot's customisation but
-  does not remove the character name from its storage keys.
+- Settings have no automatic expiry. Reset clears a slot's customisation, not the
+  character name in its storage keys.
 - Disabling does not erase settings. There is no full-data deletion control for
   current or legacy keys; do not assume uninstalling clears the client database.
-  The developer cannot access or delete these local settings remotely.
+  The developer cannot access or delete these settings remotely.
 
 ## Local development
 
 Follow Jagex's [getting-started guide](https://developer.runescape.com/rs/getting-started.html).
-Place the repository, including its subdirectories, in
+Place this repository, including subdirectories, in
 `RuneScape-BETA/dev_plugins/custom-bank-preset-names/` and install PrettyUI.
 Open the client console with **Alt + `**, then run:
 
@@ -120,7 +97,7 @@ pon custom-bank-preset-names
 ```
 
 After Lua changes, run `prl custom-bank-preset-names`. After `plugin.json` changes,
-run `prf` before reloading so the manifest and dependencies are rescanned.
+run `prf` before reloading.
 
 ### Tests
 
@@ -130,144 +107,39 @@ Run the mocked regression suite with Lua 5.4:
 lua tests/run.lua
 ```
 
-In the client, verify save/reset, all mapped slots (including preset 18), separate
-character settings, persistence after reload/restart, popup position, scrolling,
-resizing, help/close buttons, colour/icon defaults, and restoration on disable.
-Check that icons stay clipped to the bank list, swaps transfer icons with other
-customisations, and Beast of Burden's native icon remains unchanged.
-For compact buttons, also check:
-
-- Different icons on presets 1 and 10, switching pages repeatedly in both directions.
-- All nine button positions with mixed icons and default numbers on both pages.
-- Icon centring and recognisability, including the larger Necromancy source asset.
-- Movement/resizing, close/reopen, resets, swaps, reload, and disable with the bank open.
-- Unchanged preset loading, hover text, right-click menus, and keyboard behaviour;
-  Beast of Burden, page-switch, and settings buttons remain untouched.
-- Management-row icons and the editor preview still work independently.
-
-Mocked tests do not replace in-client visual and interaction checks.
+Also test in-client: save/reset, all 18 presets and Beast of Burden, character
+isolation, persistence, swaps, picker positioning, scrolling/resizing, and restoration
+on disable. Check all icon categories on both compact pages, background visibility,
+and unchanged preset loading, menus, hover text, and keyboard behaviour.
+Mocked tests do not replace visual and interaction checks.
 
 ### Code overview
 
-- `main.lua`: lifecycle, editor entry points, and label refresh/restoration.
-- `bank/`: preset bindings, local label/colour overrides, and the context menu.
-- `bank/icons.lua`: management-row icon rendering, native number restoration, and sprite cleanup.
-- `bank/compact_icons.lua`: compact-button icon rendering, page detection from native number text,
-  reversible number-colour suppression, and independent sprite cleanup.
-- `editor/`: shared editor, PrettyUI popup, layout, help, theme, and icons.
-- `presets/`: validation and per-character persistent settings.
-- `components/colour_picker/`: self-contained picker and colour conversions.
-- `components/icon_picker/`: data-driven, storage-independent native sprite picker.
+- `main.lua`: lifecycle and editor entry points.
+- `bank/`: UI bindings, labels, colours, icons, and context menus.
+- `editor/`: editor layout, preview, help, and PrettyUI integration.
+- `presets/`: validation, per-character storage, and icon catalogue.
+- `components/`: reusable colour and icon pickers.
 - `tests/`: mocked regression suites; `plugin.json`: manifest and dependency.
 
-Use slash-separated imports such as `require("editor/view")`, without `.lua`.
-The entry point passes the `prettyui` dependency global to editor modules;
-do not use `require("prettyui")`. Preset slots are one-based; native dropdown
-entry IDs are zero-based. An empty saved name means “use the predefined name”.
+Use slash-separated imports without `.lua`. PrettyUI is supplied through the
+`prettyui` dependency global, not `require("prettyui")`. Slots are one-based;
+native dropdown entry IDs are zero-based.
 
-### Reusable icon picker
+To add an icon category, add a module under `presets/icon_categories/` and register
+it in `presets/icon_catalogue.lua`. Keep saved icon keys stable. The catalogue
+supports native sprites and item artwork; the picker creates tabs and pagination.
 
-The icon picker has no bank, storage, catalogue, or PrettyUI dependency:
-
-```lua
-local catalogue = require("presets/icon_catalogue")
-local close, updatePosition = require("components/icon_picker/init").open(host, {
-    categories = catalogue.categories,
-    initial = "skills:farming", -- "" means use the preset number
-    anchor = iconControl, -- optional; defaults to host
-    resolve = catalogue.resolve, -- optional; otherwise uses id.Sprite[entry.sprite]
-    onSelect = function(key) end, -- stable key, or "" for Use preset number
-    onClose = function() end, -- optional; called before onSelect
-})
-```
-
-Categories have `key`, `name`, and ordered `entries`. Entries have `key`, `name`,
-`sprite` (native constant name), and optional source `width`/`height` (default 24).
-Selection closes the picker; closing without selecting does not change the draft.
-Unavailable sprites cannot be selected. The host manages draft state and ensures
-only one picker is open. Call `close()` on disposal and `updatePosition()` when
-the host moves; both are safe after closing. Optional `theme` and
-`attachOverlay(root, updatePosition)` follow the colour picker's pattern below.
-
-Icon storage uses stable keys under `presetIcon.v1.displayName.<context>.<slot>`.
-Missing settings mean the native number; no migration of names or colours is
-needed. The catalogue explicitly maps resource suffixes rather than assuming
-they are skill IDs. Combined Challenge icon 26 is excluded; Necromancy uses the
-verified full-colour `SKILL_ICON_NECROMANCY_52PX_0`.
-
-#### Adding an icon tab
-
-Add a module under `presets/icon_categories/` returning `{ key, name, entries }`,
-then add its `require` to the list in `presets/icon_catalogue.lua`. Each entry has
-a stable namespaced `key` (for example `skills:farming`), matching `category`, display
-`name`, and native `sprite` constant name. Optional `width`/`height` preserve the
-source aspect ratio (default 24×24). Follow `skills.lua` as an example.
-The picker creates tabs and pagination automatically; lookup, validation, storage,
-and bank rendering work through the shared catalogue without category-specific changes.
-Keep existing keys stable so saved selections continue to work.
-
-### Reusable colour picker
-
-The picker remains bundled in this plugin, but has no editor, storage or PrettyUI
-dependencies. Its public API is:
-
-```lua
-local picker = require("components/colour_picker/init")
-local close, updatePosition = picker.open(host, {
-    title = "Choose background colour", -- defaults to "Choose colour"
-    initial = "#38A4FF",
-    anchor = swatch, -- optional; defaults to host
-    onChange = function(hex) end, -- #RRGGBB; updates the staged preview immediately
-    onClose = function() end, -- optional; closing does not discard staged colours
-})
-```
-
-Call `close()` when the host is disposed and `updatePosition()` when it moves.
-Both are safe after closing. Optional `theme` supplies `border` and `background`
-RGBA tables. Optional `attachOverlay(root, updatePosition)` integrates the host's
-overlay management and returns a cleanup function; the editor uses this to keep
-the picker above PrettyUI windows during dragging/focus changes.
-
-For later extraction, move `components/colour_picker/` into the new plugin and
-replace the picker import in `editor/view.lua` and the utility import in
-`presets/colour_value.lua` with dependency exports. The component itself uses
-only the client UI API and its own colour utilities; it never saves settings.
-
-`bank/bindings.lua` maps interface 517, static component 266, category 0, dynamic
-ID `(slot - 1) * 3 + 1` for the 18 numbered presets. Live diagnostics confirmed
-the number label at dynamic ID `(slot - 1) * 3`. The bank icon renderer attaches
-non-interactive sprites under the number's native parent, with a 4-unit right
-inset; native number styling and geometry remain available to the preview.
-Compact buttons use static component 117, category 0, with number-label dynamic
-IDs `9 + (buttonIndex - 1) * 11` for button positions 1–9. These addresses are
-reused on both pages, so the compact renderer reads native number text each Draw
-and accepts only the position's first- or second-page preset number. It does not
-clear that text: it suppresses label colour alpha only after sprite setup succeeds.
-Icons are centred in the label's bounds, preserve aspect ratio, and fit within
-24 × 24 UI units. Plugin sprites use explicit category 1/dynamic IDs 1–9 and
-are moved to the front of their native parent as non-interactive siblings.
-Cleanup restores only colour still owned by the plugin and never writes cached
-page numbers over newer native text. The management and compact renderers keep
-separate lifecycle state while sharing the existing catalogue and character settings.
-Live diagnostics also confirmed
-the Beast of Burden name at dynamic 55, background at static 265/dynamic 19,
-and hit target at static 267/dynamic 19 (all category 0). Its internal saved
-entry is 19, but this does not make it a numbered or swappable preset.
-Missing or restricted components are skipped. Game UI updates may require new
-mappings. `pan Component` exports static definitions, not live dynamic rows;
-use the separate `bank-interface-diagnostics` plugin to inspect live components.
-Bind only unrestricted labels belonging to individual entries.
-
-Before submission, personally review and understand the code, test it, and follow
-Jagex's [plugin guidelines](https://developer.runescape.com/rs/submission/guidelines.html)
+Before submission, review and test the code and follow Jagex's
+[plugin guidelines](https://developer.runescape.com/rs/submission/guidelines.html)
 and [submission process](https://developer.runescape.com/rs/submission/process.html).
 
 ## Feedback and collaboration
 
 Report issues or propose contributions through this repository's issue tracker,
 or contact [vincent.rs.plugins@gmail.com](mailto:vincent.rs.plugins@gmail.com).
-For bugs, include reproduction steps and your client version. Do not post
-personal information in public reports.
+For bugs, include reproduction steps and your client version. Do not post personal
+information in public reports.
 
 ## EULA
 

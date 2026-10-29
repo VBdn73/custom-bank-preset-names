@@ -52,7 +52,7 @@ test.case("Holiday tab exposes unique seasonal item artwork and named sprites", 
     local category = catalogue.categories[3]
     test.equal(category.key, "holidays")
     test.equal(category.name, "Holidays")
-    test.equal(#category.entries, 47)
+    test.equal(#category.entries, 44)
     local seen, seenItems = {}, {}
     for _, entry in ipairs(category.entries) do
         test.equal(entry.category, category.key)
@@ -76,8 +76,7 @@ test.case("Holiday tab exposes unique seasonal item artwork and named sprites", 
         ["christmas-cracker"] = 962, ["bunny-ears"] = 1037,
         ["rubber-chicken"] = 4566, ["easter-basket"] = 54618,
         ["yo-yo"] = 4079, ["reindeer-hat"] = 10507,
-        ["blue-marionette"] = 6865, ["green-marionette"] = 6866,
-        ["red-marionette"] = 6867, ["scythe"] = 1419,
+        ["scythe"] = 1419,
         ["christmas-scythe"] = 33625, ["festive-scythe"] = 52757,
         ["red-partyhat"] = 1038, ["yellow-partyhat"] = 1040,
         ["blue-partyhat"] = 1042, ["green-partyhat"] = 1044,
@@ -108,7 +107,7 @@ test.case("Misc tab exposes coin variants, achievements, clues and utility artwo
     local category = catalogue.categories[4]
     test.equal(category.key, "misc")
     test.equal(category.name, "Misc")
-    test.equal(#category.entries, 39)
+    test.equal(#category.entries, 37)
     local seen = {}
     for _, entry in ipairs(category.entries) do
         test.equal(entry.category, "misc")
@@ -134,7 +133,6 @@ test.case("Misc tab exposes coin variants, achievements, clues and utility artwo
     test.equal(catalogue.get("misc:runescore").sprite, "ACHIEVEMENT_ICON_RUNESCORE")
     test.equal(catalogue.get("misc:skills").sprite, "RS3_ICON_TAB_SKILLS")
     local utilitySprites = {
-        ["home-teleport"] = "BUTTON_HUD_HOMETELEPORT_DEFAULT",
         ["combat-level"] = "AIF_COMBAT_ICON",
         ["world-map"] = "NAVIGATION_ICON_WORLDMAP_ON",
         calendar = "BTN_MOBILE_CALENDAR",
@@ -143,11 +141,12 @@ test.case("Misc tab exposes coin variants, achievements, clues and utility artwo
         ["life-points"] = "RS3_HUD_COMBAT_BAR_ICON_HEALTH",
         bank = "RS3_ICON_WORLDMAP_KEY_BANK",
         ["grand-exchange"] = "RS3_ICON_PATH_GRAND_EXCHANGE",
-        lodestone = "RS3_ICON_LODESTONE_TOWER",
     }
     for key, resource in pairs(utilitySprites) do
         test.equal(catalogue.get("misc:" .. key).sprite, resource)
     end
+    test.equal(catalogue.get("misc:home-teleport"), nil)
+    test.equal(catalogue.get("misc:lodestone"), nil)
 end)
 
 test.case("Native item assignment hides quantities and clears when returning to skills", function()
