@@ -79,7 +79,7 @@ local function apply(binding, store, colours)
         states[index] = state
         sprite.clickthrough = true
         sprite.enabled = false
-        sprite.sprite = spriteID
+        catalogue.apply(sprite, spriteID, entry)
         sprite.rgba = 0xFFFFFFFF
     elseif number.rgba ~= state.applied then
         state.original = number.rgba
@@ -140,7 +140,8 @@ local function apply(binding, store, colours)
     -- Native redraws may add/reorder sibling backgrounds after our child was
     -- attached. Raise only our clickthrough sprite, never native components.
     state.sprite:MoveToFront()
-    assert(state.sprite.spriteID == spriteID, "Native compact sprite assignment was not accepted.")
+    assert((entry.objectID and state.sprite.associatedObjectID or state.sprite.spriteID) == spriteID,
+        "Native compact icon assignment was not accepted.")
     -- visibleGlobal describes UI-tree visibility, not asset readiness. Do not
     -- use it as a loading gate. Report persistent tree invisibility separately.
     if not state.sprite.hidden and parent.visibleGlobal == true

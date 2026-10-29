@@ -16,7 +16,8 @@ local function fixture()
         print = function(message) f.messages[#f.messages + 1] = message end,
         require = function(path)
             if path == "presets/icon_catalogue" then
-                return { resolve = function(key) return catalogue.resolve(key, spriteIDs) end }
+                return { resolve = function(key) return catalogue.resolve(key, spriteIDs) end,
+                    apply = catalogue.apply }
             end
             return require(path)
         end,

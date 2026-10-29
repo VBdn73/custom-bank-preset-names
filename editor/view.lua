@@ -203,8 +203,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local ok = false
         if slots.valid(selectedSlot) and spriteID then
             ok = pcall(function()
-                sprite.sprite = spriteID
-                assert(sprite.spriteID == spriteID)
+                iconCatalogue.apply(sprite, spriteID, entry)
                 sprite.rgba = 0xFFFFFFFF
                 local scale = math.min(24 / entry.width, 24 / entry.height, 1)
                 sprite:SetSize(math.max(1, math.floor(entry.width * scale)),
@@ -494,8 +493,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             pickerKind = "icon"
             local slot, context = selectedSlot, names.getContext()
             closePicker, updatePicker = iconPicker.open(host, {
+                prettyui = options.prettyui,
                 categories = iconCatalogue.categories, initial = pendingIcon,
-                resolve = iconCatalogue.resolve, anchor = iconControl, theme = theme,
+                resolve = iconCatalogue.resolve, apply = iconCatalogue.apply, anchor = iconControl, theme = theme,
                 attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)
                     contentHost:_RegisterOverlay(root, nil, updatePosition)
                     contentHost:_SyncOverlays(false)

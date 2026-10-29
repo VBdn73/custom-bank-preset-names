@@ -46,8 +46,8 @@ enable commands do not download dependencies automatically.
    left to right, with white at the top and black at the bottom. Changes
    immediately update the preview. Click **×** or the same swatch again to close
    the picker without discarding the selected colour.
-4. For a numbered preset, click **Icon** to open the Skills picker. Hover an icon
-   to see its skill name; click it to stage that selection and close the picker.
+4. For a numbered preset, click **Icon** and choose **Skills** or **Weapons**. Hover an icon
+   to see its name; click it to stage that selection and close the picker.
    **Use preset number** or the adjacent **↺** stages the default number. Closing
    the picker without selecting leaves the staged value unchanged.
 5. Click **Save** (or press Enter in the name field) to save the name, colours, and icon.

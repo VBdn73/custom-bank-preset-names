@@ -164,8 +164,18 @@ local function createFixture(colours, iconStore)
     f.parent = createControl("parent", f.host)
     f.parent.width, f.parent.height = 580, 360
     function f:open(initialSlot, options)
-        if options and options.scrollable and options.prettyui == nil then
+        options = options or {}
+        if options.prettyui == nil then
             options.prettyui = prettyui
+        end
+        if options.prettyui then
+            options.prettyui.SpriteButton = { new = function(parent, spriteName, action, settings)
+                local control = createControl("Sprite", parent)
+                control:SetPos(settings.x, settings.y)
+                control:SetSize(settings.size, settings.size)
+                function control:SetDisabled(disabled) self.disabled = disabled end
+                return control
+            end }
         end
         local firstNewControl = #self.controls + 1
         self.refresh, self.toggleInfo, self.destroy, self.selectSlot = dofile("editor/view.lua").build(self.parent, self.names,

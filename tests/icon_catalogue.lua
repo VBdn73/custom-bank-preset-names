@@ -9,7 +9,7 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         "runecrafting", "slayer", "farming", "construction", "hunter", "summoning",
         "dungeoneering", "divination", "invention", "archaeology", "necromancy",
     }
-    test.equal(#catalogue.categories, 1)
+    test.equal(#catalogue.categories, 2)
     local category = catalogue.categories[1]
     test.equal(category.key, "skills")
     test.equal(category.name, "Skills")
@@ -23,6 +23,99 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         test.equal(entry.category, category.key)
         test.equal(type(entry.name), "string")
         test.equal(catalogue.get(entry.key), entry)
+    end
+end)
+
+test.case("Weapons have unique stable keys, valid item IDs and alphabetical ordering", function()
+    local category = catalogue.categories[2]
+    test.equal(category.key, "weapons90")
+    test.equal(category.name, "Weapons")
+    local previous, seen = "", {}
+    for _, entry in ipairs(category.entries) do
+        test.equal(entry.category, "weapons90")
+        test.equal(seen[entry.key], nil)
+        seen[entry.key] = true
+        test.equal(entry.name:lower() >= previous, true)
+        previous = entry.name:lower()
+        test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
+        test.equal(catalogue.resolve(entry.key, {}), entry.objectID)
+        test.equal(entry.width, 36)
+        test.equal(entry.height, 32)
+    end
+    test.equal(catalogue.get("weapons90:malachis-tooth").objectID, 64341,
+        "Beta client uses 64341 for the crossbow; 64191 is a cure potion")
+    test.equal(catalogue.get("weapons90:elder-crossbow").objectID, 63579,
+        "Beta client uses 63579 for Elder crossbow; 63315 is a trophy")
+end)
+
+test.case("Native item assignment hides quantities and clears when returning to skills", function()
+    local oldUI = ui
+    ui = { ObjectQuantityDisplayMode = { NEVER = 0 } }
+    local sprite = setmetatable({}, { __index = function(self, key)
+        if key == "spriteID" then return self.sprite end
+    end })
+    function sprite:SetAssociatedObject(objectID, quantity)
+        test.equal(quantity, nil, "Icon assignment must omit the optional native Uint64 quantity")
+        self.associatedObjectID, self.associatedObjectQuantity = objectID, quantity
+    end
+    local asset, entry = catalogue.resolve("weapons90:noxious-scythe")
+    catalogue.apply(sprite, asset, entry)
+    test.equal(sprite.associatedObjectID, 31725)
+    test.equal(sprite.associatedObjectQuantityMode, 0)
+    catalogue.apply(sprite, 123, catalogue.get("skills:attack"))
+    test.equal(sprite.associatedObjectID, -1)
+    test.equal(sprite.spriteID, 123)
+    ui = oldUI
+end)
+
+test.case("T90–95 tab includes finished weapons with valid tiers, sorted unique item artwork", function()
+    local category = catalogue.categories[2]
+    test.equal(category.key, "weapons90")
+    local previous, seen = "", {}
+    for _, entry in ipairs(category.entries) do
+        test.equal(entry.category, category.key)
+        test.equal(catalogue.get(entry.key), entry)
+        test.equal(catalogue.resolve(entry.key), entry.objectID)
+        test.equal(entry.tier >= 90 and entry.tier <= 95, true)
+        test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
+        test.equal(seen[entry.objectID], nil)
+        seen[entry.objectID] = true
+        test.equal(entry.name:lower() >= previous, true)
+        previous = entry.name:lower()
+        test.equal(entry.name:lower():find("dormant", 1, true), nil)
+    end
+    for _, key in ipairs({ "eldritch-crossbow", "fractured-staff-of-armadyl",
+        "bow-of-the-last-guardian", "abyssal-scourge", "masterwork-spear-of-annihilation",
+        "death-guard-tier-90-" }) do
+        test.equal(catalogue.get("weapons90:" .. key) ~= nil, true, key)
+    end
+    test.equal(catalogue.get("weapons90:dragon-2h-sword"), nil)
+    test.equal(#category.entries, 40)
+    for _, entry in ipairs(category.entries) do
+        for _, family in ipairs({ "promethium", "grave creeper", "spiritbloom", "empowered catalytic" }) do
+            test.equal(entry.name:lower():find(family, 1, true), nil,
+                "Daemonheim-only weapons must not appear in the picker")
+        end
+    end
+    test.equal(catalogue.get("weapons90:ruinous-rapier").objectID, 61452,
+        "Surface-usable Dungeoneering rewards remain available")
+    test.equal(catalogue.get("weapons:dragon-2h-sword"), nil,
+        "The old Weapons category is no longer registered")
+end)
+
+test.case("Weapon tabs keep main-hand and two-handed icons without paired off-hands", function()
+    local offhands = { 52045, 52057, 25672, 25895, 34855, 37080, 40600,
+        64195, 26591, 26599, 26583, 28441, 40659, 25664, 39579,
+        55482, 57158, 42774, 28621, 61454, 58213, 63337, 61462, 55542, 61466 }
+    for index = 2, 2 do
+        local present = {}
+        for _, entry in ipairs(catalogue.categories[index].entries) do
+            present[entry.objectID] = true
+            test.equal(entry.name:lower():find("off-hand", 1, true), nil)
+        end
+        for _, objectID in ipairs(offhands) do test.equal(present[objectID], nil) end
+        test.equal(present[26587], true, "Main-hand drygore remains")
+        test.equal(present[31725], true, "Two-handed noxious scythe remains")
     end
 end)
 

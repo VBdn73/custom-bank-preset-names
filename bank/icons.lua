@@ -53,7 +53,7 @@ local function apply(binding, store)
         states[slot] = state
         sprite.clickthrough = true
         sprite.enabled = false
-        sprite.sprite = spriteID
+        catalogue.apply(sprite, spriteID, entry)
         sprite.rgba = 0xFFFFFFFF
     elseif number.content ~= "" then
         -- Native scripts may redraw the number after Logic, including selection.
@@ -70,7 +70,8 @@ local function apply(binding, store)
     -- Selection scripts can reorder native sibling backgrounds after creation.
     -- Raise only our non-interactive child, without changing native hit targets.
     state.sprite:MoveToFront()
-    assert(state.sprite.spriteID == spriteID, "Native sprite assignment was not accepted.")
+    assert((entry.objectID and state.sprite.associatedObjectID or state.sprite.spriteID) == spriteID,
+        "Native icon assignment was not accepted.")
     -- Sibling placement inherits native list scrolling/clipping without changing
     -- hit targets, row backgrounds, visibility, or input hooks. Only clear text
     -- after construction, resource assignment and layout have succeeded.

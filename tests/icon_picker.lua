@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 
 local function fixture(options)
-    local f = { controls = {}, selected = {}, closed = 0, detached = 0 }
+    local f = { controls = {}, selected = {}, closed = 0, detached = 0, messages = {} }
     local function new(kind, parent)
         local control = { kind = kind, parent = parent, hooks = {}, children = {} }
         if parent then parent.children[#parent.children + 1] = control end
@@ -21,7 +21,8 @@ local function fixture(options)
     local hooks = { ONCLICK = "click", ONBUTTONPRESSED = "press", ONMOUSEOVER = "over",
         ONMOUSELEAVE = "leave", ONKEY = "key" }
     local environment = setmetatable({
-        ui = { Hook = hooks },
+        print = function(message) f.messages[#f.messages + 1] = message end,
+        ui = { Hook = hooks, AlignMode = { CENTRE = "centre" } },
         id = { Font = { MUSEO_SANS_11PT_REGULAR = 1 }, StyleSheet = { BUTTON_DEFAULT = 1 },
             Sprite = { FARM = 10, WIDE = 11, RS3_BTN_MODAL_WINDOW_1_CLOSE_NML = 20,
                 RS3_BTN_MODAL_WINDOW_1_CLOSE_OVR = 21 } },
@@ -40,6 +41,15 @@ local function fixture(options)
     f.anchor:SetPos(10, 20)
     f.anchor:SetSize(40, 30)
     f.options = {
+        prettyui = { SpriteButton = { new = function(parent, spriteName, action, options)
+            local control = new("Arrow", parent)
+            control.spriteName = spriteName
+            control:SetPos(options.x, options.y)
+            control:SetSize(options.size, options.size)
+            function control:SetDisabled(disabled) self.disabled = disabled end
+            control.hooks.press = function() if not control.disabled then action() end end
+            return control
+        end } },
         categories = { { key = "skills", name = "Skills", entries = {
             { key = "skills:farming", name = "Farming", sprite = "FARM", width = 35, height = 35 },
             { key = "skills:wide", name = "Wide", sprite = "WIDE", width = 48, height = 24 },
@@ -180,19 +190,44 @@ test.case("Larger categories paginate and start on the selected entry's page", f
     f.open()
     test.equal(#f.tiles(), 5)
     test.equal(#f.find("Text", function(c) return c.content == "2 / 2" end), 1)
-    f.find("Button", function(c) return c.label == "<" end)[1].hooks.press()
+    local pageLabel = f.find("Text", function(c) return c.content == "2 / 2" end)[1]
+    test.equal(pageLabel.alignHorizontal, "centre")
+    test.equal(pageLabel.x + pageLabel.width / 2, f.root.width / 2)
+    test.equal(f.find("Arrow")[2].disabled, true)
+    f.find("Arrow", function(c) return c.spriteName == "ARROW_LEFT" end)[1].hooks.press()
     test.equal(#f.tiles(), 30)
-    f.find("Button", function(c) return c.label == ">" end)[1].hooks.press()
+    test.equal(f.find("Arrow")[1].disabled, true)
+    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
     f.tiles()[2].hooks.press()
     test.equal(f.selected[1], "test:32")
 end)
 
+test.case("T90–95 tab paginates finished weapons and selects their stable keys", function()
+    local catalogue = require("presets/icon_catalogue")
+    local applied = {}
+    local f = fixture({ categories = catalogue.categories,
+        resolve = function() return 99 end,
+        apply = function(sprite, assetID, entry)
+            sprite.sprite = assetID
+            applied[#applied + 1] = entry.key
+        end })
+    f.open()
+    f.find("Button", function(c) return c.label == "Weapons" end)[1].hooks.press()
+    test.equal(#f.tiles(), 30)
+    test.equal(applied[#applied], catalogue.categories[2].entries[30].key)
+    local weapon = f.find("Sprite", function(c) return c.sprite == 99 and c.width == 32 end)[1]
+    test.equal(weapon.height, 28)
+    f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
+    f.tiles()[1].hooks.press()
+    test.equal(f.selected[1], catalogue.categories[2].entries[31].key)
+end)
+
 test.case("The complete Skills category fits the standard grid and narrower UIs paginate", function()
-    local categories = require("presets/icon_catalogue").categories
+    local categories = { require("presets/icon_catalogue").categories[1] }
     local f = fixture({ categories = categories, initial = "skills:necromancy", resolve = function() return 99 end })
     f.open()
     test.equal(#f.tiles(), 29)
-    test.equal(#f.find("Button", function(c) return c.label == ">" end), 0)
+    test.equal(#f.find("Arrow"), 0)
     f.close()
     local narrow = fixture({ categories = categories, initial = "skills:necromancy", resolve = function() return 99 end })
     narrow.parent:SetSize(220, 400)
@@ -211,6 +246,8 @@ test.case("Picker supports injected catalogue resolution and cleans up failed co
     f.open()
     test.equal(#f.find("Sprite", function(c) return c.sprite == 99 end), 1)
     test.equal(f.tiles()[2].label, "?")
+    test.equal(#f.messages, 1, "Repeated rendering errors are logged only once per picker")
+    test.equal(f.messages[1]:find("Unavailable resource", 1, true) ~= nil, true)
     f.close()
     local broken = fixture({ attachOverlay = function() error("Attach failed") end })
     local ok = pcall(broken.open)

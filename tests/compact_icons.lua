@@ -15,7 +15,7 @@ local function fixture()
                 return { resolve = function(key)
                     if key == "skill" then return 101, { width = 32, height = 16 } end
                     if key == "large" then return 102, { width = 64, height = 64 } end
-                end }
+                end, apply = require("presets/icon_catalogue").apply }
             end
             return require(path)
         end,

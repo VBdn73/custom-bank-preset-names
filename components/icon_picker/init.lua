@@ -1,4 +1,4 @@
--- Reusable native-asset picker. No editor, bank, storage or PrettyUI dependency.
+-- Reusable native-asset picker. PrettyUI supplies native pagination arrows.
 local picker = {}
 local defaultTheme = {
     border = { 0.58, 0.48, 0.28, 1 },
@@ -126,17 +126,23 @@ function picker.open(host, options)
             if entry.key == options.initial then page = math.ceil(index / capacity) end
         end
         local grid, tabFrames, refresh = nil, {}, nil
-        local pageLabel
+        local reportedErrors = {}
+        local pageLabel, previousButton, nextButton
         if paginated then
-            button(root, 12, footerY + 30, 60, 28, "<", function()
+            local spriteButton = assert(options.prettyui and options.prettyui.SpriteButton,
+                "PrettyUI SpriteButton is required for icon picker pagination.")
+            previousButton = spriteButton.new(root, "ARROW_LEFT", function()
+                if closed then return end
                 page = math.max(1, page - 1)
                 refresh()
-            end)
-            pageLabel = text(root, 80, footerY + 32, math.max(1, innerWidth - 136), "")
-            button(root, width - 72, footerY + 30, 60, 28, ">", function()
+            end, { x = 12, y = footerY + 30, size = 28 })
+            pageLabel = text(root, 48, footerY + 32, math.max(1, innerWidth - 72), "")
+            pageLabel.alignHorizontal = ui.AlignMode.CENTRE
+            nextButton = spriteButton.new(root, "ARROW_RIGHT", function()
+                if closed then return end
                 page = math.min(math.max(1, math.ceil(#(categories[categoryIndex].entries or {}) / capacity)), page + 1)
                 refresh()
-            end)
+            end, { x = width - 40, y = footerY + 30, size = 28 })
         end
         button(root, 12, height - 40, innerWidth, 28, "Use preset number", function() select("") end)
         for index, category in ipairs(categories) do
@@ -158,7 +164,12 @@ function picker.open(host, options)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end
             local entries = categories[categoryIndex].entries or {}
-            if pageLabel then pageLabel.content = page .. " / " .. math.max(1, math.ceil(#entries / capacity)) end
+            if pageLabel then
+                local pages = math.max(1, math.ceil(#entries / capacity))
+                pageLabel.content = page .. " / " .. pages
+                previousButton:SetDisabled(page <= 1)
+                nextButton:SetDisabled(page >= pages)
+            end
             for offset = 1, capacity do
                 local entry = entries[(page - 1) * capacity + offset]
                 if entry then
@@ -168,7 +179,7 @@ function picker.open(host, options)
                         if available then select(entry.key) end
                     end)
                     local sprite
-                    local ok = pcall(function()
+                    local ok, err = pcall(function()
                         local spriteID
                         if options.resolve then spriteID = options.resolve(entry.key)
                         else spriteID = id.Sprite[entry.sprite] end
@@ -176,9 +187,13 @@ function picker.open(host, options)
                         local w, h = entry.width or 24, entry.height or 24
                         assert(w > 0 and h > 0)
                         sprite = ui.Sprite.new(grid)
-                        sprite.sprite = spriteID
-                        assert(sprite.spriteID == spriteID)
-                        local scale = math.min(24 / w, 24 / h, 1)
+                        if options.apply then options.apply(sprite, spriteID, entry)
+                        else
+                            sprite.sprite = spriteID
+                            assert(sprite.spriteID == spriteID)
+                        end
+                        local iconSize = entry.objectID and 32 or 24
+                        local scale = math.min(iconSize / w, iconSize / h, 1)
                         w, h = math.max(1, math.floor(w * scale)), math.max(1, math.floor(h * scale))
                         sprite:SetSize(w, h)
                         sprite:SetPos(x + math.floor((40 - w) / 2), y + math.floor((40 - h) / 2))
@@ -189,6 +204,11 @@ function picker.open(host, options)
                     if not ok then
                         if sprite then pcall(function() sprite:Destroy() end) end
                         target.label = "?"
+                        local message = tostring(err)
+                        if not reportedErrors[message] then
+                            reportedErrors[message] = true
+                            print("[Icon picker] Could not render " .. entry.key .. ": " .. message)
+                        end
                     end
                     local function showName()
                         if not closed then name.content = entry.name .. (available and "" or " (unavailable)") end
