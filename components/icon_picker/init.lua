@@ -19,8 +19,11 @@ end
 function picker.open(host, options)
     options = options or {}
     assert(type(options.onSelect) == "function", "Icon picker requires an onSelect callback.")
-    local categories = options.categories or {}
-    assert(#categories > 0, "Icon picker requires at least one category.")
+    -- Keep empty categories out of the tab bar, including an empty backpack.
+    local categories = {}
+    for _, category in ipairs(options.categories or {}) do
+        if #(category.entries or {}) > 0 then categories[#categories + 1] = category end
+    end
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
     local root = ui.Layer.new(parent)
@@ -83,8 +86,8 @@ function picker.open(host, options)
         width = math.min(288, parent.width)
         local innerWidth = math.max(1, width - 24)
         local columns = math.max(1, math.floor(innerWidth / 44))
-        local tabColumns = math.min(#categories, math.max(1, math.floor(innerWidth / 80)))
-        local tabRows = math.ceil(#categories / tabColumns)
+        local tabColumns = math.max(1, math.min(#categories, math.max(1, math.floor(innerWidth / 80))))
+        local tabRows = math.max(1, math.ceil(#categories / tabColumns))
         local gridY = 76 + (tabRows - 1) * 32
         local largest = 0
         local categoryIndex = 1
@@ -125,7 +128,7 @@ function picker.open(host, options)
         local name = text(root, 12, footerY + 4, innerWidth, initialName)
         local page = 1
         -- Start on the page containing the current selection.
-        for index, entry in ipairs(categories[categoryIndex].entries or {}) do
+        for index, entry in ipairs((categories[categoryIndex] or {}).entries or {}) do
             if entry.key == options.initial then page = math.ceil(index / capacity) end
         end
         local grid, tabFrames, refresh = nil, {}, nil
@@ -167,9 +170,9 @@ function picker.open(host, options)
             grid:SetSize(innerWidth, rows * 44)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end
-            local entries = categories[categoryIndex].entries or {}
-            if #entries == 0 and categories[categoryIndex].emptyMessage then
-                name.content = categories[categoryIndex].emptyMessage
+            local entries = (categories[categoryIndex] or {}).entries or {}
+            if #categories == 0 then
+                name.content = "No icons available."
             end
             if pageLabel then
                 local pages = math.max(1, math.ceil(#entries / capacity))

@@ -16,9 +16,9 @@ test.case("Backpack snapshot exposes distinct valid item IDs without modifying t
     local backpack = fixture({ { obj = { id = 31725 } }, {}, { obj = { id = 31725 } },
         { obj = { id = 1959 } }, { obj = { id = -1 } } }, true)
     local categories = backpack.categories()
-    test.equal(#categories, 5)
-    test.equal(#catalogue.categories, 4)
-    local entries = categories[5].entries
+    test.equal(#categories, #catalogue.categories + 1)
+    test.equal(categories[#categories].key, "backpack")
+    local entries = categories[#categories].entries
     test.equal(#entries, 2)
     test.equal(entries[1].key, "item:31725")
     test.equal(entries[2].key, "item:1959")

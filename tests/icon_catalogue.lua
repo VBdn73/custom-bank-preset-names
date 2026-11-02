@@ -9,7 +9,7 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         "runecrafting", "slayer", "farming", "construction", "hunter", "summoning",
         "dungeoneering", "divination", "invention", "archaeology", "necromancy",
     }
-    test.equal(#catalogue.categories, 4)
+    test.equal(#catalogue.categories, 5)
     local category = catalogue.categories[1]
     test.equal(category.key, "skills")
     test.equal(category.name, "Skills")
@@ -24,6 +24,14 @@ test.case("Skill catalogue has 29 unique keys in native skill-list order", funct
         test.equal(type(entry.name), "string")
         test.equal(catalogue.get(entry.key), entry)
     end
+end)
+
+test.case("Bosses category is reserved for suitable icons", function()
+    local category = catalogue.categories[5]
+    test.equal(category.key, "bosses")
+    test.equal(category.name, "Bosses")
+    test.equal(#category.entries, 0)
+    test.equal(catalogue.get("bosses:nex"), nil)
 end)
 
 test.case("Weapons have unique stable keys, valid item IDs and alphabetical ordering", function()

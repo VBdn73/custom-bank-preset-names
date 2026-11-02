@@ -204,15 +204,24 @@ test.case("Category tabs wrap into readable rows without overlapping the grid", 
     test.equal(f.selected[1], "Holidays:item")
 end)
 
-test.case("Empty backpack tab explains why no items are shown", function()
+test.case("Empty categories including backpack are hidden", function()
     local f = fixture()
     f.options.categories[2] = { key = "backpack", name = "Bag", entries = {},
         emptyMessage = "Backpack unavailable." }
+    f.options.categories[3] = { key = "bosses", name = "Bosses", entries = {} }
     f.open()
-    f.find("Button", function(c) return c.label == "Bag" end)[1].hooks.press()
-    test.equal(#f.tiles(), 0)
-    test.equal(#f.find("Text", function(c) return c.content == "Backpack unavailable." end), 1)
+    test.equal(#f.find("Button", function(c) return c.label == "Bag" or c.label == "Bosses" end), 0)
+    test.equal(#f.tiles(), 3)
     f.close()
+end)
+
+test.case("Picker allows resetting when all categories are empty", function()
+    local f = fixture({ categories = { { key = "bosses", name = "Bosses", entries = {} } } })
+    f.open()
+    test.equal(#f.find("Button", function(c) return c.label == "Bosses" end), 0)
+    test.equal(#f.find("Text", function(c) return c.content == "No icons available." end), 1)
+    f.find("Button", function(c) return c.label == "Use preset number" end)[1].hooks.press()
+    test.equal(f.selected[1], "")
 end)
 
 test.case("Backpack tiles show the item name and select its stable ID", function()

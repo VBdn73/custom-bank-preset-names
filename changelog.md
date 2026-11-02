@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Hide icon categories when they contain no icons.
+
 ## 0.7.0 - 2026-10-29
 
 - Added preset icons in four categories: Skills (all 29), Weapons, Holidays, and Misc.
