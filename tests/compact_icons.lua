@@ -1,7 +1,7 @@
 local test = require("tests.test_helper")
 
 local function fixture()
-    local f = { labels = {}, selected = {}, sprites = {}, backgrounds = {}, colours = {}, messages = {}, order = {} }
+    local f = { labels = {}, selected = {}, sprites = {}, backgrounds = {}, colours = {}, messages = {}, order = {}, texts = {}, iconTexts = {} }
     local bindings = dofile("bank/bindings.lua").compactButtons
     function f.label(index)
         return { type = 1, content = tostring(index), rgba = 0xFFCB75FF,
@@ -19,7 +19,8 @@ local function fixture()
             end
             return require(path)
         end,
-        ui = { ComponentType = { LABEL = 1, SPRITE = 2 }, Interfaces = {
+        id = { Font = { MUSEO_SANS_11PT_REGULAR = 11 } },
+        ui = { ComponentType = { LABEL = 1, SPRITE = 2 }, AlignMode = { CENTRE = 1 }, Interfaces = {
             GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
                 test.equal(interfaceID, 517)
                 test.equal(staticID, 117)
@@ -28,7 +29,16 @@ local function fixture()
                 if dynamicID == 134 then return f.bobIcon end
                 return f.labels[(dynamicID - 9) / 11 + 1]
             end,
-        }, Sprite = { new = function(parent, categoryID, dynamicID)
+        }, Text = { new = function(parent, categoryID, dynamicID)
+            test.equal(categoryID, 3)
+            local text = { parent = parent, dynamicID = dynamicID }
+            function text:SetSize(w, h) self.width, self.height = w, h end
+            function text:SetPos(x, y) self.x, self.y = x, y end
+            function text:Destroy() self.destroyed = true end
+            function text:MoveToFront() f.order[#f.order + 1] = self end
+            f.texts[#f.texts + 1] = text
+            return text
+        end }, Sprite = { new = function(parent, categoryID, dynamicID)
             if f.creationFails then return nil end
             assert(type(categoryID) == "number" and categoryID % 1 == 0
                 and categoryID >= 0 and categoryID <= 256, "Invalid sprite category ID")
@@ -72,7 +82,7 @@ local function fixture()
         f.renderer.update(bindings, f.store, not f.hideBackgrounds and { rgba = function(slot, kind)
             test.equal(kind, "background")
             return f.colours[slot]
-        end })
+        end }, { get = function(slot) return f.iconTexts[slot] or "" end })
     end
     function f.page(offset)
         for index = 1, 9 do f.labels[index].content = tostring(index + offset) end
@@ -84,6 +94,43 @@ local function fixture()
     end
     return f
 end
+
+test.case("Compact icon text follows icons, page switches, visibility and resets", function()
+    local f = fixture()
+    f.iconTexts[1], f.iconTexts[10] = "WAS", "10A"
+    f.update()
+    local text = f.texts[1]
+    assert(text, table.concat(f.messages, "; "))
+    test.equal(text.content, "WAS")
+    test.equal(text.width, 40)
+    test.equal(text.maxLines, 1)
+    test.equal(text.y, f.labels[1].y)
+    test.equal(f.labels[1].content, "1")
+    test.equal(f.labels[1].rgba, 0xFFCB7500)
+    f.labels[1].rgba = 0x00000000
+    f.update()
+    test.equal(text.rgba, 0xFFCB75FF, "Native hover transparency must not hide custom text")
+    f.labels[1].rgba = 0xFFCB75FF
+    f.update()
+    f.selected[1] = "skill"
+    f.update()
+    test.equal(text.destroyed, true)
+    text = f.texts[2]
+    test.equal(text.y, f.labels[1].y + 6)
+    test.equal(f.order[#f.order], text)
+    f.labels[1].hidden = true
+    f.update()
+    test.equal(text.hidden, true)
+    f.labels[1].hidden = false
+    f.page(9)
+    f.update()
+    test.equal(text.destroyed, true)
+    test.equal(f.texts[3].content, "10A")
+    f.iconTexts[10] = ""
+    f.update()
+    test.equal(f.texts[3].destroyed, true)
+    test.equal(f.labels[1].rgba, 0xFFCB75FF)
+end)
 
 test.case("Compact BoB background follows the setting and saved colour without a custom icon", function()
     local f = fixture()

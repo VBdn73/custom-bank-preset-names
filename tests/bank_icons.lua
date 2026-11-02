@@ -2,7 +2,7 @@ local test = require("tests.test_helper")
 local catalogue = require("presets/icon_catalogue")
 
 local function fixture()
-    local f = { numbers = {}, selected = {}, sprites = {}, messages = {} }
+    local f = { numbers = {}, selected = {}, sprites = {}, messages = {}, texts = {}, iconTexts = {} }
     local spriteIDs = {}
     for index, entry in ipairs(catalogue.categories[1].entries) do spriteIDs[entry.sprite] = 1000 + index end
     local bindings = dofile("bank/bindings.lua").numbers
@@ -24,13 +24,24 @@ local function fixture()
             end
             return require(path)
         end,
-        ui = { ComponentType = { LABEL = 1 }, ObjectQuantityDisplayMode = { NEVER = 0 },
+        id = { Font = { MUSEO_SANS_11PT_REGULAR = 11 } },
+        ui = { ComponentType = { LABEL = 1 }, AlignMode = { CENTRE = 1 }, ObjectQuantityDisplayMode = { NEVER = 0 },
             Interfaces = { GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
                 test.equal(interfaceID, 517)
                 test.equal(staticID, 266)
                 test.equal(categoryID, 0)
                 test.equal(dynamicID % 3, 0)
                 return f.numbers[dynamicID / 3 + 1]
+            end },
+            Text = { new = function(parent, categoryID, dynamicID)
+                test.equal(categoryID, 3)
+                local text = { parent = parent, dynamicID = dynamicID }
+                function text:SetSize(w, h) self.width, self.height = w, h end
+                function text:SetPos(x, y) self.x, self.y = x, y end
+                function text:Destroy() self.destroyed = true end
+                function text:MoveToFront() self.frontMoves = (self.frontMoves or 0) + 1 end
+                f.texts[#f.texts + 1] = text
+                return text
             end },
             Sprite = { new = function(parent, categoryID, dynamicID)
                 if f.creationFails then return nil end
@@ -68,7 +79,7 @@ local function fixture()
         return f.selected[slot] or ""
     end }
     f.bindings = bindings
-    function f.update() f.renderer.update(f.bindings, f.store) end
+    function f.update() f.renderer.update(f.bindings, f.store, { get = function(slot) return f.iconTexts[slot] or "" end }) end
     function f.live()
         local count = 0
         for _, sprite in ipairs(f.sprites) do if not sprite.destroyed then count = count + 1 end end
@@ -77,6 +88,31 @@ local function fixture()
     f.spriteIDs = spriteIDs
     return f
 end
+
+test.case("Bank icon text replaces numbers, overlays icons and restores native labels", function()
+    local f = fixture()
+    f.iconTexts[1] = "WAS"
+    f.update()
+    local text = f.texts[1]
+    test.equal(text.content, "WAS")
+    test.equal(text.width, 40)
+    test.equal(text.maxLines, 1)
+    test.equal(text.y, f.numbers[1].y)
+    test.equal(f.numbers[1].content, "")
+    f.selected[1] = "skills:farming"
+    f.update()
+    test.equal(text.destroyed, true)
+    text = f.texts[2]
+    test.equal(text.y, f.numbers[1].y + 6)
+    test.equal(text.frontMoves, 1)
+    f.numbers[1].content = "1"
+    f.update()
+    test.equal(f.numbers[1].content, "")
+    f.iconTexts[1], f.selected[1] = "", nil
+    f.update()
+    test.equal(text.destroyed, true)
+    test.equal(f.numbers[1].content, "1")
+end)
 
 test.case("Number bindings cover only presets 1..18 with zero-based dynamic IDs", function()
     local numbers = dofile("bank/bindings.lua").numbers

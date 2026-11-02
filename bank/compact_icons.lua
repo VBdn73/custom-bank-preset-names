@@ -25,7 +25,8 @@ local function release(index)
             state.number.rgba = state.original
         end
     end)
-    pcall(function() state.sprite:Destroy() end)
+    if state.sprite then pcall(function() state.sprite:Destroy() end) end
+    if state.text then pcall(function() state.text:Destroy() end) end
     if state.background then pcall(function() state.background:Destroy() end) end
     for _, cap in ipairs(state.backgroundCaps or {}) do pcall(function() cap:Destroy() end) end
 end
@@ -41,7 +42,7 @@ local function resolve(binding)
         binding.categoryID, binding.dynamicID)
 end
 
-local function apply(binding, store, colours)
+local function apply(binding, store, colours, textStore)
     local index = binding.buttonIndex
     local number = resolve(binding)
     if not editable(number) then release(index); return end
@@ -49,6 +50,7 @@ local function apply(binding, store, colours)
     local slot = binding.slot == bob and bob or displayedSlot(number.content, index)
     if not slot or not parent or parent.isRestricted then release(index); return end
     local spriteID, entry = catalogue.resolve(store.get(slot))
+    local iconText = slot ~= bob and textStore and textStore.get(slot) or ""
     if slot == bob then
         -- BoB retains its native artwork; only mirror it while a background is
         -- enabled, so the colour can sit behind it without reordering native UI.
@@ -64,7 +66,7 @@ local function apply(binding, store, colours)
     elseif number.type ~= ui.ComponentType.LABEL then
         release(index); return
     end
-    if not spriteID then release(index); return end
+    if not spriteID and iconText == "" then release(index); return end
     local state = states[index]
     if state and (state.number ~= number or state.parent ~= parent
         or state.slot ~= slot or state.spriteID ~= spriteID) then
@@ -72,31 +74,41 @@ local function apply(binding, store, colours)
         state = nil
     end
     if not state then
-        local sprite = ui.Sprite.new(parent, spriteCategory, index)
-        assert(sprite, "Native compact number parent rejected sprite creation.")
-        state = { number = number, parent = parent, slot = slot, sprite = sprite,
-            spriteID = spriteID, original = number.rgba }
+        state = { number = number, parent = parent, slot = slot,
+            spriteID = spriteID, original = number.rgba,
+            textRGBA = (number.rgba & 0xFF) ~= 0 and number.rgba or 0xFFCB75FF }
         states[index] = state
-        sprite.clickthrough = true
-        sprite.enabled = false
-        catalogue.apply(sprite, spriteID, entry)
-        sprite.rgba = 0xFFFFFFFF
+        if spriteID then
+            local sprite = ui.Sprite.new(parent, spriteCategory, index)
+            assert(sprite, "Native compact number parent rejected sprite creation.")
+            state.sprite = sprite
+            sprite.clickthrough = true
+            sprite.enabled = false
+            catalogue.apply(sprite, spriteID, entry)
+            sprite.rgba = 0xFFFFFFFF
+        end
     elseif number.rgba ~= state.applied then
         state.original = number.rgba
     end
-    state.text = number.content
+    -- Hover/selection scripts may temporarily make the native number fully
+    -- transparent. Preserve the last visible text colour rather than passing
+    -- that transient alpha through to our replacement label.
+    if (number.rgba & 0xFF) ~= 0 then state.textRGBA = number.rgba end
     assert(number.width > 0 and number.height > 0, "Compact number label has no drawable bounds.")
-    local scale = math.min(24 / entry.width, 24 / entry.height,
-        number.width / entry.width, number.height / entry.height, 1)
-    local w, h = math.max(1, math.floor(entry.width * scale)), math.max(1, math.floor(entry.height * scale))
-    state.sprite:SetSize(w, h)
-    state.sprite:SetPos(number.x + math.floor((number.width - w) / 2),
-        number.y + math.floor((number.height - h) / 2))
+    if state.sprite then
+        local scale = math.min(24 / entry.width, 24 / entry.height,
+            number.width / entry.width, number.height / entry.height, 1)
+        local w, h = math.max(1, math.floor(entry.width * scale)), math.max(1, math.floor(entry.height * scale))
+        state.sprite:SetSize(w, h)
+        state.sprite:SetPos(number.x + math.floor((number.width - w) / 2),
+            number.y + math.floor((number.height - h) / 2))
+    end
     -- visibleGlobal on the number can become false because *we* made its
     -- colour transparent on the previous Draw. Using it here feeds our own
     -- suppression back into sibling visibility and can leave an empty button.
     -- Follow native local hiding and the unsuppressed parent's visibility.
-    state.sprite.hidden = number.hidden == true or parent.visibleGlobal == false
+    local hidden = number.hidden == true or parent.visibleGlobal == false
+    if state.sprite then state.sprite.hidden = hidden end
     local background = colours and colours.rgba(slot, "background")
     if background then
         if not state.background then
@@ -120,7 +132,7 @@ local function apply(binding, store, colours)
             math.max(1, number.height - backgroundInset * 2 - 2))
         state.background:SetPos(number.x + backgroundInset, number.y + backgroundInset + 1)
         state.background.rgba = background
-        state.background.hidden = state.sprite.hidden
+        state.background.hidden = hidden
         state.background:MoveToFront()
         -- Narrow one-pixel end strips leave the four corner pixels clear.
         -- Non-overlapping rectangles preserve the saved colour's alpha.
@@ -128,7 +140,7 @@ local function apply(binding, store, colours)
             cap:SetSize(math.max(1, number.width - backgroundInset * 2 - 2), 1)
             cap:SetPos(number.x + backgroundInset + 1,
                 number.y + (capIndex == 1 and backgroundInset or number.height - backgroundInset - 1))
-            cap.rgba, cap.hidden = background, state.sprite.hidden
+            cap.rgba, cap.hidden = background, hidden
             cap:MoveToFront()
         end
     elseif state.background then
@@ -139,12 +151,31 @@ local function apply(binding, store, colours)
     end
     -- Native redraws may add/reorder sibling backgrounds after our child was
     -- attached. Raise only our clickthrough sprite, never native components.
-    state.sprite:MoveToFront()
-    assert((entry.objectID and state.sprite.associatedObjectID or state.sprite.spriteID) == spriteID,
-        "Native compact icon assignment was not accepted.")
+    if state.sprite then
+        state.sprite:MoveToFront()
+        assert((entry.objectID and state.sprite.associatedObjectID or state.sprite.spriteID) == spriteID,
+            "Native compact icon assignment was not accepted.")
+    end
+    if iconText ~= "" then
+        if not state.text then
+            state.text = ui.Text.new(parent, spriteCategory + 2, index)
+            assert(state.text, "Native compact parent rejected icon text creation.")
+            state.text.clickthrough, state.text.enabled = true, false
+            state.text.font = id.Font.MUSEO_SANS_11PT_REGULAR or id.Font.MUSEO_SANS_15PT_REGULAR
+            state.text.alignHorizontal, state.text.alignVertical = ui.AlignMode.CENTRE, ui.AlignMode.CENTRE
+            state.text.maxLines, state.text.isShadowed = 1, true
+        end
+        state.text:SetSize(40, number.height)
+        state.text:SetPos(number.x + math.floor((number.width - 40) / 2), number.y + (spriteID and 6 or 0))
+        state.text.content, state.text.rgba, state.text.hidden = iconText, state.textRGBA, hidden
+        state.text:MoveToFront()
+    elseif state.text then
+        state.text:Destroy()
+        state.text = nil
+    end
     -- visibleGlobal describes UI-tree visibility, not asset readiness. Do not
     -- use it as a loading gate. Report persistent tree invisibility separately.
-    if not state.sprite.hidden and parent.visibleGlobal == true
+    if state.sprite and not state.sprite.hidden and parent.visibleGlobal == true
         and state.sprite.visibleGlobal == false then
         state.invisibleFrames = (state.invisibleFrames or 0) + 1
         if state.invisibleFrames >= 3 and not state.visibilityWarned then
@@ -165,7 +196,7 @@ local function apply(binding, store, colours)
     assert(number.rgba == state.applied, "Compact number transparency was not accepted.")
 end
 
-function renderer.update(bindings, store, colours)
+function renderer.update(bindings, store, colours, textStore)
     local active = {}
     for _, binding in ipairs(bindings or {}) do
         local index = binding.buttonIndex
@@ -173,7 +204,7 @@ function renderer.update(bindings, store, colours)
             and index >= 1 and index <= ids.compactPresetButtonCount + 1
             and (index <= ids.compactPresetButtonCount or binding.slot == bob) then
             active[index] = true
-            local ok, err = pcall(apply, binding, store, colours)
+            local ok, err = pcall(apply, binding, store, colours, textStore)
             if not ok then
                 release(index)
                 local message = tostring(err)

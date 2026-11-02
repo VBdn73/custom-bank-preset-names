@@ -85,9 +85,9 @@ Event.Draw.Subscribe("presetNames.labels", function()
     bankDropdown.update(settings.hidePredefinedDropdown())
     bankAppearance.update(bankBindings.appearance, presetColours)
     bankLabels.update(bankBindings.labels, presetNames)
-    bankIcons.update(bankBindings.numbers, bankBindings.icons)
+    bankIcons.update(bankBindings.numbers, bankBindings.icons, bankBindings.iconText)
     compactIcons.update(bankBindings.compactButtons, bankBindings.icons,
-        settings.showCompactBackgrounds() and presetColours or nil)
+        settings.showCompactBackgrounds() and presetColours or nil, bankBindings.iconText)
 end)
 
 function PluginShutdown()
