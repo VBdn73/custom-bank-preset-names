@@ -182,6 +182,29 @@ test.case("Categories are data-driven and switching tabs does not apply or close
     test.equal(f.selected[1], "future:test")
 end)
 
+test.case("Empty backpack tab explains why no items are shown", function()
+    local f = fixture()
+    f.options.categories[2] = { key = "backpack", name = "Bag", entries = {},
+        emptyMessage = "Backpack unavailable." }
+    f.open()
+    f.find("Button", function(c) return c.label == "Bag" end)[1].hooks.press()
+    test.equal(#f.tiles(), 0)
+    test.equal(#f.find("Text", function(c) return c.content == "Backpack unavailable." end), 1)
+    f.close()
+end)
+
+test.case("Backpack tiles show the item name and select its stable ID", function()
+    local f = fixture({ categories = { { key = "backpack", name = "Bag", entries = {
+        { key = "item:31725", name = "Noxious scythe", objectID = 31725, width = 36, height = 32 },
+    } } }, resolve = function() return 31725 end,
+        apply = function(sprite, assetID) sprite.sprite = assetID end })
+    f.open()
+    f.tiles()[1].hooks.over()
+    test.equal(#f.find("Text", function(c) return c.content == "Noxious scythe" end), 1)
+    f.tiles()[1].hooks.press()
+    test.equal(f.selected[1], "item:31725")
+end)
+
 test.case("Larger categories paginate and start on the selected entry's page", function()
     local f = fixture({ initial = "test:32" })
     local entries = {}
@@ -215,8 +238,10 @@ test.case("T90–95 tab paginates finished weapons and selects their stable keys
     f.find("Button", function(c) return c.label == "Weapons" end)[1].hooks.press()
     test.equal(#f.tiles(), 30)
     test.equal(applied[#applied], catalogue.categories[2].entries[30].key)
-    local weapon = f.find("Sprite", function(c) return c.sprite == 99 and c.width == 32 end)[1]
-    test.equal(weapon.height, 28)
+    local weapon = f.find("Sprite", function(c) return c.sprite == 99 and c.width == 36 end)[1]
+    test.equal(weapon.height, 32)
+    test.equal(weapon.x >= 0 and weapon.x + weapon.width <= 40, true)
+    test.equal(weapon.y >= 0 and weapon.y + weapon.height <= 40, true)
     f.find("Arrow", function(c) return c.spriteName == "ARROW_RIGHT" end)[1].hooks.press()
     f.tiles()[1].hooks.press()
     test.equal(f.selected[1], catalogue.categories[2].entries[31].key)

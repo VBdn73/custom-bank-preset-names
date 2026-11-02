@@ -4,6 +4,7 @@ local theme = require("editor/theme")
 local icons = require("editor/icon")
 local colourPicker = require("components/colour_picker/init")
 local iconPicker = require("components/icon_picker/init")
+local backpackIcons = require("presets/backpack_icons")
 local iconCatalogue = require("presets/icon_catalogue")
 local colourValue = require("presets/colour_value")
 local slots = require("presets/slots")
@@ -228,7 +229,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             previewIcons[index] = sprite
         end
     end
-    local function applyIcon(sprite)
+    local function applyIcon(sprite, maxWidth, maxHeight)
         if not sprite then return false end
         local spriteID, entry = iconCatalogue.resolve(pendingIcon)
         local ok = false
@@ -236,7 +237,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             ok = pcall(function()
                 iconCatalogue.apply(sprite, spriteID, entry)
                 sprite.rgba = 0xFFFFFFFF
-                local scale = math.min(24 / entry.width, 24 / entry.height, 1)
+                local scale = math.min(maxWidth / entry.width, maxHeight / entry.height, 1)
                 sprite:SetSize(math.max(1, math.floor(entry.width * scale)),
                     math.max(1, math.floor(entry.height * scale)))
             end)
@@ -246,7 +247,14 @@ function editor.build(parent, names, bindings, initialSlot, options)
         return ok
     end
     local function refreshIcon()
-        local active = applyIcon(previewSkillIcon)
+        local _, entry = iconCatalogue.resolve(pendingIcon)
+        local isItem = entry and entry.objectID
+        local active = applyIcon(previewSkillIcon, isItem and 28 or 24, isItem and 30 or 24)
+        if active and previewNumber.x and previewNumber.y then
+            previewSkillIcon:SetPos(previewNumber.x - (isItem and 3 or 0)
+                + math.floor(((isItem and 28 or 24) - previewSkillIcon.width) / 2),
+                previewNumber.y + math.floor((layout.fieldHeight - previewSkillIcon.height) / 2))
+        end
         local text = iconTextInput and iconTextInput.content or ""
         local hasText = slots.valid(selectedSlot) and text ~= ""
         if previewNumber then
@@ -269,7 +277,12 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 iconHidden[component] = not supported
             end
             iconControl.enabled = supported
-            local available = applyIcon(iconControlSprite)
+            local available = applyIcon(iconControlSprite, isItem and 30 or 24, 24)
+            if available and iconControl.x and iconControl.y then
+                iconControlSprite:SetPos(iconControl.x + 2 + math.floor(((isItem and 30 or 24)
+                    - iconControlSprite.width) / 2),
+                    iconControl.y + math.floor((iconControl.height - iconControlSprite.height) / 2))
+            end
             iconControlNumber.content = tostring(selectedSlot)
             iconControlNumber.hidden = not supported or available
             iconHidden[iconControlNumber] = not supported or available
@@ -540,7 +553,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local slot, context = selectedSlot, names.getContext()
             closePicker, updatePicker = iconPicker.open(host, {
                 prettyui = options.prettyui,
-                categories = iconCatalogue.categories, initial = pendingIcon,
+                categories = backpackIcons.categories(), initial = pendingIcon,
+                initialName = iconCatalogue.displayName(pendingIcon),
                 resolve = iconCatalogue.resolve, apply = iconCatalogue.apply, anchor = iconControl, theme = theme,
                 attachOverlay = contentHost and contentHost._RegisterOverlay and function(root, updatePosition)
                     contentHost:_RegisterOverlay(root, nil, updatePosition)

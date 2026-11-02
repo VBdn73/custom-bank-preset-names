@@ -23,6 +23,7 @@ local function createFixture(colours, iconStore)
             self.parentX, self.selfX = parentX, selfX
         end
         function control:SetSize(width, height) self.width, self.height = width, height end
+        function control:SetAssociatedObject(objectID) self.associatedObjectID = objectID end
         function control:Destroy() self.destroyed = true end
         function control:Setup(visibility, filter, limit)
             self.visibility, self.filter, self.limit = visibility, filter, limit
@@ -61,6 +62,7 @@ local function createFixture(colours, iconStore)
             ONSCROLLWHEEL = 6, ONHOLD = 7, ONRELEASE = 8,
             ONMOUSEOVER = 9, ONMOUSELEAVE = 10, ONKEY = 11 },
         SelectionChangeEvent = { SELECTED = 1, DESELECTED = 0 },
+        ObjectQuantityDisplayMode = { NEVER = 0 },
         TextContentVisibilityMode = { VISIBLE = 0 }, InputFieldFilterMode = { NONE = 0 },
         AlignMode = { CENTRE = 1 },
         Margin = { new = function(left, top, right, bottom)
@@ -1356,6 +1358,24 @@ test.case("Editor icon choices are staged, previewed, saved and restored on reop
     test.equal(f.selector.entries[0], "Preset 1 *")
     f:open()
     test.equal(f:iconNumber().hidden, true)
+end)
+
+test.case("Editor item previews use the available space without overlapping the control arrow", function()
+    local f = iconFixture()
+    f:stageIcon("item:31725")
+    local previews = {}
+    for _, control in ipairs(f.controls) do
+        if control.kind == "sprite" and control.associatedObjectID == 31725 and not control.hidden then
+            previews[#previews + 1] = control
+        end
+    end
+    test.equal(#previews, 2)
+    local preview, buttonIcon = previews[1], previews[2]
+    local button = f:iconButton()
+    test.equal(preview.width, 28)
+    test.equal(preview.height <= 30, true)
+    test.equal(buttonIcon.x >= button.x and buttonIcon.x + buttonIcon.width <= button.x + 32, true)
+    test.equal(buttonIcon.y >= button.y and buttonIcon.y + buttonIcon.height <= button.y + button.height, true)
 end)
 
 test.case("Editor icon reset and full Reset stage defaults until Save", function()

@@ -9,6 +9,7 @@ changes their appearance locally, not their server-side names or behaviour.
   18 numbered presets and the Beast of Burden row.
 - Icons for numbered presets from **Skills**, **Weapons**, **Holidays**, and **Misc**,
   using native client assets. All 29 skills are included.
+- Experimental **Bag** icon tab: select item artwork from the current backpack.
 - Saved icons appear in preset-management rows and both compact bank pages.
 - Optional compact-button background colours, enabled by default.
 - Draggable editor with live previews, colour/hex controls, and individual resets.
@@ -36,6 +37,10 @@ do not download dependencies automatically.
    colour canvas or enter `#RRGGBB`; changes preview immediately.
 3. For numbered presets, click **Icon**, choose a category, and select an icon.
    Hover an icon to see its name. **Use preset number** restores the default.
+   The experimental **Bag** tab shows a snapshot of backpack items when the picker
+   opens; hover shows the item name (or its ID if the name is unavailable).
+   Reopen the picker to refresh the snapshot.
+   The saved icon stays selected after the item leaves the backpack.
 4. Click **Save**, or press Enter in the name field, to apply your changes.
 
 ### Editor controls

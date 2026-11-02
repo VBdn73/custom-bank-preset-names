@@ -85,7 +85,7 @@ function picker.open(host, options)
         local columns = math.max(1, math.floor(innerWidth / 44))
         local largest = 0
         local categoryIndex = 1
-        local initialName = "Use preset number"
+        local initialName = options.initialName or "Use preset number"
         for index, category in ipairs(categories) do
             largest = math.max(largest, #(category.entries or {}))
             for _, entry in ipairs(category.entries or {}) do
@@ -164,6 +164,9 @@ function picker.open(host, options)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end
             local entries = categories[categoryIndex].entries or {}
+            if #entries == 0 and categories[categoryIndex].emptyMessage then
+                name.content = categories[categoryIndex].emptyMessage
+            end
             if pageLabel then
                 local pages = math.max(1, math.ceil(#entries / capacity))
                 pageLabel.content = page .. " / " .. pages
@@ -192,7 +195,7 @@ function picker.open(host, options)
                             sprite.sprite = spriteID
                             assert(sprite.spriteID == spriteID)
                         end
-                        local iconSize = entry.objectID and 32 or 24
+                        local iconSize = entry.objectID and 36 or 24
                         local scale = math.min(iconSize / w, iconSize / h, 1)
                         w, h = math.max(1, math.floor(w * scale)), math.max(1, math.floor(h * scale))
                         sprite:SetSize(w, h)

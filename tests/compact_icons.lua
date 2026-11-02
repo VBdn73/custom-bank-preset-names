@@ -15,12 +15,17 @@ local function fixture()
                 return { resolve = function(key)
                     if key == "skill" then return 101, { width = 32, height = 16 } end
                     if key == "large" then return 102, { width = 64, height = 64 } end
-                end, apply = require("presets/icon_catalogue").apply }
+                    if key == "item" then return 31725, { objectID = 31725, width = 36, height = 32 } end
+                end, apply = function(sprite, assetID, entry)
+                    if entry.objectID then sprite:SetAssociatedObject(assetID)
+                    else require("presets/icon_catalogue").apply(sprite, assetID, entry) end
+                end }
             end
             return require(path)
         end,
         id = { Font = { MUSEO_SANS_11PT_REGULAR = 11 } },
-        ui = { ComponentType = { LABEL = 1, SPRITE = 2 }, AlignMode = { CENTRE = 1 }, Interfaces = {
+        ui = { ComponentType = { LABEL = 1, SPRITE = 2 }, AlignMode = { CENTRE = 1 },
+            ObjectQuantityDisplayMode = { NEVER = 0 }, Interfaces = {
             GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
                 test.equal(interfaceID, 517)
                 test.equal(staticID, 117)
@@ -48,6 +53,7 @@ local function fixture()
             test.equal(dynamicID >= 1 and dynamicID <= 10, true)
             local sprite = { parent = parent, visibleGlobal = f.initialSpriteVisibility,
                 categoryID = categoryID, dynamicID = dynamicID }
+            function sprite:SetAssociatedObject(objectID) self.associatedObjectID = objectID end
             function sprite:SetSize(w, h)
                 if f.layoutFails then error("Injected layout failure") end
                 self.width, self.height = w, h
@@ -94,6 +100,22 @@ local function fixture()
     end
     return f
 end
+
+test.case("Compact item canvas expands within the button interior and follows resizing", function()
+    local f = fixture()
+    f.selected[1] = "item"
+    f.update()
+    local icon, label = f.sprites[1], f.labels[1]
+    test.equal(icon.width, 26)
+    test.equal(icon.height, 23)
+    test.equal(icon.x >= label.x + 2 and icon.x + icon.width <= label.x + label.width - 2, true)
+    test.equal(icon.y >= label.y + 2 and icon.y + icon.height <= label.y + label.height - 2, true)
+    label.width, label.height = 20, 20
+    f.update()
+    test.equal(icon.width, 16)
+    test.equal(icon.x >= label.x + 2 and icon.x + icon.width <= label.x + label.width - 2, true)
+    test.equal(icon.y >= label.y + 2 and icon.y + icon.height <= label.y + label.height - 2, true)
+end)
 
 test.case("Compact icon text follows icons, page switches, visibility and resets", function()
     local f = fixture()

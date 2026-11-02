@@ -7,7 +7,7 @@ local states, errors = {}, {}
 local horizontalInset = 4
 -- Item artwork includes padding inside its native canvas. Give it a larger
 -- canvas than skill sprites so the visible artwork is closer in size.
-local itemScale = 1.25
+local itemScale = 4 / 3
 -- Keep injected children out of the native category-0 ID sequence. Both IDs
 -- remain within the client's accepted range, as in the compact renderer.
 local spriteCategory = 1

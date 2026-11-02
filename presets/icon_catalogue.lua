@@ -20,7 +20,35 @@ end
 -- An empty key means the native number; unknown keys have the same fallback.
 function catalogue.get(key)
     if type(key) ~= "string" then return nil end
-    return byKey[key]
+    if byKey[key] then return byKey[key] end
+    -- Dynamic backpack selections remain usable after the item leaves the inventory.
+    local digits = key:match("^item:([1-9]%d*)$")
+    local objectID = digits and tonumber(digits)
+    if not objectID or objectID > 2147483647 or tostring(objectID) ~= digits then return nil end
+    return { key = key, category = "backpack", name = "Item " .. digits,
+        objectID = objectID, width = 36, height = 32 }
+end
+
+-- Item names are display metadata, not part of the persisted icon identity.
+-- Keep this lookup out of get/resolve, which are called on every draw.
+function catalogue.objectName(object)
+    local ok, name = pcall(function() return object and object.name end)
+    if not ok or type(name) ~= "string" then return nil end
+    name = name:gsub("[%c<>]", ""):match("^%s*(.-)%s*$")
+    if name == "" then return nil end
+    return name
+end
+
+function catalogue.displayName(key)
+    local entry = catalogue.get(key)
+    if not entry then return nil end
+    if entry.category == "backpack" then
+        local ok, object = pcall(function()
+            return config and config.Obj and config.Obj.FromID(entry.objectID)
+        end)
+        if ok then return catalogue.objectName(object) or entry.name end
+    end
+    return entry.name
 end
 
 -- Resolve at use time, not module load: IDs may change between client versions.

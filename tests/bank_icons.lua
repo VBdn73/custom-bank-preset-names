@@ -161,16 +161,16 @@ test.case("Item icons use a larger centered canvas while staying within row heig
     f.selected[1], f.selected[2] = "weapons90:noxious-scythe", "skills:farming"
     f.update()
     local item, skill = f.sprites[1], f.sprites[2]
-    test.equal(item.width, 30)
-    test.equal(item.height, 26)
-    test.equal(item.x, 5)
-    test.equal(item.y, 2)
+    test.equal(item.width, 32)
+    test.equal(item.height, 28)
+    test.equal(item.x, 4)
+    test.equal(item.y, 1)
     test.equal(skill.width, 24)
     test.equal(skill.height, 24)
     f.numbers[1].height = 20
     f.update()
     test.equal(item.height, 20)
-    test.equal(item.width <= 30, true)
+    test.equal(item.width <= 32, true)
 end)
 
 test.case("All 18 bank rows render saved icons and reset independently", function()

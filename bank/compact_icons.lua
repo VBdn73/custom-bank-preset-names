@@ -96,8 +96,14 @@ local function apply(binding, store, colours, textStore)
     if (number.rgba & 0xFF) ~= 0 then state.textRGBA = number.rgba end
     assert(number.width > 0 and number.height > 0, "Compact number label has no drawable bounds.")
     if state.sprite then
-        local scale = math.min(24 / entry.width, 24 / entry.height,
-            number.width / entry.width, number.height / entry.height, 1)
+        -- Items have transparent padding in their native artwork. Use the
+        -- button interior for them, but leave the native bevel untouched.
+        local limit = entry.objectID and 26 or 24
+        local inset = entry.objectID and backgroundInset * 2 or 0
+        local scale = math.min(limit / entry.width, limit / entry.height,
+            math.max(0, number.width - inset) / entry.width,
+            math.max(0, number.height - inset) / entry.height, 1)
+        assert(scale > 0, "Compact icon has no drawable bounds.")
         local w, h = math.max(1, math.floor(entry.width * scale)), math.max(1, math.floor(entry.height * scale))
         state.sprite:SetSize(w, h)
         state.sprite:SetPos(number.x + math.floor((number.width - w) / 2),
