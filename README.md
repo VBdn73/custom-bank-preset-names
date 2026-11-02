@@ -38,8 +38,8 @@ do not download dependencies automatically.
 3. For numbered presets, click **Icon**, choose a category, and select an icon.
    Hover an icon to see its name. **Use preset number** restores the default.
    The experimental **Bag** tab shows a snapshot of backpack items when the picker
-   opens; hover shows the item name (or its ID if the name is unavailable). Empty
-   categories, including Bag when empty or unavailable, are hidden.
+   opens; hover shows the item name (or its ID if the name is unavailable). Bag
+   explains its purpose when empty; other empty categories are hidden.
    Reopen the picker to refresh the snapshot.
    The saved icon stays selected after the item leaves the backpack.
 4. Click **Save**, or press Enter in the name field, to apply your changes.

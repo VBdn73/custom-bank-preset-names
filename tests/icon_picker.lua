@@ -204,14 +204,19 @@ test.case("Category tabs wrap into readable rows without overlapping the grid", 
     test.equal(f.selected[1], "Holidays:item")
 end)
 
-test.case("Empty categories including backpack are hidden", function()
+test.case("Empty categories are hidden but the backpack can explain its purpose", function()
     local f = fixture()
-    f.options.categories[2] = { key = "backpack", name = "Bag", entries = {},
-        emptyMessage = "Backpack unavailable." }
+    f.options.categories[2] = { key = "backpack", name = "Bag", entries = {}, showWhenEmpty = true,
+        emptyMessage = "Add items to Bag to use as icons." }
     f.options.categories[3] = { key = "bosses", name = "Bosses", entries = {} }
     f.open()
-    test.equal(#f.find("Button", function(c) return c.label == "Bag" or c.label == "Bosses" end), 0)
+    test.equal(#f.find("Button", function(c) return c.label == "Bosses" end), 0)
     test.equal(#f.tiles(), 3)
+    f.find("Button", function(c) return c.label == "Bag" end)[1].hooks.press()
+    test.equal(#f.tiles(), 0)
+    test.equal(#f.find("Text", function(c)
+        return c.content == "Add items to Bag to use as icons."
+    end), 1)
     f.close()
 end)
 

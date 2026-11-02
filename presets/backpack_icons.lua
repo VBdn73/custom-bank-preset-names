@@ -3,7 +3,8 @@ local catalogue = require("presets/icon_catalogue")
 local backpack = {}
 
 function backpack.category()
-    local category = { key = "backpack", name = "Bag", entries = {}, emptyMessage = "Backpack is empty." }
+    local category = { key = "backpack", name = "Bag", entries = {}, showWhenEmpty = true,
+        emptyMessage = "Add items to Bag to use as icons." }
     local ok = pcall(function()
         assert(Inventory and config and config.Inv and config.Inv.INV)
         local inventory = Inventory.Find(config.Inv.INV)
@@ -33,7 +34,7 @@ function backpack.category()
     end)
     if not ok then
         category.entries = {}
-        category.emptyMessage = "Backpack unavailable."
+        category.emptyMessage = "Bag unavailable; reopen picker to retry."
     end
     return category
 end

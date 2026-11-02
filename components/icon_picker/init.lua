@@ -19,10 +19,12 @@ end
 function picker.open(host, options)
     options = options or {}
     assert(type(options.onSelect) == "function", "Icon picker requires an onSelect callback.")
-    -- Keep empty categories out of the tab bar, including an empty backpack.
+    -- Hide empty categories unless they explicitly provide an empty state.
     local categories = {}
     for _, category in ipairs(options.categories or {}) do
-        if #(category.entries or {}) > 0 then categories[#categories + 1] = category end
+        if #(category.entries or {}) > 0 or category.showWhenEmpty then
+            categories[#categories + 1] = category
+        end
     end
     local parent = host
     while parent.parent and not parent.parent.isRestricted do parent = parent.parent end
@@ -170,9 +172,12 @@ function picker.open(host, options)
             grid:SetSize(innerWidth, rows * 44)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end
-            local entries = (categories[categoryIndex] or {}).entries or {}
+            local category = categories[categoryIndex] or {}
+            local entries = category.entries or {}
             if #categories == 0 then
                 name.content = "No icons available."
+            elseif #entries == 0 and category.emptyMessage then
+                name.content = category.emptyMessage
             end
             if pageLabel then
                 local pages = math.max(1, math.ceil(#entries / capacity))

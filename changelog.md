@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Hide icon categories when they contain no icons.
+- Hide empty icon categories, except Bag, which explains how to add item icons.
 
 ## 0.7.0 - 2026-10-29
 

@@ -27,11 +27,11 @@ end)
 
 test.case("Backpack unavailable and empty snapshots provide distinct messages", function()
     local backpack, env = fixture({}, true)
-    test.equal(backpack.category().emptyMessage, "Backpack is empty.")
+    test.equal(backpack.category().emptyMessage, "Add items to Bag to use as icons.")
     env.Inventory.Find = function() return nil end
-    test.equal(backpack.category().emptyMessage, "Backpack unavailable.")
+    test.equal(backpack.category().emptyMessage, "Bag unavailable; reopen picker to retry.")
     env.Inventory.Find = function() error("unavailable") end
-    test.equal(backpack.category().emptyMessage, "Backpack unavailable.")
+    test.equal(backpack.category().emptyMessage, "Bag unavailable; reopen picker to retry.")
 end)
 
 test.case("Backpack snapshot supports sparse and zero-based slots", function()
