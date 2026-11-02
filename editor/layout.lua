@@ -61,5 +61,6 @@ layout.popupHeight = layout.popupHeaderHeight + layout.bodyHeight + layout.popup
 layout.compactPopupHeight = layout.popupHeaderHeight + layout.compactBodyHeight + layout.popupBottomPadding
 layout.colourHeight = 64
 layout.iconHeight = 32
+layout.iconTextHeight = 32
 
 return layout

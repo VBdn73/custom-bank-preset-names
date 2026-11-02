@@ -15,6 +15,7 @@ local settings = require("presets/settings")
 local preferences = require("editor/preferences")
 bankBindings.colours = presetColours
 bankBindings.icons = require("presets/icons")
+bankBindings.iconText = require("presets/icon_text")
 
 -- Each open editor supplies a callback that follows character changes.
 local editorRefreshCallbacks = {}

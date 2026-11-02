@@ -3,7 +3,7 @@ local slots = require("presets/slots")
 local customisations = {}
 
 -- Dependencies are explicit so editor and native-swap entry points share one path.
-function customisations.new(names, colours, icons)
+function customisations.new(names, colours, icons, iconText)
     local service = {}
     local function failure(message, status, details)
         return false, message, { status = status, details = details }
@@ -44,6 +44,16 @@ function customisations.new(names, colours, icons)
                             save = function(v) return icons.save(change.slot, v) end }
                     end
                 end
+                if iconText and change.iconText ~= nil then
+                    local value, message = iconText.normalize(change.iconText)
+                    assert(value ~= nil, message)
+                    assert(slots.valid(change.slot) or value == "", "Beast of Burden does not support icon text.")
+                    if slots.valid(change.slot) then
+                        writes[#writes + 1] = { slot = change.slot, kind = "icon text", value = value,
+                            get = function() return iconText.get(change.slot) end,
+                            save = function(v) return iconText.save(change.slot, v) end }
+                    end
+                end
             end
             for _, write in ipairs(writes) do write.old = write.get() end
             assert(names.getContext() == context, "Character changed before saving.")
@@ -80,7 +90,7 @@ function customisations.new(names, colours, icons)
 
     function service.save(slot, values)
         return service.apply({ { slot = slot, name = values.name,
-            background = values.background, text = values.text, icon = values.icon } })
+            background = values.background, text = values.text, icon = values.icon, iconText = values.iconText } })
     end
 
     function service.swap(first, second)
@@ -103,6 +113,7 @@ function customisations.new(names, colours, icons)
                     background = colours and colours.get(transfer.sourceSlot, "background"),
                     text = colours and colours.get(transfer.sourceSlot, "text"),
                     icon = icons and icons.get(transfer.sourceSlot),
+                    iconText = iconText and iconText.get(transfer.sourceSlot),
                 }
             end
             assert(names.getContext() == context, "Character changed before swapping.")

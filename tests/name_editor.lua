@@ -205,6 +205,63 @@ local function createFixture(colours, iconStore)
     return f
 end
 
+test.case("Icon text previews, validates, saves and resets without changing bank icons", function()
+    local f = createFixture()
+    local saved = {}
+    local textStore = {
+        normalize = require("presets/icon_text").normalize,
+        get = function(slot) return saved[slot] or "" end,
+        save = function(slot, value) saved[slot] = value; return true end,
+    }
+    local colours = { get = function() return "" end, save = function() return true end }
+    local icons = { get = function() return "" end, save = function() return true end,
+        normalize = function(value) return value end }
+    f.bindings = { presetCount = 18, colours = colours, icons = icons, iconText = textStore }
+    local first = #f.controls + 1
+    f:open(1)
+    local input, preview, label
+    for index = first, #f.controls do
+        local control = f.controls[index]
+        if control.kind == "input" and control.limit == 3 then input = control end
+        if control.content == "Icon text:" then label = control end
+    end
+    test.equal(label ~= nil, true)
+    input.content = "A1"
+    input.hooks[ui.Hook.ONCONTENTCHANGED](input)
+    for index = first, #f.controls do
+        local control = f.controls[index]
+        if control.kind == "text" and control.content == "A1" then preview = control end
+    end
+    test.equal(preview.hidden, false)
+    test.equal(preview.maxLines, 1)
+    test.equal(preview.width, 40)
+    local standaloneY = preview.y
+    test.equal(input.y > label.y - 5, true)
+    local entry = require("presets/icon_catalogue").categories[1].entries[1]
+    id.Sprite[entry.sprite] = 9001
+    icons.get = function() return entry.key end
+    f.selectSlot(2)
+    f.selectSlot(1)
+    input.content = "A1"
+    input.hooks[ui.Hook.ONCONTENTCHANGED](input)
+    local sprite
+    for index = first, #f.controls do
+        local control = f.controls[index]
+        if control.kind == "sprite" and control.sprite == 9001 and control.x == preview.x + 8 then sprite = control end
+    end
+    test.equal(sprite ~= nil and not sprite.hidden, true, "Text overlays the selected icon")
+    test.equal(preview.hidden, false)
+    test.equal(preview.y, standaloneY + 6, "Overlay sits lower to reveal more of the icon")
+    f:clickSave()
+    test.equal(saved[1], "A1")
+    input.content = "!"
+    f:clickSave()
+    test.equal(saved[1], "A1")
+    f:clickReset()
+    f:clickSave()
+    test.equal(saved[1], "")
+end)
+
 test.case("Unsaved indicator follows staged edits, failed saves and selection", function()
     local f = createFixture()
     local first = #f.controls + 1

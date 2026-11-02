@@ -33,7 +33,7 @@ end
 
 function editor.build(parent, names, bindings, initialSlot, options)
     options = options or {}
-    local persistence = customisations.new(names, bindings.colours, bindings.icons)
+    local persistence = customisations.new(names, bindings.colours, bindings.icons, bindings.iconText)
     local host = parent
     local scrollView
     local contentHost = options.contentHost
@@ -56,6 +56,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local contentHeight = options.hideTitle and layout.compactBodyHeight or layout.compactHeight
     if bindings.colours then contentHeight = contentHeight + layout.colourHeight end
     if bindings.icons then contentHeight = contentHeight + layout.iconHeight end
+    if bindings.iconText then contentHeight = contentHeight + layout.iconTextHeight end
     local headingGapReduction = options.readOnlyPreset and layout.popupEditorGapReduction or 0
     contentHeight = contentHeight - headingGapReduction
     local controlPositions = {}
@@ -104,6 +105,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     or bindings.colours.get(preset, "text") ~= ""
             end
             if bindings.icons then customized = customized or bindings.icons.get(preset) ~= "" end
+            if bindings.iconText then customized = customized or bindings.iconText.get(preset) ~= "" end
             labels[preset] = slots.title(preset) .. (customized and " *" or "")
             changed = changed or labels[preset] ~= presetLabels[preset]
         end
@@ -169,6 +171,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         nameInput.emptyText = ""
     end
     local pendingIcon = ""
+    local iconTextInput, managedIconText, iconTextLabel
+    local iconTextComponents = {}
     local previewSkillIcon
     local iconControl, iconControlSprite, iconControlNumber, iconLabel, iconReset
     local iconComponents = {}
@@ -189,7 +193,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         trackPosition(unsavedLabel, layout.padding,
             bindings.colours and layout.rows.colourStatus or layout.rows.status)
     end
-    local previewNumber, previewIcons = nil, {}
+    local previewNumber, previewIconText, previewIcons = nil, nil, {}
     if previewBackground then
         previewNumber = ui.Text.new(parent)
         previewNumber:SetSize(28, layout.fieldHeight)
@@ -204,6 +208,17 @@ function editor.build(parent, names, bindings, initialSlot, options)
             previewSkillIcon.enabled = false
             previewSkillIcon:SetSize(24, 24)
             trackPosition(previewSkillIcon, layout.padding, layout.rows.input)
+        end
+        if bindings.iconText then
+            previewIconText = ui.Text.new(parent)
+            previewIconText:SetSize(40, layout.fieldHeight)
+            previewIconText.font = smallFont
+            previewIconText.maxLines = 1
+            previewIconText.alignHorizontal = ui.AlignMode.CENTRE
+            previewIconText.alignVertical = ui.AlignMode.CENTRE
+            previewIconText.isShadowed = true
+            previewIconText.clickthrough = true
+            trackPosition(previewIconText, layout.padding, layout.rows.input)
         end
         for index = 1, 3 do
             local sprite = ui.Sprite.new(parent)
@@ -232,9 +247,20 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
     local function refreshIcon()
         local active = applyIcon(previewSkillIcon)
+        local text = iconTextInput and iconTextInput.content or ""
+        local hasText = slots.valid(selectedSlot) and text ~= ""
         if previewNumber then
-            previewNumber.hidden = active
-            iconHidden[previewNumber] = active
+            previewNumber.hidden = active or hasText
+            iconHidden[previewNumber] = active or hasText
+        end
+        if previewIconText then
+            previewIconText.content = text
+            previewIconText.rgba = previewNumber.rgba
+            previewIconText.hidden = not hasText
+            iconHidden[previewIconText] = not hasText
+            if previewNumber.x ~= nil and previewNumber.y ~= nil then
+                previewIconText:SetPos(previewNumber.x - 8, previewNumber.y + (active and 6 or 0))
+            end
         end
         if iconControl then
             local supported = slots.valid(selectedSlot)
@@ -534,6 +560,37 @@ function editor.build(parent, names, bindings, initialSlot, options)
             })
         end)
     end
+    if bindings.iconText then
+        iconTextLabel = createText(parent, "Icon text:", smallFont)
+        iconTextLabel:SetSize(layout.swatchX - layout.padding - 6, 20)
+        iconTextLabel.clickthrough = true
+        iconTextComponents[iconTextLabel] = true
+        trackPosition(iconTextLabel, layout.padding, layout.rows.colourLabel)
+        managedIconText = contentHost and contentHost:AddTextField({
+            absolute = true, x = 0, y = 0, width = 58, height = 26, maxLength = 3,
+            placeholder = "", _scrollController = contentHost._scroll or contentHost,
+        })
+        iconTextInput = managedIconText and managedIconText.root or ui.InputField.new(parent)
+        iconTextInput:SetSize(58, 26)
+        iconTextInput.stylesheetID = id.StyleSheet.INPUT_DEFAULT
+        if not managedIconText then
+            iconTextInput:Setup(ui.TextContentVisibilityMode.VISIBLE, ui.InputFieldFilterMode.NONE, 3)
+        end
+        iconTextComponents[iconTextInput] = true
+        trackPosition(iconTextInput, layout.swatchX, layout.rows.colourLabel - 3)
+        local resetText, updateReset = icons.new(parent,
+            id.Sprite.RS3_ICON_STOPWATCH_RESET_0, id.Sprite.RS3_ICON_STOPWATCH_RESET_1,
+            id.Sprite.RS3_ICON_STOPWATCH_RESET_2, function()
+                iconTextInput.content = ""
+                statusLabel.content = ""
+                refreshIcon()
+                refreshUnsavedChanges()
+            end)
+        resetText:SetSize(22, 22)
+        iconTextComponents[resetText] = true
+        trackPosition(resetText, layout.swatchX + 66, layout.rows.colourLabel - 1)
+        updateColourResetIcons[#updateColourResetIcons + 1] = updateReset
+    end
     local toggleInfo, positionInfo = info.new(options.infoParent or host, {
         header = options.infoParent ~= nil,
     })
@@ -556,6 +613,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end
         end
         if bindings.icons then dirty = dirty or pendingIcon ~= (bindings.icons.get(selectedSlot) or "") end
+        if iconTextInput then dirty = dirty or (iconTextInput.content or "") ~= bindings.iconText.get(selectedSlot) end
         if unsavedIcon then
             unsavedIcon.hidden, unsavedLabel.hidden = not dirty, not dirty
             iconHidden[unsavedIcon], iconHidden[unsavedLabel] = not dirty, not dirty
@@ -566,6 +624,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
         dismissPicker()
         displayedCharacterContext = names.getContext()
         pendingIcon = bindings.icons and bindings.icons.get(selectedSlot) or ""
+        if iconTextInput then
+            iconTextInput.content = bindings.iconText.get(selectedSlot)
+            iconTextInput.enabled = slots.valid(selectedSlot)
+        end
         if bindings.colours then
             for kind in pairs(colourControls) do
                 pendingColours[kind] = bindings.colours.get(selectedSlot, kind)
@@ -592,6 +654,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local saveSucceeded, message = persistence.save(selectedSlot, {
             name = value, background = pendingColours.background, text = pendingColours.text,
             icon = bindings.icons and pendingIcon or nil,
+            iconText = iconTextInput and (iconTextInput.content or "") or nil,
         })
         setStatus(message, saveSucceeded)
         refreshUnsavedChanges()
@@ -638,6 +701,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         nameInput.content = ""
         pendingColours.background, pendingColours.text = "", ""
         pendingIcon = ""
+        if iconTextInput then iconTextInput.content = "" end
         refreshColours()
         refreshIcon()
         refreshUnsavedChanges()
@@ -658,6 +722,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
             end
         end)
     end
+    if iconTextInput then
+        local function changed()
+            statusLabel.content = ""
+            refreshIcon()
+            refreshUnsavedChanges()
+        end
+        if managedIconText then
+            managedIconText.onChange = changed
+            managedIconText.onSubmit = saveInput
+        else
+            iconTextInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
+                changed()
+                if reason == ui.InputFieldActionResult.SUBMIT then saveInput() end
+            end)
+        end
+    end
     refreshSelectedName()
 
     for _, position in ipairs(controlPositions) do
@@ -668,7 +748,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
         for _, position in ipairs(controlPositions) do
             -- Lists own their wheel events for navigating their entries.
             if position.component ~= presetSelector
-                and not (managedInput and position.component == nameInput) then
+                and not (managedInput and position.component == nameInput)
+                and not (managedIconText and position.component == iconTextInput) then
                 position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", function(_, delta)
                     if not scrollView.scrollbarVisible then return true end
                     scrollView:ScrollBy(delta * layout.fieldHeight)
@@ -685,7 +766,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local top = control.y - scrollView.scrollY
             -- Native input text can escape ancestor clipping; suppress controls
             -- crossing the viewport boundary, as in the previous ribbon editor.
-            if not (managedInput and control == nameInput) then
+            if not (managedInput and control == nameInput) and not (managedIconText and control == iconTextInput) then
                 local kind = defaultMarkKinds[control]
                 local customColour = kind and colourValue.normalize(pendingColours[kind]) ~= nil
                 local nonemptyPreview = control == defaultNamePreview and nativeTextVisible
@@ -699,6 +780,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         local hostHeight = options.formHeight or host.height
         local minimumHeight = (bindings.colours and layout.minimumColourHeight or layout.minimumHeight)
             + (bindings.icons and layout.iconHeight or 0)
+            + (bindings.iconText and layout.iconTextHeight or 0)
             - (options.hideTitle and layout.titleHeight or 0)
             - headingGapReduction
         local overflowing = scrollView ~= nil and host.height < minimumHeight
@@ -757,8 +839,8 @@ function editor.build(parent, names, bindings, initialSlot, options)
             local isColumn = position.width == layout.buttonWidth
                 or (bindings.colours and position.y + titleOffset == layout.rows.colourLabel)
             local availableWidth = isColumn and buttonWidth or controlWidth
-            local isSwatch = position.x >= layout.swatchX - 1 and (position.width <= 34 or control == iconControl)
-            local isColourLabel = control == colourLabels.background or control == colourLabels.text or control == iconLabel
+            local isSwatch = position.x >= layout.swatchX - 1 and (position.width <= 34 or control == iconControl or control == iconTextInput)
+            local isColourLabel = control == colourLabels.background or control == colourLabels.text or control == iconLabel or control == iconTextLabel
             local swatchX = math.max(layout.padding, math.min(layout.swatchX,
                 width - layout.padding - (bindings.icons and 88 or 62)))
             if isSwatch then
@@ -779,6 +861,10 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if bindings.icons and not iconComponents[control]
                 and position.y + titleOffset >= layout.rows.colourLabel - 3 then
                 y = y + layout.iconHeight
+            end
+            if bindings.iconText and not iconComponents[control] and not iconTextComponents[control]
+                and position.y + titleOffset >= layout.rows.colourLabel - 3 then
+                y = y + layout.iconTextHeight
             end
             if control.content == constants.editorTitle or control.content == "Preset customisation" then
                 control.content = width < layout.width and "Preset customisation" or constants.editorTitle
@@ -805,6 +891,9 @@ function editor.build(parent, names, bindings, initialSlot, options)
             elseif control == previewSkillIcon then
                 control:SetSize(24, 24)
                 control:SetPos(offsetX + layout.padding + 5, offsetY + y + (layout.fieldHeight - 24) / 2)
+            elseif control == previewIconText then
+                control:SetSize(40, layout.fieldHeight)
+                control:SetPos(offsetX + layout.padding - 3, offsetY + y)
             else
                 for index, sprite in ipairs(previewIcons) do
                     if control == sprite then

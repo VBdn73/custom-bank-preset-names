@@ -84,6 +84,7 @@ function popup.open(slot, names, bindings, prettyui)
     end
     local bodyHeight = layout.compactBodyHeight + (bindings.colours and layout.colourHeight or 0)
         + (bindings.icons and layout.iconHeight or 0)
+        + (bindings.iconText and layout.iconTextHeight or 0)
         - layout.popupEditorGapReduction
     -- PrettyUI chrome uses a 32px title and 8px bottom/side borders.
     local width, height = layout.width + 16, bodyHeight + 32 + 8
