@@ -140,7 +140,7 @@ local function createFixture(colours, iconStore)
             RS3_BTN_MODAL_WINDOW_1_CLOSE_NML = 1001, RS3_BTN_MODAL_WINDOW_1_CLOSE_OVR = 1002,
             RS3_BUTTON_INFO_PARENT_2 = 32136,
             RS3_ICON_STOPWATCH_RESET_0 = 14805, RS3_ICON_STOPWATCH_RESET_1 = 14806,
-            RS3_ICON_STOPWATCH_RESET_2 = 14807 },
+            RS3_ICON_STOPWATCH_RESET_2 = 14807, RS3_ICON_EDIT_23PX_0 = 33406 },
     }
     if iconStore then
         for index, entry in ipairs(require("presets/icon_catalogue").categories[1].entries) do
@@ -204,6 +204,46 @@ local function createFixture(colours, iconStore)
     f:open()
     return f
 end
+
+test.case("Unsaved indicator follows staged edits, failed saves and selection", function()
+    local f = createFixture()
+    local first = #f.controls + 1
+    f:open(18, { hideTitle = true, readOnlyPreset = true })
+    local heading, indicator, indicatorLabel
+    for index = first, #f.controls do
+        if f.controls[index].content == "Preset 18 - Last preset" then heading = f.controls[index] end
+        if f.controls[index].sprite == id.Sprite.RS3_ICON_EDIT_23PX_0 then indicator = f.controls[index] end
+        if f.controls[index].content == "Unsaved" then indicatorLabel = f.controls[index] end
+    end
+    test.equal(indicator.hidden, true)
+    test.equal(indicatorLabel.hidden, true)
+    f.input.content = "Changed"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input)
+    test.equal(heading.content, "Preset 18 - Last preset")
+    test.equal(indicator.hidden, false)
+    test.equal(indicatorLabel.hidden, false)
+    test.equal(indicator.y, f.status.y, "Indicator shares the feedback row")
+    test.equal(indicatorLabel.y, f.status.y)
+    test.equal(f.status.x + f.status.width <= indicator.x, true, "Feedback does not overlap the indicator")
+    test.equal(indicator.y + indicator.height, indicatorLabel.y + indicatorLabel.height,
+        "Native icon and label are vertically aligned")
+    f.saveMode = "rejected"
+    f:clickSave()
+    test.equal(indicator.hidden, false)
+    f.input.content = "Last preset"
+    f.input.hooks[ui.Hook.ONCONTENTCHANGED](f.input)
+    test.equal(heading.content, "Preset 18 - Last preset")
+    test.equal(indicator.hidden, true)
+    f:clickReset()
+    test.equal(indicator.hidden, false)
+    f.saveMode = "success"
+    f:clickSave()
+    test.equal(heading.content, "Preset 18")
+    test.equal(indicator.hidden, true)
+    f.input.content = "Another edit"
+    f.selectSlot(1)
+    test.equal(heading.content, "Preset 1")
+end)
 
 test.case("BoB appears by name and saves independently from preset 18", function()
     local f = createFixture()

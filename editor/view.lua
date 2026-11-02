@@ -173,6 +173,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local iconControl, iconControlSprite, iconControlNumber, iconLabel, iconReset
     local iconComponents = {}
     local iconHidden = {}
+    local unsavedIcon, unsavedLabel
+    if presetHeading then
+        unsavedIcon = ui.Sprite.new(parent)
+        unsavedIcon.sprite = id.Sprite.RS3_ICON_EDIT_23PX_0
+        unsavedIcon.clickthrough = true
+        unsavedIcon:SetSize(18, 18)
+        trackPosition(unsavedIcon, layout.padding,
+            bindings.colours and layout.rows.colourStatus or layout.rows.status)
+        unsavedLabel = createText(parent, "Unsaved", smallFont)
+        unsavedLabel:SetSize(58, layout.noteHeight)
+        unsavedLabel.alignVertical = ui.AlignMode.CENTRE
+        unsavedLabel.clickthrough = true
+        unsavedLabel.colour = theme.colour(theme.titleText)
+        trackPosition(unsavedLabel, layout.padding,
+            bindings.colours and layout.rows.colourStatus or layout.rows.status)
+    end
     local previewNumber, previewIcons = nil, {}
     if previewBackground then
         previewNumber = ui.Text.new(parent)
@@ -309,6 +325,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
     local defaultMarkKinds = {}
     local colourLabels = {}
     local pendingColours = {}
+    local refreshUnsavedChanges
     local closePicker
     local updatePicker
     local pickerKind
@@ -387,6 +404,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 pendingColours[kind] = ""
                 statusLabel.content = ""
                 refreshColours()
+                refreshUnsavedChanges()
             end)
             resetColour:SetSize(22, 22)
             trackPosition(resetColour, layout.swatchX + (bindings.icons and 66 or 40), y - 1)
@@ -428,6 +446,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     pendingColours[kind] = value
                     statusLabel.content = ""
                     refreshColours()
+                    refreshUnsavedChanges()
                     end,
                     onClose = function()
                     closePicker = nil
@@ -481,6 +500,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                 pendingIcon = ""
                 statusLabel.content = ""
                 refreshIcon()
+                refreshUnsavedChanges()
             end)
         iconReset:SetSize(22, 22)
         trackIcon(iconReset, layout.swatchX + 66, layout.rows.colourLabel - 1)
@@ -506,6 +526,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
                     pendingIcon = value
                     statusLabel.content = ""
                     refreshIcon()
+                    refreshUnsavedChanges()
                 end,
                 onClose = function()
                     closePicker, updatePicker, pickerKind = nil, nil, nil
@@ -525,6 +546,22 @@ function editor.build(parent, names, bindings, initialSlot, options)
     end
 
     local displayedCharacterContext = names.getContext()
+    refreshUnsavedChanges = function()
+        local dirty = (nameInput.content or "") ~= (names.get(selectedSlot) or "")
+        if bindings.colours then
+            for _, kind in ipairs({ "background", "text" }) do
+                local pending = colourValue.normalize(pendingColours[kind]) or ""
+                local saved = colourValue.normalize(bindings.colours.get(selectedSlot, kind)) or ""
+                dirty = dirty or pending ~= saved
+            end
+        end
+        if bindings.icons then dirty = dirty or pendingIcon ~= (bindings.icons.get(selectedSlot) or "") end
+        if unsavedIcon then
+            unsavedIcon.hidden, unsavedLabel.hidden = not dirty, not dirty
+            iconHidden[unsavedIcon], iconHidden[unsavedLabel] = not dirty, not dirty
+        end
+        refreshPresetLabels()
+    end
     local function refreshSelectedName()
         dismissPicker()
         displayedCharacterContext = names.getContext()
@@ -539,6 +576,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         refreshIcon()
         nameInput.content = names.get(selectedSlot) or ""
         refreshInputAlignment()
+        refreshUnsavedChanges()
         statusLabel.content = displayedCharacterContext and "" or "Log in and wait for your character name."
     end
 
@@ -556,7 +594,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             icon = bindings.icons and pendingIcon or nil,
         })
         setStatus(message, saveSucceeded)
-        refreshPresetLabels()
+        refreshUnsavedChanges()
         return saveSucceeded
     end
 
@@ -602,14 +640,19 @@ function editor.build(parent, names, bindings, initialSlot, options)
         pendingIcon = ""
         refreshColours()
         refreshIcon()
+        refreshUnsavedChanges()
         setStatus("Defaults staged. Click Save to apply.", true)
     end), layout.resetX, buttonsY)
     if managedInput then
         managedInput.onSubmit = saveInput
-        managedInput.onChange = refreshInputAlignment
+        managedInput.onChange = function()
+            refreshInputAlignment()
+            refreshUnsavedChanges()
+        end
     else
         nameInput:Subscribe(ui.Hook.ONCONTENTCHANGED, function(_, reason)
             refreshInputAlignment()
+            refreshUnsavedChanges()
             if reason == ui.InputFieldActionResult.SUBMIT then
                 saveInput()
             end
@@ -744,6 +787,15 @@ function editor.build(parent, names, bindings, initialSlot, options)
             control:SetSize(availableWidth, compact and position.height == layout.textHeight
                 and layout.noteHeight or position.height)
             control:SetPos(offsetX + x, offsetY + y)
+            if control == statusLabel and unsavedIcon then
+                control:SetSize(math.max(1, controlWidth - 82), position.height)
+            elseif control == unsavedIcon then
+                control:SetSize(18, 18)
+                control:SetPos(offsetX + layout.padding + controlWidth - 80, offsetY + y)
+            elseif control == unsavedLabel then
+                control:SetSize(58, position.height)
+                control:SetPos(offsetX + layout.padding + controlWidth - 58, offsetY + y)
+            end
             if previewNumber and (control == nameInput or control == defaultNamePreview) then
                 control:SetSize(math.max(1, controlWidth - 96), position.height)
                 control:SetPos(offsetX + layout.padding + 28, offsetY + y)
@@ -800,7 +852,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         if names.getContext() ~= displayedCharacterContext then
             refreshSelectedName()
         end
-        refreshPresetLabels()
+        refreshUnsavedChanges()
         refreshColours()
         refreshIcon()
         updateClipping()
