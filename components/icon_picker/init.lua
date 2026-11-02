@@ -83,6 +83,9 @@ function picker.open(host, options)
         width = math.min(288, parent.width)
         local innerWidth = math.max(1, width - 24)
         local columns = math.max(1, math.floor(innerWidth / 44))
+        local tabColumns = math.min(#categories, math.max(1, math.floor(innerWidth / 80)))
+        local tabRows = math.ceil(#categories / tabColumns)
+        local gridY = 76 + (tabRows - 1) * 32
         local largest = 0
         local categoryIndex = 1
         local initialName = options.initialName or "Use preset number"
@@ -96,10 +99,10 @@ function picker.open(host, options)
         end
         -- Pagination keeps larger future categories within the same popup layout.
         local rows = math.max(1, math.min(5, math.ceil(largest / columns),
-            math.floor((parent.height - 176) / 44)))
+            math.floor((parent.height - 176 - (tabRows - 1) * 32) / 44)))
         local capacity = rows * columns
         local paginated = largest > capacity
-        local footerY = 76 + rows * 44
+        local footerY = gridY + rows * 44
         height = footerY + (paginated and 100 or 68)
         root:SetSize(width, height)
         root.clickthrough = false
@@ -146,20 +149,21 @@ function picker.open(host, options)
         end
         button(root, 12, height - 40, innerWidth, 28, "Use preset number", function() select("") end)
         for index, category in ipairs(categories) do
-            local tabWidth = innerWidth / #categories
-            local x = 12 + math.floor((index - 1) * tabWidth)
-            button(root, x, 40, math.floor(tabWidth) - 2, 28, category.name, function()
+            local tabWidth = innerWidth / tabColumns
+            local x = 12 + math.floor(((index - 1) % tabColumns) * tabWidth)
+            local y = 40 + math.floor((index - 1) / tabColumns) * 32
+            button(root, x, y, math.floor(tabWidth) - 2, 28, category.name, function()
                 categoryIndex, page = index, 1
                 name.content = initialName
                 refresh()
             end)
-            tabFrames[index] = rectangle(root, x, 40, math.floor(tabWidth) - 2, 28, false, theme.border)
+            tabFrames[index] = rectangle(root, x, y, math.floor(tabWidth) - 2, 28, false, theme.border)
         end
         refresh = function()
             if closed then return end
             if grid then grid:Destroy() end
             grid = ui.Layer.new(root)
-            grid:SetPos(12, 76)
+            grid:SetPos(12, gridY)
             grid:SetSize(innerWidth, rows * 44)
             grid.clickthrough = true
             for index, frame in ipairs(tabFrames) do frame.hidden = index ~= categoryIndex end

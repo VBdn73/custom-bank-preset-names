@@ -182,6 +182,28 @@ test.case("Categories are data-driven and switching tabs does not apply or close
     test.equal(f.selected[1], "future:test")
 end)
 
+test.case("Category tabs wrap into readable rows without overlapping the grid", function()
+    local f = fixture()
+    f.options.categories = {}
+    for _, name in ipairs({ "Skills", "Weapons", "Holidays", "Misc", "Bag" }) do
+        f.options.categories[#f.options.categories + 1] = { key = name, name = name, entries = {
+            { key = name .. ":item", name = name .. " item", sprite = "FARM" },
+        } }
+    end
+    f.open()
+    local weapons = f.find("Button", function(c) return c.label == "Weapons" end)[1]
+    local holidays = f.find("Button", function(c) return c.label == "Holidays" end)[1]
+    local bag = f.find("Button", function(c) return c.label == "Bag" end)[1]
+    test.equal(weapons.width >= 78, true)
+    test.equal(holidays.width >= 78, true)
+    test.equal(bag.y > weapons.y, true)
+    test.equal(f.tiles()[1].parent.y >= bag.y + bag.height, true)
+    holidays.hooks.press()
+    test.equal(#f.tiles(), 1)
+    f.tiles()[1].hooks.press()
+    test.equal(f.selected[1], "Holidays:item")
+end)
+
 test.case("Empty backpack tab explains why no items are shown", function()
     local f = fixture()
     f.options.categories[2] = { key = "backpack", name = "Bag", entries = {},
