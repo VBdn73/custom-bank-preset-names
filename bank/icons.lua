@@ -5,6 +5,9 @@ local states, errors = {}, {}
 -- Native number labels sit close to the row border. Give replacement icons
 -- a small inset like the editor preview, without moving native labels or hits.
 local horizontalInset = 4
+-- Item artwork includes padding inside its native canvas. Give it a larger
+-- canvas than skill sprites so the visible artwork is closer in size.
+local itemScale = 1.25
 -- Keep injected children out of the native category-0 ID sequence. Both IDs
 -- remain within the client's accepted range, as in the compact renderer.
 local spriteCategory = 1
@@ -59,7 +62,8 @@ local function apply(binding, store)
         -- Native scripts may redraw the number after Logic, including selection.
         state.original = number.content
     end
-    local scale = math.min(number.width / entry.width, number.height / entry.height, 1)
+    local widthLimit = number.width * (entry.objectID and itemScale or 1)
+    local scale = math.min(widthLimit / entry.width, number.height / entry.height, 1)
     assert(scale > 0, "Number label has no drawable bounds.")
     local w = math.max(1, math.floor(entry.width * scale))
     local h = math.max(1, math.floor(entry.height * scale))

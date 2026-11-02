@@ -17,11 +17,14 @@ local function fixture()
         require = function(path)
             if path == "presets/icon_catalogue" then
                 return { resolve = function(key) return catalogue.resolve(key, spriteIDs) end,
-                    apply = catalogue.apply }
+                    apply = function(sprite, assetID, entry)
+                        if entry.objectID then sprite:SetAssociatedObject(assetID)
+                        else catalogue.apply(sprite, assetID, entry) end
+                    end }
             end
             return require(path)
         end,
-        ui = { ComponentType = { LABEL = 1 },
+        ui = { ComponentType = { LABEL = 1 }, ObjectQuantityDisplayMode = { NEVER = 0 },
             Interfaces = { GetComponent = function(_, interfaceID, staticID, categoryID, dynamicID)
                 test.equal(interfaceID, 517)
                 test.equal(staticID, 266)
@@ -38,6 +41,7 @@ local function fixture()
                 test.equal(categoryID, 1, "Plugin sprites must not inherit native category 0")
                 test.equal(dynamicID >= 1 and dynamicID <= 18, true)
                 local sprite = { parent = parent, categoryID = categoryID, dynamicID = dynamicID }
+                function sprite:SetAssociatedObject(objectID) self.associatedObjectID = objectID end
                 function sprite:SetSize(w, h)
                     if f.layoutFails then error("Injected layout failure") end
                     self.width, self.height = w, h
@@ -114,6 +118,23 @@ test.case("Bank icons render as untinted, non-interactive siblings and leave nat
     f.update()
     test.equal(#f.sprites, 1, "Unchanged components reuse their sprite")
     test.equal(sprite.frontMoves, 2)
+end)
+
+test.case("Item icons use a larger centered canvas while staying within row height", function()
+    local f = fixture()
+    f.selected[1], f.selected[2] = "weapons90:noxious-scythe", "skills:farming"
+    f.update()
+    local item, skill = f.sprites[1], f.sprites[2]
+    test.equal(item.width, 30)
+    test.equal(item.height, 26)
+    test.equal(item.x, 5)
+    test.equal(item.y, 2)
+    test.equal(skill.width, 24)
+    test.equal(skill.height, 24)
+    f.numbers[1].height = 20
+    f.update()
+    test.equal(item.height, 20)
+    test.equal(item.width <= 30, true)
 end)
 
 test.case("All 18 bank rows render saved icons and reset independently", function()
