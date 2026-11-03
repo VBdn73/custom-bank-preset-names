@@ -16,7 +16,7 @@ function preferences.build(parent, settings, prettyui)
             width = math.max(1, parent.width - 16),
             onChange = function(_, _, _, selected)
                 if not option.set(selected) then
-                    print("[Preset names] Could not save " .. option.key .. " preference.")
+                    print("[Custom bank presets] Could not save " .. option.key .. " preference.")
                     checkbox:SetSelected(option.key, option.get(), false)
                 end
             end,
@@ -51,7 +51,7 @@ function preferences.build(parent, settings, prettyui)
         note:SetSize(width, 64)
     end
     resize()
-    parent:Subscribe(ui.Hook.ONRESIZE, "presetNames.preferences", resize)
+    parent:Subscribe(ui.Hook.ONRESIZE, "customBankPresets.preferences", resize)
 
     return function()
         for _, option in ipairs(options) do

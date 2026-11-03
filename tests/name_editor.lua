@@ -189,7 +189,7 @@ local function createFixture(colours, iconStore)
             elseif control.label == "Save" then self.save = control
             elseif control.label == "Reset" then self.reset = control
             elseif control.kind == "sprite" and control.sprite == 28787 then self.info = control
-            elseif control.content == "Custom bank preset names" then self.title = control
+            elseif control.content == "Custom bank presets" then self.title = control
             elseif control.kind == "text" and control.height == 18
                 and control.y == math.max(0, math.floor((self.parent.height
                      - (options and options.hideTitle and 162 or 194)) / 2))
@@ -995,7 +995,7 @@ test.case("Popup editor omits its duplicate title and fits beneath window chrome
     f:open(18, { hideTitle = true })
     for index = first, #f.controls do
         local c = f.controls[index]
-        test.equal(c.content == "Custom bank preset names", false)
+        test.equal(c.content == "Custom bank presets", false)
         if c.content ~= "" then
             test.equal(c.y >= 0 and c.y + c.height <= 162, true, "Visible control fits popup content")
         end
@@ -1061,7 +1061,7 @@ test.case("Resizable ribbon fits narrow panels and restores the wide layout with
         test.equal(f.selector.selectedID, 17)
     end
     test.equal(f.input.width, 224)
-    test.equal(f.title.content, "Custom bank preset names")
+    test.equal(f.title.content, "Custom bank presets")
     test.equal(f.saveCalls, 0)
 end)
 

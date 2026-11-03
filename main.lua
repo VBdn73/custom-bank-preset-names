@@ -22,30 +22,30 @@ local editorRefreshCallbacks = {}
 local destroyContentView
 local destroySettingsView
 
-Event.MiniMenuReady.Subscribe("presetNames.menu", function(event)
+Event.MiniMenuReady.Subscribe("customBankPresets.menu", function(event)
     presetMenu.add(event.miniMenu, bankBindings.labels, function(slot)
         editorPopup.open(slot, presetNames, bankBindings, prettyUILibrary)
     end)
 end)
 
-Event.MiniMenuEntrySelected.Subscribe("presetNames.selection", function(event)
+Event.MiniMenuEntrySelected.Subscribe("customBankPresets.selection", function(event)
     editorPopup.select(presetMenu.selectedSlot(event.entry, bankBindings.labels))
 end)
 
-Event.SettingsLayerReady.Subscribe("presetNames.settings", function(event)
+Event.SettingsLayerReady.Subscribe("customBankPresets.settings", function(event)
     if destroySettingsView then pcall(destroySettingsView) end
     local refresh, _, destroy = preferences.build(event.component, settings, prettyUILibrary)
     editorRefreshCallbacks.settings, destroySettingsView = refresh, destroy
 end)
 
-Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
+Event.ContentLayerReady.Subscribe("customBankPresets.content", function(event)
     if destroyContentView then pcall(destroyContentView) end
     editorRefreshCallbacks.content, destroyContentView = nil, nil
     local ok, refresh, _, destroy = pcall(preferences.build, event.component, settings, prettyUILibrary)
     if ok then
         editorRefreshCallbacks.content, destroyContentView = refresh, destroy
     else
-        print("[Preset names] Ribbon settings error: " .. tostring(refresh))
+        print("[Custom bank presets] Ribbon settings error: " .. tostring(refresh))
         for index, text in ipairs({ "Could not open settings.",
             "See the client console for the error." }) do
             local message = ui.Text.new(event.component)
@@ -58,7 +58,7 @@ Event.ContentLayerReady.Subscribe("presetNames.content", function(event)
 end)
 
 -- Reacquire components each tick: bank interfaces can close or rebuild at any time.
-Event.Logic.Subscribe("presetNames.labels", function()
+Event.Logic.Subscribe("customBankPresets.labels", function()
     bankReorder.update(bankBindings)
     bankDropdown.update(settings.hidePredefinedDropdown())
     editorPopup.update()
@@ -81,7 +81,7 @@ end)
 -- Bank scripts can reset label text after Logic (for example on selection).
 -- Apply again at the render boundary so the predefined text is not drawn for
 -- one frame before the next logic tick restores the custom name.
-Event.Draw.Subscribe("presetNames.labels", function()
+Event.Draw.Subscribe("customBankPresets.labels", function()
     bankDropdown.update(settings.hidePredefinedDropdown())
     bankAppearance.update(bankBindings.appearance, presetColours)
     bankLabels.update(bankBindings.labels, presetNames)
@@ -100,12 +100,12 @@ function PluginShutdown()
     if destroySettingsView then pcall(destroySettingsView) end
     destroySettingsView = nil
     bankAppearance.restore(bankBindings.appearance)
-    Event.MiniMenuReady.Unsubscribe("presetNames.menu")
-    Event.MiniMenuEntrySelected.Unsubscribe("presetNames.selection")
+    Event.MiniMenuReady.Unsubscribe("customBankPresets.menu")
+    Event.MiniMenuEntrySelected.Unsubscribe("customBankPresets.selection")
     editorPopup.close()
-    Event.Logic.Unsubscribe("presetNames.labels")
-    Event.Draw.Unsubscribe("presetNames.labels")
-    Event.SettingsLayerReady.Unsubscribe("presetNames.settings")
-    Event.ContentLayerReady.Unsubscribe("presetNames.content")
+    Event.Logic.Unsubscribe("customBankPresets.labels")
+    Event.Draw.Unsubscribe("customBankPresets.labels")
+    Event.SettingsLayerReady.Unsubscribe("customBankPresets.settings")
+    Event.ContentLayerReady.Unsubscribe("customBankPresets.content")
     bankLabels.restore(bankBindings.labels)
 end

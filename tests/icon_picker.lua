@@ -261,7 +261,7 @@ test.case("Larger categories paginate and start on the selected entry's page", f
     test.equal(f.selected[1], "test:32")
 end)
 
-test.case("T90–95 tab paginates finished weapons and selects their stable keys", function()
+test.case("Weapons tab paginates finished weapons and selects their stable keys", function()
     local catalogue = require("presets/icon_catalogue")
     local applied = {}
     local f = fixture({ categories = catalogue.categories,

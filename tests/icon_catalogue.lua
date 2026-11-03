@@ -177,7 +177,7 @@ test.case("Native item assignment hides quantities and clears when returning to 
     ui = oldUI
 end)
 
-test.case("T90–95 tab includes finished weapons with valid tiers, sorted unique item artwork", function()
+test.case("Weapons tab includes finished weapons with valid tiers, sorted unique item artwork", function()
     local category = catalogue.categories[2]
     test.equal(category.key, "weapons90")
     local previous, seen = "", {}
@@ -185,7 +185,7 @@ test.case("T90–95 tab includes finished weapons with valid tiers, sorted uniqu
         test.equal(entry.category, category.key)
         test.equal(catalogue.get(entry.key), entry)
         test.equal(catalogue.resolve(entry.key), entry.objectID)
-        test.equal(entry.tier >= 90 and entry.tier <= 95, true)
+        test.equal(entry.tier >= 90 and entry.tier <= 100, true)
         test.equal(entry.objectID > 0 and entry.objectID % 1 == 0, true)
         test.equal(seen[entry.objectID], nil)
         seen[entry.objectID] = true
@@ -195,11 +195,11 @@ test.case("T90–95 tab includes finished weapons with valid tiers, sorted uniqu
     end
     for _, key in ipairs({ "eldritch-crossbow", "fractured-staff-of-armadyl",
         "bow-of-the-last-guardian", "abyssal-scourge", "masterwork-spear-of-annihilation",
-        "death-guard-tier-90-" }) do
+        "death-guard-tier-90-", "masterwork-2h-sword", "masterwork-bow", "masterwork-staff" }) do
         test.equal(catalogue.get("weapons90:" .. key) ~= nil, true, key)
     end
     test.equal(catalogue.get("weapons90:dragon-2h-sword"), nil)
-    test.equal(#category.entries, 40)
+    test.equal(#category.entries, 55)
     for _, entry in ipairs(category.entries) do
         for _, family in ipairs({ "promethium", "grave creeper", "spiritbloom", "empowered catalytic" }) do
             test.equal(entry.name:lower():find(family, 1, true), nil,
@@ -212,19 +212,24 @@ test.case("T90–95 tab includes finished weapons with valid tiers, sorted uniqu
         "The old Weapons category is no longer registered")
 end)
 
-test.case("Weapon tabs keep main-hand and two-handed icons without paired off-hands", function()
-    local offhands = { 52045, 52057, 25672, 25895, 34855, 37080, 40600,
-        64195, 26591, 26599, 26583, 28441, 40659, 25664, 39579,
-        55482, 57158, 42774, 28621, 61454, 58213, 63337, 61462, 55542, 61466 }
-    for index = 2, 2 do
-        local present = {}
-        for _, entry in ipairs(catalogue.categories[index].entries) do
-            present[entry.objectID] = true
-            test.equal(entry.name:lower():find("off-hand", 1, true), nil)
-        end
-        for _, objectID in ipairs(offhands) do test.equal(present[objectID], nil) end
-        test.equal(present[26587], true, "Main-hand drygore remains")
-        test.equal(present[31725], true, "Two-handed noxious scythe remains")
+test.case("Weapon tab retains main-hand, two-handed and selected off-hand icons", function()
+    local expected = {
+        [26587] = "Drygore longsword",
+        [31725] = "Noxious scythe",
+        [40659] = "Khopesh of Elidinis",
+        [52057] = "Dark Sliver of Leng",
+        [28621] = "Seismic singularity",
+        [39579] = "Imperium core",
+        [57158] = "Ode to Deceit",
+        [55542] = "Skull lantern (tier 90)",
+        [55482] = "Soulbound lantern",
+    }
+    local present = {}
+    for _, entry in ipairs(catalogue.categories[2].entries) do
+        present[entry.objectID] = entry.name
+    end
+    for objectID, name in pairs(expected) do
+        test.equal(present[objectID], name, "Missing weapon artwork: " .. name)
     end
 end)
 

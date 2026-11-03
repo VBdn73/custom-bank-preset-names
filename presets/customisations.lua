@@ -77,7 +77,7 @@ function customisations.new(names, colours, icons, iconText)
                             previous.slot, previous.kind, tostring(ok and reason or restored))
                     end
                 end
-                print("[Preset names] Grouped save failed: " .. table.concat(details, "; "))
+                print("[Custom bank presets] Grouped save failed: " .. table.concat(details, "; "))
                 return failure(recovered
                     and "Save failed. Previous customisations restored. See the client console."
                     or "Save failed; recovery incomplete. Check customisations and the client console.",

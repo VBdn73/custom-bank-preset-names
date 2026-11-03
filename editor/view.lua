@@ -764,7 +764,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
             if position.component ~= presetSelector
                 and not (managedInput and position.component == nameInput)
                 and not (managedIconText and position.component == iconTextInput) then
-                position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "presetNames.scroll", function(_, delta)
+                position.component:Subscribe(ui.Hook.ONSCROLLWHEEL, "customBankPresets.scroll", function(_, delta)
                     if not scrollView.scrollbarVisible then return true end
                     scrollView:ScrollBy(delta * layout.fieldHeight)
                     return false
@@ -943,7 +943,7 @@ function editor.build(parent, names, bindings, initialSlot, options)
         end
     end
     centreContent()
-    host:Subscribe(ui.Hook.ONRESIZE, "presetNames.centre", centreContent)
+    host:Subscribe(ui.Hook.ONRESIZE, "customBankPresets.centre", centreContent)
 
     -- Called by main.lua each logic tick, not only when the editor is opened.
     return function()

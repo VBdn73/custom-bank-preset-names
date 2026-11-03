@@ -4,7 +4,7 @@ local names = require("presets/names")
 local bankLabels = require("bank/labels")
 local reorder = {}
 local watched = {}
-local hookID = "presetNames.reorder"
+local hookID = "customBankPresets.reorder"
 
 local function componentKey(component)
     return ("%s:%s:%s:%s"):format(tostring(component.interfaceID), tostring(component.staticID),
@@ -72,7 +72,7 @@ function reorder.update(bindings)
                             bankLabels.swapOriginals(bindings.labels, first, second)
                             bankLabels.update(bindings.labels, names)
                         else
-                            print("[Preset names] Could not swap customisations: " .. tostring(message))
+                            print("[Custom bank presets] Could not swap customisations: " .. tostring(message))
                         end
                     end
                     return true -- Preserve the native preset swap.

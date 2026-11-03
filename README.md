@@ -1,6 +1,6 @@
-# Custom bank preset names
+# Custom bank presets
 
-Give your RuneScape bank presets custom names, colours, and icons. Version **0.7.0**
+Give your RuneScape bank presets custom names, colours, icons, and icon text. Version **0.8.0**
 changes their appearance locally, not their server-side names or behaviour.
 
 ## Features
@@ -9,11 +9,12 @@ changes their appearance locally, not their server-side names or behaviour.
   18 numbered presets and the Beast of Burden row.
 - Icons for numbered presets from **Skills**, **Weapons**, **Holidays**, and **Misc**,
   using native client assets. All 29 skills are included.
-- Experimental **Bag** icon tab: select item artwork from the current backpack.
+- Up to three letters or numbers of icon text for numbered presets, with or without an icon.
+- **Bag** icon tab: select item artwork from the current backpack.
 - Saved icons appear in preset-management rows and both compact bank pages.
 - Optional compact-button background colours, enabled by default.
-- Draggable editor with live previews, colour/hex controls, and individual resets.
-- Per-character settings; names, colours, and icons follow drag-and-drop preset swaps.
+- Draggable editor with live previews, colour/hex controls, resets, and an unsaved indicator.
+- Per-character settings; customisations follow drag-and-drop preset swaps.
 - Option to hide the bank's predefined-name dropdown.
 
 No preset loading, automation, hidden information, or slot unlocking. Bank actions
@@ -37,12 +38,13 @@ do not download dependencies automatically.
    colour canvas or enter `#RRGGBB`; changes preview immediately.
 3. For numbered presets, click **Icon**, choose a category, and select an icon.
    Hover an icon to see its name. **Use preset number** restores the default.
-   The experimental **Bag** tab shows a snapshot of backpack items when the picker
+   The **Bag** tab shows a snapshot of backpack items when the picker
    opens; hover shows the item name (or its ID if the name is unavailable). Bag
    explains its purpose when empty; other empty categories are hidden.
    Reopen the picker to refresh the snapshot.
    The saved icon stays selected after the item leaves the backpack.
-4. Click **Save**, or press Enter in the name field, to apply your changes.
+4. Optionally enter up to three letters or numbers in **Icon text**. Click **Save**,
+   or press Enter in the name field, to apply your changes.
 
 ### Editor controls
 
@@ -76,11 +78,12 @@ native bank preset swaps are not undone.
 network requests, screenshots, or gameplay-history collection.
 
 Settings use the client's `PersistentDB` API. Your display name, preset names,
-colours, and icons are stored locally per character. Display-name keys ignore case
+colours, icons, and icon text are stored locally per character. Display-name keys ignore case
 and surrounding spaces. Editor position and display preferences are shared across
 characters on this device. Nothing is sent to the developer or external services.
 
 - Settings do not sync between devices; beta and live storage are separate.
+- Saves under the previous plugin name are not automatically imported after the rename.
 - After a character rename, re-enter or manually migrate settings. Reusing a display
   name on the same device can inherit its previous settings.
 - Older device-wide and tracking-ID-based settings are not imported automatically.
@@ -94,15 +97,15 @@ characters on this device. Nothing is sent to the developer or external services
 
 Follow Jagex's [getting-started guide](https://developer.runescape.com/rs/getting-started.html).
 Place this repository, including subdirectories, in
-`RuneScape-BETA/dev_plugins/custom-bank-preset-names/` and install PrettyUI.
+`RuneScape-BETA/dev_plugins/custom-bank-presets/` and install PrettyUI.
 Open the client console with **Alt + `**, then run:
 
 ```text
 prf
-pon custom-bank-preset-names
+pon custom-bank-presets
 ```
 
-After Lua changes, run `prl custom-bank-preset-names`. After `plugin.json` changes,
+After Lua changes, run `prl custom-bank-presets`. After `plugin.json` changes,
 run `prf` before reloading.
 
 ### Tests

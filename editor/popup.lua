@@ -112,7 +112,7 @@ function popup.open(slot, names, bindings, prettyui)
     end)
     if not ok then
         popup.close()
-        print("[Preset names] Bank editor error: " .. tostring(message))
+        print("[Custom bank presets] Bank editor error: " .. tostring(message))
     end
 end
 
